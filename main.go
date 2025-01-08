@@ -42,6 +42,7 @@ var (
 	verbose      bool
 	dryRun       bool
 	undo         bool
+	prompt       bool
 	summary      Summary
 	logEntries   []LogEntry
 )
@@ -60,6 +61,7 @@ func main() {
 	rootCmd.Flags().BoolVar(&verbose, "verbose", false, "Verbose output")
 	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would happen without making changes")
 	rootCmd.Flags().BoolVar(&undo, "undo", false, "Restore files to their original locations")
+	rootCmd.Flags().BoolVar(&prompt, "prompt", false, "Prompt for confirmation before moving each book")
 	rootCmd.MarkFlagRequired("dir")
 
 	if err := rootCmd.Execute(); err != nil {
@@ -167,6 +169,23 @@ func processPath(s string) string {
 	return s
 }
 
+func promptForConfirmation(metadata Metadata, sourcePath, targetPath string) bool {
+	color.Yellow("\nBook found:")
+	color.White("  Title: %s", metadata.Title)
+	color.White("  Authors: %s", strings.Join(metadata.Authors, ", "))
+	if len(metadata.Series) > 0 {
+		color.White("  Series: %s", metadata.Series[0])
+	}
+	color.Cyan("\nProposed move:")
+	color.White("  From: %s", sourcePath)
+	color.White("  To: %s", targetPath)
+
+	fmt.Print("\nProceed with move? [y/N] ")
+	var response string
+	fmt.Scanln(&response)
+	return strings.ToLower(response) == "y"
+}
+
 func organizeAudiobook(sourcePath, metadataPath string) error {
 	data, err := os.ReadFile(metadataPath)
 	if err != nil {
@@ -221,6 +240,13 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 		From: sourcePath,
 		To:   targetPath,
 	})
+
+	if prompt && !dryRun {
+		if !promptForConfirmation(metadata, sourcePath, targetPath) {
+			color.Yellow("Skipping %s", metadata.Title)
+			return nil
+		}
+	}
 
 	var fileNames []string
 	for _, entry := range entries {

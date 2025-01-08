@@ -9,6 +9,7 @@ CLI tool to organize audiobooks based on metadata.json files.
 - Preserves spaces by default
 - Optional space replacement with custom character
 - Dry-run mode to preview changes
+- Interactive prompt mode for reviewing moves
 - Undo functionality
 - Colored output
 - Operation logs for recovery
@@ -32,6 +33,24 @@ Options:
 - `--dry-run`: Preview changes without moving files
 - `--verbose`: Show detailed progress
 - `--undo`: Restore files to original locations
+- `--prompt`: Review and confirm each book move interactively
+
+### Interactive Mode
+
+Using the `--prompt` flag will show each book's details and proposed move location:
+
+```
+Book found:
+  Title: The Book Title
+  Authors: Author One, Author Two
+  Series: Amazing Series #1
+
+Proposed move:
+  From: /original/path/book
+  To: /audiobooks/Author One,Author Two/Amazing Series #1/The Book Title
+
+Proceed with move? [y/N]
+```
 
 ## Metadata Format
 
