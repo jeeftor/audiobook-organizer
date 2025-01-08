@@ -73,6 +73,23 @@ func main() {
 }
 
 func organize(cmd *cobra.Command, args []string) {
+	// Clean and resolve the paths
+	resolvedBaseDir, err := filepath.EvalSymlinks(filepath.Clean(baseDir))
+	if err != nil {
+		color.Red("Error resolving base directory path: %v", err)
+		os.Exit(1)
+	}
+	baseDir = resolvedBaseDir
+
+	if outputDir != "" {
+		resolvedOutputDir, err := filepath.EvalSymlinks(filepath.Clean(outputDir))
+		if err != nil {
+			color.Red("Error resolving output directory path: %v", err)
+			os.Exit(1)
+		}
+		outputDir = resolvedOutputDir
+	}
+
 	if undo {
 		if err := undoMoves(); err != nil {
 			color.Red("Error undoing moves: %v", err)
@@ -82,7 +99,7 @@ func organize(cmd *cobra.Command, args []string) {
 	}
 
 	startTime := time.Now()
-	err := filepath.Walk(baseDir, processDirectory)
+	err = filepath.Walk(baseDir, processDirectory)
 	if err != nil {
 		color.Red("Error walking directory: %v", err)
 		os.Exit(1)
@@ -156,7 +173,15 @@ func undoMoves() error {
 }
 
 func processDirectory(path string, info os.FileInfo, err error) error {
+	// Handle walk errors more gracefully
 	if err != nil {
+		// If the file doesn't exist, it might have been moved by a previous operation
+		if os.IsNotExist(err) {
+			if verbose {
+				color.Yellow("Skipping non-existent path (likely moved): %s", path)
+			}
+			return nil
+		}
 		return err
 	}
 
@@ -167,6 +192,8 @@ func processDirectory(path string, info os.FileInfo, err error) error {
 			if err := organizeAudiobook(path, metadataPath); err != nil {
 				color.Red("Error organizing %s: %v", path, err)
 			}
+			// Skip processing subdirectories of organized books
+			return filepath.SkipDir
 		} else if verbose {
 			summary.MetadataMissing = append(summary.MetadataMissing, path)
 			color.Yellow("No metadata.json found in %s", path)

@@ -52,6 +52,16 @@ func TestOrganizer(t *testing.T) {
 			replaceSpace: ".",
 			wantDir:      "John.Smith/Test.Series.#1/Test.Book",
 		},
+		{
+			name: "directory_with_spaces",
+			metadata: Metadata{
+				Authors: []string{"John Smith Jr"},
+				Title:   "My Book Title",
+				Series:  []string{"My Series Name #1"},
+			},
+			replaceSpace: "",
+			wantDir:      "John Smith Jr/My Series Name #1/My Book Title",
+		},
 	}
 
 	for _, tt := range tests {
