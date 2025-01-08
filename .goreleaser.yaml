@@ -41,13 +41,36 @@ archives:
       - goos: windows
         format: zip
 
+# Add this new section for .deb package generation
+nfpms:
+  - vendor: jeffsui  # Replace with your name/organization
+    homepage: https://github.com/jeffsui/audiobook-organizer
+    maintainer: Jeff Stein <jeffstein@gmail.com>  # Replace with your details
+    description: CLI tool to organize audiobooks based on metadata.json files
+    license: MIT  # Adjust based on your license
+    formats:
+      - deb
+    dependencies:
+      - git
+    recommends:
+      - golang
+    suggests:
+      - docker
+    section: utils
+    priority: optional
+    contents:
+      - src: ./README.md
+        dst: /usr/share/doc/audiobook-organizer/README.md
+      - src: ./LICENSE  # If you have a license file
+        dst: /usr/share/doc/audiobook-organizer/LICENSE
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
 changelog:
   sort: asc
   filters:
     exclude:
       - "^docs:"
       - "^test:"
-
 
 release:
   draft: false
