@@ -1,24 +1,27 @@
-package main
+package main_test
 
 import (
+	"audiobook-organizer/internal/organizer"
 	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	_ "audiobook-organizer/internal/organizer" // Add this import
 )
 
 func TestOrganizer(t *testing.T) {
 	tests := []struct {
 		name         string
-		metadata     Metadata
+		metadata     organizer.Metadata
 		replaceSpace string
 		wantDir      string
 	}{
 		{
 			name: "single_author",
-			metadata: Metadata{
+			metadata: organizer.Metadata{
 				Authors: []string{"John Smith"},
 				Title:   "Test Book",
 			},
@@ -27,7 +30,7 @@ func TestOrganizer(t *testing.T) {
 		},
 		{
 			name: "multiple_authors",
-			metadata: Metadata{
+			metadata: organizer.Metadata{
 				Authors: []string{"John Smith", "Jane Doe"},
 				Title:   "Test Book",
 			},
@@ -36,7 +39,7 @@ func TestOrganizer(t *testing.T) {
 		},
 		{
 			name: "with_series",
-			metadata: Metadata{
+			metadata: organizer.Metadata{
 				Authors: []string{"John Smith"},
 				Title:   "Test Book",
 				Series:  []string{"Test Series #12"},
@@ -46,7 +49,7 @@ func TestOrganizer(t *testing.T) {
 		},
 		{
 			name: "with_series_and_space_replacement",
-			metadata: Metadata{
+			metadata: organizer.Metadata{
 				Authors: []string{"John Smith"},
 				Title:   "Test Book",
 				Series:  []string{"Test Series #1"},
@@ -56,7 +59,7 @@ func TestOrganizer(t *testing.T) {
 		},
 		{
 			name: "directory_with_spaces",
-			metadata: Metadata{
+			metadata: organizer.Metadata{
 				Authors: []string{"John Smith Jr"},
 				Title:   "My Book Title",
 				Series:  []string{"My Series Name #3"},
@@ -66,7 +69,7 @@ func TestOrganizer(t *testing.T) {
 		},
 		{
 			name: "multiple_hash_in_series",
-			metadata: Metadata{
+			metadata: organizer.Metadata{
 				Authors: []string{"John Smith"},
 				Title:   "Test Book",
 				Series:  []string{"Test #Series Part 1 #12"},
@@ -76,7 +79,7 @@ func TestOrganizer(t *testing.T) {
 		},
 		{
 			name: "special_characters",
-			metadata: Metadata{
+			metadata: organizer.Metadata{
 				Authors: []string{"John Smith-Jones", "O'Brien, Pat"},
 				Title:   "Test & Book!",
 				Series:  []string{"Test's Series #1"},
@@ -113,12 +116,17 @@ func TestOrganizer(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			baseDir = tempDir
-			replaceSpace = tt.replaceSpace
-			dryRun = false
-			verbose = false
+			org := organizer.New(
+				tempDir,
+				"", // no output dir
+				tt.replaceSpace,
+				false, // verbose
+				false, // dryRun
+				false, // undo
+				false, // prompt
+			)
 
-			if err := organizeAudiobook(sourceDir, filepath.Join(sourceDir, "metadata.json")); err != nil {
+			if err := org.OrganizeAudiobook(sourceDir, filepath.Join(sourceDir, "metadata.json")); err != nil {
 				t.Fatal(err)
 			}
 
@@ -158,7 +166,7 @@ func TestOutputDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	metadata := Metadata{
+	metadata := organizer.Metadata{
 		Authors: []string{"John Smith"},
 		Title:   "Test Book",
 	}
@@ -176,12 +184,17 @@ func TestOutputDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	baseDir = sourceDir
-	outputDir = outputDir
-	dryRun = false
-	verbose = false
+	org := organizer.New(
+		sourceDir,
+		outputDir,
+		"",    // replaceSpace
+		false, // verbose
+		false, // dryRun
+		false, // undo
+		false, // prompt
+	)
 
-	if err := organizeAudiobook(sourceDir, filepath.Join(sourceDir, "metadata.json")); err != nil {
+	if err := org.OrganizeAudiobook(sourceDir, filepath.Join(sourceDir, "metadata.json")); err != nil {
 		t.Fatal(err)
 	}
 
@@ -199,7 +212,7 @@ func TestMissingMetadata(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// Test missing authors
-	missingAuthors := Metadata{
+	missingAuthors := organizer.Metadata{
 		Title: "Test Book",
 	}
 	if err := testInvalidMetadata(t, tempDir, missingAuthors); err == nil {
@@ -207,7 +220,7 @@ func TestMissingMetadata(t *testing.T) {
 	}
 
 	// Test missing title
-	missingTitle := Metadata{
+	missingTitle := organizer.Metadata{
 		Authors: []string{"John Smith"},
 	}
 	if err := testInvalidMetadata(t, tempDir, missingTitle); err == nil {
@@ -234,8 +247,17 @@ func TestInvalidMetadataJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	baseDir = tempDir
-	if err := organizeAudiobook(sourceDir, metadataPath); err == nil {
+	org := organizer.New(
+		tempDir,
+		"",    // outputDir
+		"",    // replaceSpace
+		false, // verbose
+		false, // dryRun
+		false, // undo
+		false, // prompt
+	)
+
+	if err := org.OrganizeAudiobook(sourceDir, metadataPath); err == nil {
 		t.Error("expected error for invalid JSON")
 	}
 }
@@ -252,7 +274,7 @@ func TestLogFileCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	metadata := Metadata{
+	metadata := organizer.Metadata{
 		Authors: []string{"Test Author"},
 		Title:   "Test Book",
 	}
@@ -270,16 +292,22 @@ func TestLogFileCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	baseDir = tempDir
-	dryRun = false
-	verbose = false
+	org := organizer.New(
+		tempDir,
+		"",    // outputDir
+		"",    // replaceSpace
+		false, // verbose
+		false, // dryRun
+		false, // undo
+		false, // prompt
+	)
 
-	if err := organizeAudiobook(sourceDir, filepath.Join(sourceDir, "metadata.json")); err != nil {
+	if err := org.OrganizeAudiobook(sourceDir, filepath.Join(sourceDir, "metadata.json")); err != nil {
 		t.Fatal(err)
 	}
 
 	// Check log file exists
-	logPath := filepath.Join(tempDir, logFileName)
+	logPath := filepath.Join(tempDir, organizer.LogFileName)
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
 		t.Error("log file was not created")
 	}
@@ -290,7 +318,7 @@ func TestLogFileCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var logEntries []LogEntry
+	var logEntries []organizer.LogEntry
 	if err := json.Unmarshal(logData, &logEntries); err != nil {
 		t.Error("invalid log file format")
 	}
@@ -304,7 +332,7 @@ func TestLogFileCreation(t *testing.T) {
 	}
 }
 
-func testInvalidMetadata(t *testing.T, tempDir string, metadata Metadata) error {
+func testInvalidMetadata(t *testing.T, tempDir string, metadata organizer.Metadata) error {
 	sourceDir := filepath.Join(tempDir, "source")
 	if err := os.MkdirAll(sourceDir, 0755); err != nil {
 		t.Fatal(err)
@@ -320,7 +348,15 @@ func testInvalidMetadata(t *testing.T, tempDir string, metadata Metadata) error 
 		t.Fatal(err)
 	}
 
-	baseDir = tempDir
-	replaceSpace = ""
-	return organizeAudiobook(sourceDir, metadataPath)
+	org := organizer.New(
+		tempDir,
+		"",    // outputDir
+		"",    // replaceSpace
+		false, // verbose
+		false, // dryRun
+		false, // undo
+		false, // prompt
+	)
+
+	return org.OrganizeAudiobook(sourceDir, metadataPath)
 }

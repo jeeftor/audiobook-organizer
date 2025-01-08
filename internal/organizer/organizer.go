@@ -11,7 +11,7 @@ import (
 	"github.com/fatih/color"
 )
 
-const logFileName = ".abook-org.log"
+const LogFileName = ".abook-org.log"
 
 type Organizer struct {
 	baseDir      string
@@ -42,7 +42,7 @@ func (o *Organizer) GetLogPath() string {
 	if o.outputDir != "" {
 		logBase = o.outputDir
 	}
-	return filepath.Join(logBase, logFileName)
+	return filepath.Join(logBase, LogFileName)
 }
 
 func (o *Organizer) Execute() error {
@@ -151,7 +151,7 @@ func (o *Organizer) processDirectory(path string, info os.FileInfo, err error) e
 		metadataPath := filepath.Join(path, "metadata.json")
 		if _, err := os.Stat(metadataPath); err == nil {
 			o.summary.MetadataFound = append(o.summary.MetadataFound, metadataPath)
-			if err := o.organizeAudiobook(path, metadataPath); err != nil {
+			if err := o.OrganizeAudiobook(path, metadataPath); err != nil {
 				color.Red("❌ Error organizing %s: %v", path, err)
 			}
 			return filepath.SkipDir
@@ -212,7 +212,7 @@ func (o *Organizer) promptForConfirmation(metadata Metadata, sourcePath, targetP
 	return strings.ToLower(response) == "y"
 }
 
-func (o *Organizer) organizeAudiobook(sourcePath, metadataPath string) error {
+func (o *Organizer) OrganizeAudiobook(sourcePath, metadataPath string) error {
 	data, err := os.ReadFile(metadataPath)
 	if err != nil {
 		return fmt.Errorf("error reading metadata: %v", err)
