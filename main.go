@@ -51,6 +51,10 @@ var (
 const logFileName = ".abook-org.log"
 
 func main() {
+	// Add some color to startup
+	color.Cyan("🎧 Audiobook Organizer")
+	color.Cyan("=====================")
+
 	rootCmd := &cobra.Command{
 		Use:   "audiobook-organizer",
 		Short: "Organize audiobooks based on metadata.json files",
@@ -67,52 +71,11 @@ func main() {
 	rootCmd.MarkFlagRequired("dir")
 
 	if err := rootCmd.Execute(); err != nil {
-		color.Red("Error: %v", err)
+		color.Red("❌ Error: %v", err)
 		os.Exit(1)
 	}
 }
 
-func organize(cmd *cobra.Command, args []string) {
-	// Clean and resolve the paths
-	resolvedBaseDir, err := filepath.EvalSymlinks(filepath.Clean(baseDir))
-	if err != nil {
-		color.Red("Error resolving base directory path: %v", err)
-		os.Exit(1)
-	}
-	baseDir = resolvedBaseDir
-
-	if outputDir != "" {
-		resolvedOutputDir, err := filepath.EvalSymlinks(filepath.Clean(outputDir))
-		if err != nil {
-			color.Red("Error resolving output directory path: %v", err)
-			os.Exit(1)
-		}
-		outputDir = resolvedOutputDir
-	}
-
-	if undo {
-		if err := undoMoves(); err != nil {
-			color.Red("Error undoing moves: %v", err)
-			os.Exit(1)
-		}
-		return
-	}
-
-	startTime := time.Now()
-	err = filepath.Walk(baseDir, processDirectory)
-	if err != nil {
-		color.Red("Error walking directory: %v", err)
-		os.Exit(1)
-	}
-
-	if !dryRun && len(logEntries) > 0 {
-		if err := saveLog(); err != nil {
-			color.Red("Error saving log: %v", err)
-		}
-	}
-
-	printSummary(startTime)
-}
 func cleanSeriesName(series string) string {
 	// Find the last occurrence of " #" and remove everything after it
 	if idx := strings.LastIndex(series, " #"); idx != -1 {
@@ -120,6 +83,57 @@ func cleanSeriesName(series string) string {
 	}
 	return series
 }
+
+func organize(cmd *cobra.Command, args []string) {
+	// Clean and resolve the paths
+	color.Blue("🔍 Resolving paths...")
+	resolvedBaseDir, err := filepath.EvalSymlinks(filepath.Clean(baseDir))
+	if err != nil {
+		color.Red("❌ Error resolving base directory path: %v", err)
+		os.Exit(1)
+	}
+	baseDir = resolvedBaseDir
+
+	if outputDir != "" {
+		resolvedOutputDir, err := filepath.EvalSymlinks(filepath.Clean(outputDir))
+		if err != nil {
+			color.Red("❌ Error resolving output directory path: %v", err)
+			os.Exit(1)
+		}
+		outputDir = resolvedOutputDir
+	}
+
+	if undo {
+		color.Yellow("↩️  Undoing previous operations...")
+		if err := undoMoves(); err != nil {
+			color.Red("❌ Error undoing moves: %v", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	if dryRun {
+		color.Yellow("🔍 Running in dry-run mode - no files will be moved")
+	}
+
+	startTime := time.Now()
+	color.Blue("📚 Scanning for audiobooks...")
+	err = filepath.Walk(baseDir, processDirectory)
+	if err != nil {
+		color.Red("❌ Error walking directory: %v", err)
+		os.Exit(1)
+	}
+
+	if !dryRun && len(logEntries) > 0 {
+		color.Blue("💾 Saving operation log...")
+		if err := saveLog(); err != nil {
+			color.Red("❌ Error saving log: %v", err)
+		}
+	}
+
+	printSummary(startTime)
+}
+
 func saveLog() error {
 	// Use output directory for log if specified, otherwise use base directory
 	logBase := baseDir
@@ -153,9 +167,9 @@ func undoMoves() error {
 	}
 
 	for _, entry := range entries {
-		color.Yellow("Restoring files from %s to %s", entry.TargetPath, entry.SourcePath)
+		color.Yellow("↩️  Restoring files from %s to %s", entry.TargetPath, entry.SourcePath)
 		if err := os.MkdirAll(entry.SourcePath, 0755); err != nil {
-			color.Red("Error creating source directory: %v", err)
+			color.Red("❌ Error creating source directory: %v", err)
 			continue
 		}
 
@@ -163,16 +177,16 @@ func undoMoves() error {
 			oldPath := filepath.Join(entry.TargetPath, file)
 			newPath := filepath.Join(entry.SourcePath, file)
 			if verbose {
-				color.Blue("Moving %s to %s", oldPath, newPath)
+				color.Blue("📦 Moving %s to %s", oldPath, newPath)
 			}
 			if err := os.Rename(oldPath, newPath); err != nil {
-				color.Red("Error moving %s: %v", oldPath, err)
+				color.Red("❌ Error moving %s: %v", oldPath, err)
 			}
 		}
 	}
 
 	if err := os.Remove(logPath); err != nil {
-		color.Yellow("Warning: couldn't remove log file: %v", err)
+		color.Yellow("⚠️  Warning: couldn't remove log file: %v", err)
 	}
 
 	return nil
@@ -184,7 +198,7 @@ func processDirectory(path string, info os.FileInfo, err error) error {
 		// If the file doesn't exist, it might have been moved by a previous operation
 		if os.IsNotExist(err) {
 			if verbose {
-				color.Yellow("Skipping non-existent path (likely moved): %s", path)
+				color.Yellow("⏩ Skipping non-existent path (likely moved): %s", path)
 			}
 			return nil
 		}
@@ -196,13 +210,13 @@ func processDirectory(path string, info os.FileInfo, err error) error {
 		if _, err := os.Stat(metadataPath); err == nil {
 			summary.MetadataFound = append(summary.MetadataFound, metadataPath)
 			if err := organizeAudiobook(path, metadataPath); err != nil {
-				color.Red("Error organizing %s: %v", path, err)
+				color.Red("❌ Error organizing %s: %v", path, err)
 			}
 			// Skip processing subdirectories of organized books
 			return filepath.SkipDir
 		} else if verbose {
 			summary.MetadataMissing = append(summary.MetadataMissing, path)
-			color.Yellow("No metadata.json found in %s", path)
+			color.Yellow("⚠️  No metadata.json found in %s", path)
 		}
 	}
 	return nil
@@ -216,17 +230,19 @@ func processPath(s string) string {
 }
 
 func promptForConfirmation(metadata Metadata, sourcePath, targetPath string) bool {
-	color.Yellow("\nBook found:")
+	color.Yellow("\n📖 Book found:")
 	color.White("  Title: %s", metadata.Title)
 	color.White("  Authors: %s", strings.Join(metadata.Authors, ", "))
 	if len(metadata.Series) > 0 {
-		color.White("  Series: %s", metadata.Series[0])
+		cleanedSeries := cleanSeriesName(metadata.Series[0])
+		color.White("  Series: %s", cleanedSeries)
 	}
-	color.Cyan("\nProposed move:")
+
+	color.Cyan("\n📝 Proposed move:")
 	color.White("  From: %s", sourcePath)
 	color.White("  To: %s", targetPath)
 
-	fmt.Print("\nProceed with move? [y/N] ")
+	fmt.Print("\n❓ Proceed with move? [y/N] ")
 	var response string
 	fmt.Scanln(&response)
 	return strings.ToLower(response) == "y"
@@ -252,7 +268,8 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 		color.White("  Authors: %v", metadata.Authors)
 		color.White("  Title: %s", metadata.Title)
 		if len(metadata.Series) > 0 {
-			color.White("  Series: %v", metadata.Series)
+			cleanedSeries := cleanSeriesName(metadata.Series[0])
+			color.White("  Series: %s (%s)", metadata.Series[0], cleanedSeries)
 		}
 	}
 
@@ -267,8 +284,8 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 
 	var targetPath string
 	if len(metadata.Series) > 0 {
-		seriesName := cleanSeriesName(metadata.Series[0])
-		seriesDir := processPath(seriesName)
+		cleanedSeries := cleanSeriesName(metadata.Series[0])
+		seriesDir := processPath(cleanedSeries)
 		targetPath = filepath.Join(targetBase, authorDir, seriesDir, titleDir)
 	} else {
 		targetPath = filepath.Join(targetBase, authorDir, titleDir)
@@ -281,7 +298,7 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 	// If the book is already in the correct location, skip it
 	if cleanSourcePath == cleanTargetPath {
 		if verbose {
-			color.Green("✓ Book already in correct location: %s", cleanSourcePath)
+			color.Green("✅ Book already in correct location: %s", cleanSourcePath)
 		}
 		return nil
 	}
@@ -308,7 +325,7 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 
 	if prompt && !dryRun {
 		if !promptForConfirmation(metadata, sourcePath, targetPath) {
-			color.Yellow("Skipping %s", metadata.Title)
+			color.Yellow("⏩ Skipping %s", metadata.Title)
 			return nil
 		}
 	}
@@ -324,12 +341,12 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 			if !dryRun {
 				prefix = ""
 			}
-			color.Blue("%sMoving %s to %s", prefix, sourceName, targetName)
+			color.Blue("📦 %sMoving %s to %s", prefix, sourceName, targetName)
 		}
 
 		if !dryRun {
 			if err := os.Rename(sourceName, targetName); err != nil {
-				color.Red("Error moving %s: %v", sourceName, err)
+				color.Red("❌ Error moving %s: %v", sourceName, err)
 			}
 		}
 	}
@@ -345,15 +362,16 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 
 	return nil
 }
+
 func printSummary(startTime time.Time) {
 	duration := time.Since(startTime)
 
 	fmt.Println("\n📊 Summary Report")
-	color.White("Duration: %v", duration.Round(time.Millisecond))
+	color.White("⏱️  Duration: %v", duration.Round(time.Millisecond))
 
-	color.Green("\nMetadata files found: %d", len(summary.MetadataFound))
+	color.Green("\n📚 Metadata files found: %d", len(summary.MetadataFound))
 	if len(summary.MetadataFound) > 0 {
-		fmt.Println("\nValid Audiobooks Found:")
+		fmt.Println("\n📖 Valid Audiobooks Found:")
 		for _, path := range summary.MetadataFound {
 			data, err := os.ReadFile(path)
 			if err != nil {
@@ -366,14 +384,15 @@ func printSummary(startTime time.Time) {
 			if len(metadata.Authors) > 0 && metadata.Title != "" {
 				color.Green("  📚 %s by %s", metadata.Title, strings.Join(metadata.Authors, ", "))
 				if len(metadata.Series) > 0 {
-					color.Green("     Series: %s", metadata.Series[0])
+					cleanedSeries := cleanSeriesName(metadata.Series[0])
+					color.Green("     📖 Series: %s", cleanedSeries)
 				}
 			}
 		}
 	}
 
 	if len(summary.MetadataMissing) > 0 {
-		color.Yellow("\nDirectories without metadata: %d", len(summary.MetadataMissing))
+		color.Yellow("\n⚠️  Directories without metadata: %d", len(summary.MetadataMissing))
 		if verbose {
 			for _, path := range summary.MetadataMissing {
 				fmt.Printf("  - %s\n", path)
@@ -381,12 +400,14 @@ func printSummary(startTime time.Time) {
 		}
 	}
 
-	color.Cyan("\nMoves planned/executed: %d", len(summary.Moves))
+	color.Cyan("\n🔄 Moves planned/executed: %d", len(summary.Moves))
 	for _, move := range summary.Moves {
 		fmt.Printf("  From: %s\n  To: %s\n\n", move.From, move.To)
 	}
 
 	if dryRun {
-		color.Yellow("\nThis was a dry run - no files were actually moved")
+		color.Yellow("\n🔍 This was a dry run - no files were actually moved")
+	} else {
+		color.Green("\n✅ Organization complete!")
 	}
 }
