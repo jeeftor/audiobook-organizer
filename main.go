@@ -17,6 +17,13 @@ type Metadata struct {
 	Title   string   `json:"title"`
 }
 
+type LogEntry struct {
+	Timestamp time.Time `json:"timestamp"`
+	SourcePath string `json:"source_path"`
+	TargetPath string `json:"target_path"`
+	Files []string `json:"files"`
+}
+
 type Summary struct {
 	MetadataFound   []string
 	MetadataMissing []string
@@ -33,8 +40,12 @@ var (
 	replaceSpace string
 	verbose      bool
 	dryRun       bool
+	undo         bool
 	summary      Summary
+	logEntries   []LogEntry
 )
+
+const logFileName = ".abs-org.log"
 
 func main() {
 	rootCmd := &cobra.Command{
@@ -47,6 +58,7 @@ func main() {
 	rootCmd.Flags().StringVar(&replaceSpace, "replace_space", ".", "Character to replace spaces")
 	rootCmd.Flags().BoolVar(&verbose, "verbose", false, "Verbose output")
 	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would happen without making changes")
+	rootCmd.Flags().BoolVar(&undo, "undo", false, "Restore files to their original locations")
 	rootCmd.MarkFlagRequired("dir")
 
 	if err := rootCmd.Execute(); err != nil {
@@ -56,15 +68,75 @@ func main() {
 }
 
 func organize(cmd *cobra.Command, args []string) {
+	if undo {
+		if err := undoMoves(); err != nil {
+			color.Red("Error undoing moves: %v", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	startTime := time.Now()
-	
 	err := filepath.Walk(baseDir, processDirectory)
 	if err != nil {
 		color.Red("Error walking directory: %v", err)
 		os.Exit(1)
 	}
 
+	if !dryRun && len(logEntries) > 0 {
+		if err := saveLog(); err != nil {
+			color.Red("Error saving log: %v", err)
+		}
+	}
+
 	printSummary(startTime)
+}
+
+func saveLog() error {
+	logPath := filepath.Join(baseDir, logFileName)
+	data, err := json.MarshalIndent(logEntries, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(logPath, data, 0644)
+}
+
+func undoMoves() error {
+	logPath := filepath.Join(baseDir, logFileName)
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		return fmt.Errorf("no log file found at %s", logPath)
+	}
+
+	var entries []LogEntry
+	if err := json.Unmarshal(data, &entries); err != nil {
+		return fmt.Errorf("error parsing log: %v", err)
+	}
+
+	for _, entry := range entries {
+		color.Yellow("Restoring files from %s to %s", entry.TargetPath, entry.SourcePath)
+		if err := os.MkdirAll(entry.SourcePath, 0755); err != nil {
+			color.Red("Error creating source directory: %v", err)
+			continue
+		}
+
+		for _, file := range entry.Files {
+			oldPath := filepath.Join(entry.TargetPath, file)
+			newPath := filepath.Join(entry.SourcePath, file)
+			if verbose {
+				color.Blue("Moving %s to %s", oldPath, newPath)
+			}
+			if err := os.Rename(oldPath, newPath); err != nil {
+				color.Red("Error moving %s: %v", oldPath, err)
+			}
+		}
+	}
+
+	if err := os.Remove(logPath); err != nil {
+		color.Yellow("Warning: couldn't remove log file: %v", err)
+	}
+
+	return nil
 }
 
 func processDirectory(path string, info os.FileInfo, err error) error {
@@ -134,7 +206,9 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 		To:   targetPath,
 	})
 
+	var fileNames []string
 	for _, entry := range entries {
+		fileNames = append(fileNames, entry.Name())
 		sourceName := filepath.Join(sourcePath, entry.Name())
 		targetName := filepath.Join(targetPath, entry.Name())
 
@@ -153,6 +227,15 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 		}
 	}
 
+	if !dryRun {
+		logEntries = append(logEntries, LogEntry{
+			Timestamp:  time.Now(),
+			SourcePath: sourcePath,
+			TargetPath: targetPath,
+			Files:     fileNames,
+		})
+	}
+
 	return nil
 }
 
@@ -163,9 +246,20 @@ func printSummary(startTime time.Time) {
 	color.White("Duration: %v", duration.Round(time.Millisecond))
 	
 	color.Green("\nMetadata files found: %d", len(summary.MetadataFound))
-	if verbose {
+	if len(summary.MetadataFound) > 0 {
+		fmt.Println("\nValid Audiobooks Found:")
 		for _, path := range summary.MetadataFound {
-			fmt.Printf("  - %s\n", path)
+			data, err := os.ReadFile(path)
+			if err != nil {
+				continue
+			}
+			var metadata Metadata
+			if err := json.Unmarshal(data, &metadata); err != nil {
+				continue
+			}
+			if len(metadata.Authors) > 0 && metadata.Title != "" {
+				color.Green("  📚 %s by %s", metadata.Title, strings.Join(metadata.Authors, ", "))
+			}
 		}
 	}
 
