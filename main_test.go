@@ -18,47 +18,55 @@ func TestOrganizer(t *testing.T) {
 			name: "single_author",
 			metadata: Metadata{
 				Authors: []string{"John Smith"},
-				Title:  "Test Book",
+				Title:   "Test Book",
 			},
-			replaceSpace: ".",
-			wantDir:     "John.Smith/Test.Book",
+			replaceSpace: "",
+			wantDir:      "John Smith/Test Book",
 		},
 		{
 			name: "multiple_authors",
 			metadata: Metadata{
 				Authors: []string{"John Smith", "Jane Doe"},
-				Title:  "Test Book",
+				Title:   "Test Book",
 			},
-			replaceSpace: ".",
-			wantDir:     "John.Smith,Jane.Doe/Test.Book",
+			replaceSpace: "",
+			wantDir:      "John Smith,Jane Doe/Test Book",
 		},
 		{
-			name: "custom_space_replacement",
+			name: "with_series",
 			metadata: Metadata{
 				Authors: []string{"John Smith"},
-				Title:  "Test Book",
+				Title:   "Test Book",
+				Series:  []string{"Test Series #1"},
 			},
-			replaceSpace: "_",
-			wantDir:     "John_Smith/Test_Book",
+			replaceSpace: "",
+			wantDir:      "John Smith/Test Series #1/Test Book",
+		},
+		{
+			name: "with_series_and_space_replacement",
+			metadata: Metadata{
+				Authors: []string{"John Smith"},
+				Title:   "Test Book",
+				Series:  []string{"Test Series #1"},
+			},
+			replaceSpace: ".",
+			wantDir:      "John.Smith/Test.Series.#1/Test.Book",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create temp test directory
 			tempDir, err := os.MkdirTemp("", "audiobook-test-*")
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer os.RemoveAll(tempDir)
 
-			// Create source directory with metadata
 			sourceDir := filepath.Join(tempDir, "source")
 			if err := os.MkdirAll(sourceDir, 0755); err != nil {
 				t.Fatal(err)
 			}
 
-			// Create metadata file
 			metadataBytes, err := json.Marshal(tt.metadata)
 			if err != nil {
 				t.Fatal(err)
@@ -67,13 +75,11 @@ func TestOrganizer(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// Create test file
 			testFile := filepath.Join(sourceDir, "test.mp3")
 			if err := os.WriteFile(testFile, []byte("test data"), 0644); err != nil {
 				t.Fatal(err)
 			}
 
-			// Run organizer
 			baseDir = tempDir
 			replaceSpace = tt.replaceSpace
 			dryRun = false
@@ -83,7 +89,6 @@ func TestOrganizer(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// Check if files were moved correctly
 			wantPath := filepath.Join(tempDir, tt.wantDir)
 			if _, err := os.Stat(wantPath); os.IsNotExist(err) {
 				t.Errorf("directory %s was not created", wantPath)
@@ -131,13 +136,13 @@ func testInvalidMetadata(t *testing.T, tempDir string, metadata Metadata) error 
 	if err != nil {
 		t.Fatal(err)
 	}
-	
+
 	metadataPath := filepath.Join(sourceDir, "metadata.json")
 	if err := os.WriteFile(metadataPath, metadataBytes, 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	baseDir = tempDir
-	replaceSpace = "."
+	replaceSpace = ""
 	return organizeAudiobook(sourceDir, metadataPath)
 }

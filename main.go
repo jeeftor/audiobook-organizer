@@ -15,13 +15,14 @@ import (
 type Metadata struct {
 	Authors []string `json:"authors"`
 	Title   string   `json:"title"`
+	Series  []string `json:"series"`
 }
 
 type LogEntry struct {
-	Timestamp time.Time `json:"timestamp"`
-	SourcePath string `json:"source_path"`
-	TargetPath string `json:"target_path"`
-	Files []string `json:"files"`
+	Timestamp  time.Time `json:"timestamp"`
+	SourcePath string    `json:"source_path"`
+	TargetPath string    `json:"target_path"`
+	Files      []string  `json:"files"`
 }
 
 type Summary struct {
@@ -55,7 +56,7 @@ func main() {
 	}
 
 	rootCmd.Flags().StringVar(&baseDir, "dir", "", "Base directory to scan")
-	rootCmd.Flags().StringVar(&replaceSpace, "replace_space", ".", "Character to replace spaces")
+	rootCmd.Flags().StringVar(&replaceSpace, "replace_space", "", "Character to replace spaces")
 	rootCmd.Flags().BoolVar(&verbose, "verbose", false, "Verbose output")
 	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would happen without making changes")
 	rootCmd.Flags().BoolVar(&undo, "undo", false, "Restore files to their original locations")
@@ -159,6 +160,13 @@ func processDirectory(path string, info os.FileInfo, err error) error {
 	return nil
 }
 
+func processPath(s string) string {
+	if replaceSpace != "" {
+		return strings.ReplaceAll(s, " ", replaceSpace)
+	}
+	return s
+}
+
 func organizeAudiobook(sourcePath, metadataPath string) error {
 	data, err := os.ReadFile(metadataPath)
 	if err != nil {
@@ -178,13 +186,21 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 		color.Green("📚 Metadata detected in %s:", metadataPath)
 		color.White("  Authors: %v", metadata.Authors)
 		color.White("  Title: %s", metadata.Title)
+		if len(metadata.Series) > 0 {
+			color.White("  Series: %v", metadata.Series)
+		}
 	}
 
-	authorDir := strings.Join(metadata.Authors, ",")
-	authorDir = strings.ReplaceAll(authorDir, " ", replaceSpace)
-	titleDir := strings.ReplaceAll(metadata.Title, " ", replaceSpace)
+	authorDir := processPath(strings.Join(metadata.Authors, ","))
+	titleDir := processPath(metadata.Title)
 
-	targetPath := filepath.Join(baseDir, authorDir, titleDir)
+	var targetPath string
+	if len(metadata.Series) > 0 {
+		seriesDir := processPath(metadata.Series[0])
+		targetPath = filepath.Join(baseDir, authorDir, seriesDir, titleDir)
+	} else {
+		targetPath = filepath.Join(baseDir, authorDir, titleDir)
+	}
 
 	if verbose {
 		color.Cyan("🔄 Moving contents from %s to %s", sourcePath, targetPath)
@@ -232,7 +248,7 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 			Timestamp:  time.Now(),
 			SourcePath: sourcePath,
 			TargetPath: targetPath,
-			Files:     fileNames,
+			Files:      fileNames,
 		})
 	}
 
@@ -241,10 +257,10 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 
 func printSummary(startTime time.Time) {
 	duration := time.Since(startTime)
-	
+
 	fmt.Println("\n📊 Summary Report")
 	color.White("Duration: %v", duration.Round(time.Millisecond))
-	
+
 	color.Green("\nMetadata files found: %d", len(summary.MetadataFound))
 	if len(summary.MetadataFound) > 0 {
 		fmt.Println("\nValid Audiobooks Found:")
@@ -259,6 +275,9 @@ func printSummary(startTime time.Time) {
 			}
 			if len(metadata.Authors) > 0 && metadata.Title != "" {
 				color.Green("  📚 %s by %s", metadata.Title, strings.Join(metadata.Authors, ", "))
+				if len(metadata.Series) > 0 {
+					color.Green("     Series: %s", metadata.Series[0])
+				}
 			}
 		}
 	}
