@@ -113,7 +113,13 @@ func organize(cmd *cobra.Command, args []string) {
 
 	printSummary(startTime)
 }
-
+func cleanSeriesName(series string) string {
+	// Find the last occurrence of " #" and remove everything after it
+	if idx := strings.LastIndex(series, " #"); idx != -1 {
+		return strings.TrimSpace(series[:idx])
+	}
+	return series
+}
 func saveLog() error {
 	// Use output directory for log if specified, otherwise use base directory
 	logBase := baseDir
@@ -261,7 +267,8 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 
 	var targetPath string
 	if len(metadata.Series) > 0 {
-		seriesDir := processPath(metadata.Series[0])
+		seriesName := cleanSeriesName(metadata.Series[0])
+		seriesDir := processPath(seriesName)
 		targetPath = filepath.Join(targetBase, authorDir, seriesDir, titleDir)
 	} else {
 		targetPath = filepath.Join(targetBase, authorDir, titleDir)
@@ -338,7 +345,6 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 
 	return nil
 }
-
 func printSummary(startTime time.Time) {
 	duration := time.Since(startTime)
 

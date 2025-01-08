@@ -37,10 +37,10 @@ func TestOrganizer(t *testing.T) {
 			metadata: Metadata{
 				Authors: []string{"John Smith"},
 				Title:   "Test Book",
-				Series:  []string{"Test Series #1"},
+				Series:  []string{"Test Series #12"},
 			},
 			replaceSpace: "",
-			wantDir:      "John Smith/Test Series #1/Test Book",
+			wantDir:      "John Smith/Test Series/Test Book",
 		},
 		{
 			name: "with_series_and_space_replacement",
@@ -50,17 +50,17 @@ func TestOrganizer(t *testing.T) {
 				Series:  []string{"Test Series #1"},
 			},
 			replaceSpace: ".",
-			wantDir:      "John.Smith/Test.Series.#1/Test.Book",
+			wantDir:      "John.Smith/Test.Series/Test.Book",
 		},
 		{
 			name: "directory_with_spaces",
 			metadata: Metadata{
 				Authors: []string{"John Smith Jr"},
 				Title:   "My Book Title",
-				Series:  []string{"My Series Name #1"},
+				Series:  []string{"My Series Name #3"},
 			},
 			replaceSpace: "",
-			wantDir:      "John Smith Jr/My Series Name #1/My Book Title",
+			wantDir:      "John Smith Jr/My Series Name/My Book Title",
 		},
 	}
 
