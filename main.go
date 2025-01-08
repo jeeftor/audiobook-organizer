@@ -47,7 +47,7 @@ var (
 	logEntries   []LogEntry
 )
 
-const logFileName = ".abs-org.log"
+const logFileName = ".abook-org.log"
 
 func main() {
 	rootCmd := &cobra.Command{

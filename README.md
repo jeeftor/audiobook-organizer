@@ -16,8 +16,20 @@ CLI tool to organize audiobooks based on metadata.json files.
 
 ## Installation
 
+### Go Install
 ```bash
 go install github.com/yourusername/audiobook-organizer@latest
+```
+
+### Docker
+```bash
+docker pull jeffsui/audiobook-organizer:latest
+
+# Run with current directory as base
+docker run -v $(pwd):/books jeffsui/audiobook-organizer --dir=/books
+
+# Run with prompt mode
+docker run -it -v $(pwd):/books jeffsui/audiobook-organizer --dir=/books --prompt
 ```
 
 ## Usage
@@ -87,4 +99,4 @@ With space replacement (--replace_space="."):
 
 ## Recovery
 
-Operations are logged to `.abs-org.log`. Use `--undo` to restore files to their original locations.
+Operations are logged to `.abook-org.log`. Use `--undo` to restore files to their original locations.

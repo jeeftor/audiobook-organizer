@@ -1,4 +1,4 @@
-module abs-organizer
+module audiobook-organizer
 
 go 1.22.4
 
