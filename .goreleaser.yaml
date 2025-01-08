@@ -47,3 +47,7 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+
+
+release:
+  draft: false
