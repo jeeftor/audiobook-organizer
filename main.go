@@ -38,6 +38,7 @@ type MoveSummary struct {
 
 var (
 	baseDir      string
+	outputDir    string
 	replaceSpace string
 	verbose      bool
 	dryRun       bool
@@ -57,6 +58,7 @@ func main() {
 	}
 
 	rootCmd.Flags().StringVar(&baseDir, "dir", "", "Base directory to scan")
+	rootCmd.Flags().StringVar(&outputDir, "out", "", "Output directory (if different from base directory)")
 	rootCmd.Flags().StringVar(&replaceSpace, "replace_space", "", "Character to replace spaces")
 	rootCmd.Flags().BoolVar(&verbose, "verbose", false, "Verbose output")
 	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would happen without making changes")
@@ -96,7 +98,12 @@ func organize(cmd *cobra.Command, args []string) {
 }
 
 func saveLog() error {
-	logPath := filepath.Join(baseDir, logFileName)
+	// Use output directory for log if specified, otherwise use base directory
+	logBase := baseDir
+	if outputDir != "" {
+		logBase = outputDir
+	}
+	logPath := filepath.Join(logBase, logFileName)
 	data, err := json.MarshalIndent(logEntries, "", "  ")
 	if err != nil {
 		return err
@@ -105,7 +112,13 @@ func saveLog() error {
 }
 
 func undoMoves() error {
-	logPath := filepath.Join(baseDir, logFileName)
+	// Use output directory for log if specified, otherwise use base directory
+	logBase := baseDir
+	if outputDir != "" {
+		logBase = outputDir
+	}
+	logPath := filepath.Join(logBase, logFileName)
+
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		return fmt.Errorf("no log file found at %s", logPath)
@@ -213,12 +226,18 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 	authorDir := processPath(strings.Join(metadata.Authors, ","))
 	titleDir := processPath(metadata.Title)
 
+	// Determine which directory to use as base for output
+	targetBase := baseDir
+	if outputDir != "" {
+		targetBase = outputDir
+	}
+
 	var targetPath string
 	if len(metadata.Series) > 0 {
 		seriesDir := processPath(metadata.Series[0])
-		targetPath = filepath.Join(baseDir, authorDir, seriesDir, titleDir)
+		targetPath = filepath.Join(targetBase, authorDir, seriesDir, titleDir)
 	} else {
-		targetPath = filepath.Join(baseDir, authorDir, titleDir)
+		targetPath = filepath.Join(targetBase, authorDir, titleDir)
 	}
 
 	if verbose {

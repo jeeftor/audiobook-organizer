@@ -1,97 +1,61 @@
-# Audiobook Organizer
+# Audiobook Organizer Docker Image
 
-CLI tool to organize audiobooks based on metadata.json files.
+Docker container for organizing audiobooks based on metadata.json files. This container provides a CLI tool that organizes your audiobooks into a structured directory format.
 
-## Features
+## Quick Start
 
-- Organizes audiobooks by author/series/title structure
-- Handles multiple authors
-- Preserves spaces by default
-- Optional space replacement with custom character
-- Dry-run mode to preview changes
-- Interactive prompt mode for reviewing moves
-- Undo functionality
-- Colored output
-- Operation logs for recovery
-
-## Installation
-
-### Go Install
 ```bash
-go install github.com/yourusername/audiobook-organizer@latest
+docker run -v /path/to/your/audiobooks:/books jeffsui/audiobook-organizer --dir=/books
 ```
 
-### Docker
+## Volume Mounting
+
+The container requires access to your audiobook files through a mounted volume:
+
 ```bash
-docker pull jeffsui/audiobook-organizer:latest
-
-docker pull jeffsui/audiobook-organizer:latest
-
-# Volume Mounting
-When running the Docker container, you need to mount your audiobook directory to make it accessible to the container. The container will process and organize books within this mounted directory.
-
-Examples:
-
-# Mount and process current directory
+# Basic usage with current directory
 docker run -v $(pwd):/books jeffsui/audiobook-organizer --dir=/books
 
-# Mount a specific audiobook directory
-docker run -v /path/to/your/audiobooks:/books jeffsui/audiobook-organizer --dir=/books
+# Mount specific directory
+docker run -v /path/to/audiobooks:/books jeffsui/audiobook-organizer --dir=/books
 
-# Mount with prompt mode (interactive)
-docker run -it -v /path/to/your/audiobooks:/books jeffsui/audiobook-organizer --dir=/books --prompt
-
-# Mount read-only source directory and separate output directory
-docker run \
--v /path/to/source/audiobooks:/source:ro \
--v /path/to/output/audiobooks:/output \
-jeffsui/audiobook-organizer --dir=/output
+# Interactive mode with prompt
+docker run -it -v /path/to/audiobooks:/books jeffsui/audiobook-organizer --dir=/books --prompt
 ```
 
-Notes:
-- The container path (/books in examples) must match the --dir parameter
-- Use `-it` flag when running with `--prompt` for interactive mode
-- Add `:ro` to source volume mount for read-only access if desired
-- Multiple directories can be mounted for source/destination separation
+## Container Parameters
 
+- `-v`: Mount your audiobook directory
+- `-it`: Required for interactive mode (when using --prompt)
 
+## CLI Options
 
-
-## Usage
-
-Basic organization:
-```bash
-audiobook-organizer --dir=/path/to/audiobooks
-```
-
-Options:
-- `--dir`: Base directory (required)
-- `--replace_space`: Character to replace spaces (optional)
+- `--dir`: Source directory to scan (required, must match mounted volume path)
+- `--out`: Output directory for organized files (optional, defaults to --dir)
+- `--replace_space`: Character to replace spaces in filenames
 - `--dry-run`: Preview changes without moving files
 - `--verbose`: Show detailed progress
-- `--undo`: Restore files to original locations
-- `--prompt`: Review and confirm each book move interactively
+- `--prompt`: Interactive mode to confirm moves
+- `--undo`: Restore previous organization
 
-### Interactive Mode
+## Directory Structure
 
-Using the `--prompt` flag will show each book's details and proposed move location:
+The organizer creates the following structure:
 
 ```
-Book found:
-  Title: The Book Title
-  Authors: Author One, Author Two
-  Series: Amazing Series #1
-
-Proposed move:
-  From: /original/path/book
-  To: /audiobooks/Author One,Author Two/Amazing Series #1/The Book Title
-
-Proceed with move? [y/N]
+/books/
+  ├── Author Name/
+  │   ├── Series Name #1/
+  │   │   └── Book Title/
+  │   └── Standalone Book/
+  └── Multiple Authors/
+      └── Collaboration Book/
 ```
 
 ## Metadata Format
 
-Expects metadata.json files with structure:
+Requires metadata.json files in book directories:
+
 ```json
 {
   "authors": ["Author Name"],
@@ -100,28 +64,28 @@ Expects metadata.json files with structure:
 }
 ```
 
-## Directory Structure
+## Security Notes
 
-Without series:
-```
-/audiobooks/Author Name/Book Title/
-```
+- The container runs with minimal privileges
+- Use `:ro` mount flag for read-only access to source directories
+- Consider using separate source and destination mounts for added safety
 
-With series:
-```
-/audiobooks/Author Name/Series Name #1/Book Title/
-```
+## Examples
 
-With multiple authors:
-```
-/audiobooks/Author One,Author Two/Book Title/
-```
-
-With space replacement (--replace_space="."):
-```
-/audiobooks/Author.Name/Series.Name.#1/Book.Title/
+Read-only source with separate output:
+```bash
+docker run \
+  -v /source/audiobooks:/source:ro \
+  -v /output/audiobooks:/output \
+  jeffsui/audiobook-organizer --dir=/output
 ```
 
-## Recovery
+Dry run to preview changes:
+```bash
+docker run -v /path/to/audiobooks:/books \
+  jeffsui/audiobook-organizer --dir=/books --dry-run
+```
 
-Operations are logged to `.abook-org.log`. Use `--undo` to restore files to their original locations.
+## Support
+
+For issues and feature requests, please visit the [GitHub repository](https://github.com/yourusername/audiobook-organizer).
