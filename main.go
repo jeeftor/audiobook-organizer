@@ -267,6 +267,18 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 		targetPath = filepath.Join(targetBase, authorDir, titleDir)
 	}
 
+	// Clean both paths to ensure consistent comparison
+	cleanSourcePath := filepath.Clean(sourcePath)
+	cleanTargetPath := filepath.Clean(targetPath)
+
+	// If the book is already in the correct location, skip it
+	if cleanSourcePath == cleanTargetPath {
+		if verbose {
+			color.Green("✓ Book already in correct location: %s", cleanSourcePath)
+		}
+		return nil
+	}
+
 	if verbose {
 		color.Cyan("🔄 Moving contents from %s to %s", sourcePath, targetPath)
 	}
