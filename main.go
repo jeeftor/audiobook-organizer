@@ -36,6 +36,13 @@ type MoveSummary struct {
 	To   string
 }
 
+// Define colors for consistent use
+var (
+	titleColor  = color.New(color.FgCyan)
+	authorColor = color.New(color.FgYellow)
+	seriesColor = color.New(color.FgMagenta)
+)
+
 var (
 	baseDir      string
 	outputDir    string
@@ -229,18 +236,41 @@ func processPath(s string) string {
 	return s
 }
 
+func colorizePathComponents(path string, metadata Metadata) string {
+	parts := strings.Split(path, string(os.PathSeparator))
+	for i, part := range parts {
+		// Color the title
+		if part == metadata.Title {
+			parts[i] = titleColor.Sprint(part)
+			continue
+		}
+		// Color the authors
+		if strings.Contains(part, strings.Join(metadata.Authors, ",")) {
+			parts[i] = authorColor.Sprint(part)
+			continue
+		}
+		// Color the series if it exists
+		if len(metadata.Series) > 0 && strings.Contains(part, cleanSeriesName(metadata.Series[0])) {
+			parts[i] = seriesColor.Sprint(part)
+		}
+	}
+	return strings.Join(parts, string(os.PathSeparator))
+}
+
 func promptForConfirmation(metadata Metadata, sourcePath, targetPath string) bool {
-	color.Yellow("\n📖 Book found:")
-	color.White("  Title: %s", metadata.Title)
-	color.White("  Authors: %s", strings.Join(metadata.Authors, ", "))
+	fmt.Println("\n📖 Book found:")
+	fmt.Print("  Title: ")
+	titleColor.Printf("%s\n", metadata.Title)
+	fmt.Print("  Authors: ")
+	authorColor.Printf("%s\n", strings.Join(metadata.Authors, ", "))
 	if len(metadata.Series) > 0 {
-		cleanedSeries := cleanSeriesName(metadata.Series[0])
-		color.White("  Series: %s", cleanedSeries)
+		fmt.Print("  Series: ")
+		seriesColor.Printf("%s\n", cleanSeriesName(metadata.Series[0]))
 	}
 
-	color.Cyan("\n📝 Proposed move:")
-	color.White("  From: %s", sourcePath)
-	color.White("  To: %s", targetPath)
+	color.Blue("\n📝 Proposed move:")
+	fmt.Printf("  From: %s\n", sourcePath)
+	fmt.Printf("  To: %s\n", colorizePathComponents(targetPath, metadata))
 
 	fmt.Print("\n❓ Proceed with move? [y/N] ")
 	var response string
@@ -264,12 +294,14 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 	}
 
 	if verbose {
-		color.Green("📚 Metadata detected in %s:", metadataPath)
-		color.White("  Authors: %v", metadata.Authors)
-		color.White("  Title: %s", metadata.Title)
+		fmt.Println("\n📚 Metadata detected:")
+		fmt.Print("  Title: ")
+		titleColor.Printf("%s\n", metadata.Title)
+		fmt.Print("  Authors: ")
+		authorColor.Printf("%s\n", strings.Join(metadata.Authors, ", "))
 		if len(metadata.Series) > 0 {
-			cleanedSeries := cleanSeriesName(metadata.Series[0])
-			color.White("  Series: %s (%s)", metadata.Series[0], cleanedSeries)
+			fmt.Print("  Series: ")
+			seriesColor.Printf("%s\n", cleanSeriesName(metadata.Series[0]))
 		}
 	}
 
@@ -284,8 +316,8 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 
 	var targetPath string
 	if len(metadata.Series) > 0 {
-		cleanedSeries := cleanSeriesName(metadata.Series[0])
-		seriesDir := processPath(cleanedSeries)
+		seriesName := cleanSeriesName(metadata.Series[0])
+		seriesDir := processPath(seriesName)
 		targetPath = filepath.Join(targetBase, authorDir, seriesDir, titleDir)
 	} else {
 		targetPath = filepath.Join(targetBase, authorDir, titleDir)
@@ -298,13 +330,16 @@ func organizeAudiobook(sourcePath, metadataPath string) error {
 	// If the book is already in the correct location, skip it
 	if cleanSourcePath == cleanTargetPath {
 		if verbose {
-			color.Green("✅ Book already in correct location: %s", cleanSourcePath)
+			color.Green("✅ Book already in correct location: %s",
+				colorizePathComponents(cleanSourcePath, metadata))
 		}
 		return nil
 	}
 
 	if verbose {
-		color.Cyan("🔄 Moving contents from %s to %s", sourcePath, targetPath)
+		color.Blue("🔄 Moving contents:")
+		fmt.Printf("  From: %s\n", sourcePath)
+		fmt.Printf("  To: %s\n", colorizePathComponents(targetPath, metadata))
 	}
 
 	if !dryRun {
@@ -382,32 +417,6 @@ func printSummary(startTime time.Time) {
 				continue
 			}
 			if len(metadata.Authors) > 0 && metadata.Title != "" {
-				color.Green("  📚 %s by %s", metadata.Title, strings.Join(metadata.Authors, ", "))
-				if len(metadata.Series) > 0 {
-					cleanedSeries := cleanSeriesName(metadata.Series[0])
-					color.Green("     📖 Series: %s", cleanedSeries)
-				}
-			}
-		}
-	}
-
-	if len(summary.MetadataMissing) > 0 {
-		color.Yellow("\n⚠️  Directories without metadata: %d", len(summary.MetadataMissing))
-		if verbose {
-			for _, path := range summary.MetadataMissing {
-				fmt.Printf("  - %s\n", path)
-			}
-		}
-	}
-
-	color.Cyan("\n🔄 Moves planned/executed: %d", len(summary.Moves))
-	for _, move := range summary.Moves {
-		fmt.Printf("  From: %s\n  To: %s\n\n", move.From, move.To)
-	}
-
-	if dryRun {
-		color.Yellow("\n🔍 This was a dry run - no files were actually moved")
-	} else {
-		color.Green("\n✅ Organization complete!")
-	}
-}
+				fmt.Print("  📚 ")
+				titleColor.Printf("%s", metadata.Title)
+				fmt.Print
