@@ -1,61 +1,127 @@
-# Audiobook Organizer Docker Image
+# Audiobook Organizer
 
-Docker container for organizing audiobooks based on metadata.json files. This container provides a CLI tool that organizes your audiobooks into a structured directory format.
+CLI tool to organize audiobooks based on metadata.json files.
 
-## Quick Start
+## Features
 
+- Organizes audiobooks by author/series/title structure
+- Handles multiple authors
+- Preserves spaces by default
+- Optional space replacement with custom character
+- Dry-run mode to preview changes
+- Interactive prompt mode for reviewing moves
+- Undo functionality
+- Colored output
+- Operation logs for recovery
+- Separate input/output directory support
+
+## Installation
+
+### Go Install
 ```bash
-docker run -v /path/to/your/audiobooks:/books jeffsui/audiobook-organizer --dir=/books
+go install github.com/yourusername/audiobook-organizer@latest
 ```
 
-## Volume Mounting
-
-The container requires access to your audiobook files through a mounted volume:
-
+### Docker
 ```bash
-# Basic usage with current directory
-docker run -v $(pwd):/books jeffsui/audiobook-organizer --dir=/books
-
-# Mount specific directory
-docker run -v /path/to/audiobooks:/books jeffsui/audiobook-organizer --dir=/books
-
-# Interactive mode with prompt
-docker run -it -v /path/to/audiobooks:/books jeffsui/audiobook-organizer --dir=/books --prompt
+docker pull jeffsui/audiobook-organizer:latest
 ```
 
-## Container Parameters
+## Usage
 
-- `-v`: Mount your audiobook directory
-- `-it`: Required for interactive mode (when using --prompt)
+Basic organization:
+```bash
+# Organize in place
+audiobook-organizer --dir=/path/to/audiobooks
 
-## CLI Options
+# Organize to separate output directory
+audiobook-organizer --dir=/path/to/source/audiobooks --out=/path/to/organized/audiobooks
+```
 
-- `--dir`: Source directory to scan (required, must match mounted volume path)
-- `--out`: Output directory for organized files (optional, defaults to --dir)
-- `--replace_space`: Character to replace spaces in filenames
+Options:
+- `--dir`: Base directory to scan (required)
+- `--out`: Output directory for organized files (optional, defaults to --dir if not specified)
+- `--replace_space`: Character to replace spaces (optional)
 - `--dry-run`: Preview changes without moving files
 - `--verbose`: Show detailed progress
-- `--prompt`: Interactive mode to confirm moves
-- `--undo`: Restore previous organization
+- `--undo`: Restore files to original locations
+- `--prompt`: Review and confirm each book move interactively
 
-## Directory Structure
+### Docker Usage Examples
 
-The organizer creates the following structure:
+Basic usage with single directory:
+```bash
+# Process current directory
+docker run -v $(pwd):/books \
+  jeffsui/audiobook-organizer --dir=/books
+
+# Process specific directory
+docker run -v /path/to/audiobooks:/books \
+  jeffsui/audiobook-organizer --dir=/books
+```
+
+Separate input and output directories:
+```bash
+# Mount source and destination directories
+docker run \
+  -v /path/to/source:/input:ro \
+  -v /path/to/destination:/output \
+  jeffsui/audiobook-organizer --dir=/input --out=/output
+
+# Use current directory as source, output to specific directory
+docker run \
+  -v $(pwd):/input:ro \
+  -v /path/to/organized:/output \
+  jeffsui/audiobook-organizer --dir=/input --out=/output
+```
+
+Interactive mode with input/output:
+```bash
+# Interactive prompt mode with separate directories
+docker run -it \
+  -v /path/to/source:/input:ro \
+  -v /path/to/destination:/output \
+  jeffsui/audiobook-organizer --dir=/input --out=/output --prompt
+```
+
+Dry run with verbose output:
+```bash
+# Preview changes without moving files
+docker run \
+  -v /path/to/source:/input:ro \
+  -v /path/to/destination:/output \
+  jeffsui/audiobook-organizer --dir=/input --out=/output --dry-run --verbose
+```
+
+### Docker Volume Mounting Notes
+
+- Use `:ro` for read-only access to source directories
+- The container paths must match the `--dir` and `--out` parameters
+- Use `-it` flag when running with `--prompt` for interactive mode
+- Multiple directories can be mounted for source/destination separation
+- Source and destination can be the same directory if desired
+- Log files will be written to the output directory
+
+### Interactive Mode
+
+Using the `--prompt` flag will show each book's details and proposed move location:
 
 ```
-/books/
-  ├── Author Name/
-  │   ├── Series Name #1/
-  │   │   └── Book Title/
-  │   └── Standalone Book/
-  └── Multiple Authors/
-      └── Collaboration Book/
+Book found:
+  Title: The Book Title
+  Authors: Author One, Author Two
+  Series: Amazing Series #1
+
+Proposed move:
+  From: /input/original/path/book
+  To: /output/Author One,Author Two/Amazing Series #1/The Book Title
+
+Proceed with move? [y/N]
 ```
 
 ## Metadata Format
 
-Requires metadata.json files in book directories:
-
+Expects metadata.json files with structure:
 ```json
 {
   "authors": ["Author Name"],
@@ -64,28 +130,36 @@ Requires metadata.json files in book directories:
 }
 ```
 
-## Security Notes
+## Directory Structure
 
-- The container runs with minimal privileges
-- Use `:ro` mount flag for read-only access to source directories
-- Consider using separate source and destination mounts for added safety
+Without series:
+```
+/output/Author Name/Book Title/
+```
 
-## Examples
+With series:
+```
+/output/Author Name/Series Name #1/Book Title/
+```
 
-Read-only source with separate output:
+With multiple authors:
+```
+/output/Author One,Author Two/Book Title/
+```
+
+With space replacement (--replace_space="."):
+```
+/output/Author.Name/Series.Name.#1/Book.Title/
+```
+
+## Recovery
+
+Operations are logged to `.abook-org.log` in the output directory. Use `--undo` to restore files to their original locations:
+
 ```bash
+# Undo with same input/output configuration
 docker run \
-  -v /source/audiobooks:/source:ro \
-  -v /output/audiobooks:/output \
-  jeffsui/audiobook-organizer --dir=/output
+  -v /path/to/source:/input \
+  -v /path/to/destination:/output \
+  jeffsui/audiobook-organizer --dir=/input --out=/output --undo
 ```
-
-Dry run to preview changes:
-```bash
-docker run -v /path/to/audiobooks:/books \
-  jeffsui/audiobook-organizer --dir=/books --dry-run
-```
-
-## Support
-
-For issues and feature requests, please visit the [GitHub repository](https://github.com/yourusername/audiobook-organizer).
