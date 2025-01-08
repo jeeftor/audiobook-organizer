@@ -182,3 +182,70 @@ docker run \
 ```
 
 
+## FileFlows Docker Mod
+
+If you want to include this in FileFlows you can add the following docker-mod script:
+
+```bash
+#!/bin/bash
+
+# Function to handle errors
+function handle_error {
+    echo "An error occurred. Exiting..."
+    exit 1
+}
+
+# Check if the --uninstall option is provided
+if [ "$1" == "--uninstall" ]; then
+    echo "Uninstalling audiobook-organizer..."
+    if apt-get remove -y audiobook-organizer; then
+        # Clean up repository files
+        rm -f /usr/local/share/keyrings/audiobook-organizer.gpg
+        rm -f /etc/apt/sources.list.d/audiobook-organizer.list
+        apt-get update
+        echo "audiobook-organizer successfully uninstalled."
+        exit 0
+    else
+        handle_error
+    fi
+fi
+
+# Check if audiobook-organizer is already installed
+if command -v audiobook-organizer &>/dev/null; then
+    echo "audiobook-organizer is already installed."
+    exit 0
+fi
+
+echo "audiobook-organizer is not installed. Installing..."
+
+# Install required dependencies
+apt-get update
+apt-get install -y curl gpg
+
+# Create keyrings directory if it doesn't exist
+mkdir -p /usr/local/share/keyrings
+
+# Add the repository GPG key
+if ! curl -fsSL https://github.com/jeeftor/audiobook-organizer/raw/main/key.gpg | gpg --dearmor -o /usr/local/share/keyrings/audiobook-organizer.gpg; then
+    handle_error
+fi
+
+# Add repository
+if ! echo "deb [signed-by=/usr/local/share/keyrings/audiobook-organizer.gpg] https://github.com/yourusername/audiobook-organizer/releases/latest/download/ /" > /etc/apt/sources.list.d/audiobook-organizer.list; then
+    handle_error
+fi
+
+# Update package lists and install audiobook-organizer
+if ! apt-get update || ! apt-get install -y audiobook-organizer; then
+    handle_error
+fi
+
+# Verify installation
+if command -v audiobook-organizer &>/dev/null; then
+    echo "audiobook-organizer successfully installed."
+    exit 0
+fi
+
+echo "Failed to install audiobook-organizer."
+exit 1
+```
