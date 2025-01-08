@@ -25,12 +25,37 @@ go install github.com/yourusername/audiobook-organizer@latest
 ```bash
 docker pull jeffsui/audiobook-organizer:latest
 
-# Run with current directory as base
+docker pull jeffsui/audiobook-organizer:latest
+
+# Volume Mounting
+When running the Docker container, you need to mount your audiobook directory to make it accessible to the container. The container will process and organize books within this mounted directory.
+
+Examples:
+
+# Mount and process current directory
 docker run -v $(pwd):/books jeffsui/audiobook-organizer --dir=/books
 
-# Run with prompt mode
-docker run -it -v $(pwd):/books jeffsui/audiobook-organizer --dir=/books --prompt
+# Mount a specific audiobook directory
+docker run -v /path/to/your/audiobooks:/books jeffsui/audiobook-organizer --dir=/books
+
+# Mount with prompt mode (interactive)
+docker run -it -v /path/to/your/audiobooks:/books jeffsui/audiobook-organizer --dir=/books --prompt
+
+# Mount read-only source directory and separate output directory
+docker run \
+-v /path/to/source/audiobooks:/source:ro \
+-v /path/to/output/audiobooks:/output \
+jeffsui/audiobook-organizer --dir=/output
 ```
+
+Notes:
+- The container path (/books in examples) must match the --dir parameter
+- Use `-it` flag when running with `--prompt` for interactive mode
+- Add `:ro` to source volume mount for read-only access if desired
+- Multiple directories can be mounted for source/destination separation
+
+
+
 
 ## Usage
 
