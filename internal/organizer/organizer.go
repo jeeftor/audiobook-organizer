@@ -179,16 +179,32 @@ func cleanSeriesName(series string) string {
 
 func (o *Organizer) promptForConfirmation(metadata Metadata, sourcePath, targetPath string) bool {
 	color.Yellow("\n📖 Book found:")
-	color.White("  Title: %s", metadata.Title)
-	color.White("  Authors: %s", strings.Join(metadata.Authors, ", "))
+
+	// Title
+	fmt.Printf("  ")
+	color.White("Title: ")
+	color.Cyan(metadata.Title)
+
+	// Authors
+	fmt.Printf("  ")
+	color.White("Authors: ")
+	color.Cyan(strings.Join(metadata.Authors, ", "))
+
+	// Series (if present)
 	if len(metadata.Series) > 0 {
 		cleanedSeries := cleanSeriesName(metadata.Series[0])
-		color.White("  Series: %s", cleanedSeries)
+		fmt.Printf("  ")
+		color.White("Series: ")
+		color.Cyan(cleanedSeries)
 	}
 
 	color.Cyan("\n📝 Proposed move:")
-	color.White("  From: %s", sourcePath)
-	color.White("  To: %s", targetPath)
+	fmt.Printf("  ")
+	color.White("From: ")
+	color.Yellow(sourcePath)
+	fmt.Printf("  ")
+	color.White("To: ")
+	color.Yellow(targetPath)
 
 	fmt.Print("\n❓ Proceed with move? [y/N] ")
 	var response string
