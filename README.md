@@ -20,17 +20,19 @@ CLI tool to organize audiobooks based on metadata.json files.
 ### Ubuntu/Debian
 
 ```bash
-# Add the repository GPG key
-curl -fsSL https://github.com/yourusername/audiobook-organizer/raw/main/key.gpg | sudo gpg --dearmor -o /usr/local/share/keyrings/audiobook-organizer.gpg
+# Install required dependencies
+sudo apt-get install -y jq curl wget
 
-# Add repository
-echo "deb [signed-by=/usr/local/share/keyrings/audiobook-organizer.gpg] https://github.com/yourusername/audiobook-organizer/releases/latest/download/ /" | sudo tee /etc/apt/sources.list.d/audiobook-organizer.list
+# Download and install the latest release
+LATEST_RELEASE=$(curl -s https://api.github.com/repos/jeeftor/audiobook-organizer/releases/latest | jq -r '(.assets[].browser_download_url | select(. | contains("_amd64.deb")))')
+wget "$LATEST_RELEASE" -O audiobook-organizer.deb
+sudo dpkg -i audiobook-organizer.deb
 
-# Update package list
-sudo apt update
+# Install any missing dependencies
+sudo apt-get install -f -y
 
-# Install the package
-sudo apt install audiobook-organizer
+# Clean up
+rm audiobook-organizer.debit
 ```
 
 ### Go Install
