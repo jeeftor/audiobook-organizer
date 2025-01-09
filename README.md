@@ -32,7 +32,7 @@ sudo dpkg -i audiobook-organizer.deb
 sudo apt-get install -f -y
 
 # Clean up
-rm audiobook-organizer.debit
+rm audiobook-organizer.deb
 ```
 
 ### Go Install
