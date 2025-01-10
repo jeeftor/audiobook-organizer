@@ -16,15 +16,15 @@ CLI tool to organize audiobooks based on `metadata.json` files.
 - Operation logs for recovery
 - Separate input/output directory support
 
-## Installation
 
-### Pre-requirements
+
+## Pre-requirements
 
 In order for this tool to operate you need to configure audiobookshelf to store `metadata.json` files in the same directories as your books. When this setting is toggled whenver metadata is generated a copy will be stored inside the directory - this is what will be used to rename the books.
 
 ![Settings - metadata.json](docs/store_metadata.jpg) 
 
-### Post-requirements
+## Post-requirements
 
 Because this software is not modifying the internal databse (due to time constraints) upon running the software you *may* end up with a good nubmer of **Missing** books as audiobookshelf. I believe the setting **Enable folder watcher for library** in your library config may inhibit this from happening - but - if it does occur you will see an error like this:
 
@@ -36,6 +36,11 @@ To resolve these issues simply click on the **Issues** button
 
 next use the **Remove All x Books** button to clean up the errors.
 
+
+
+## Installation
+
+*There are various ways to install this - I actually haven't tested the Docker install - but it should work :)*
 
 ### Ubuntu/Debian
 
