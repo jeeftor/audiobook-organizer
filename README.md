@@ -1,6 +1,7 @@
 # Audiobook Organizer
 
-CLI tool to organize audiobooks based on metadata.json files.
+CLI tool to organize audiobooks based on `metadata.json` files.
+
 
 ## Features
 
@@ -16,6 +17,12 @@ CLI tool to organize audiobooks based on metadata.json files.
 - Separate input/output directory support
 
 ## Installation
+
+### Pre-req's
+
+In order for this tool to operate you need to configure audiobookshelf to store `metadata.json` files in the same directories as your books. When this setting is toggled whenver metadata is generated a copy will be stored inside the directory - this is what will be used to rename the books.
+
+![Settings - metadata.json](docs/store_metadata.jpg) 
 
 ### Ubuntu/Debian
 
