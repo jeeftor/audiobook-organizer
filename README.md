@@ -18,11 +18,24 @@ CLI tool to organize audiobooks based on `metadata.json` files.
 
 ## Installation
 
-### Pre-req's
+### Pre-requirements
 
 In order for this tool to operate you need to configure audiobookshelf to store `metadata.json` files in the same directories as your books. When this setting is toggled whenver metadata is generated a copy will be stored inside the directory - this is what will be used to rename the books.
 
 ![Settings - metadata.json](docs/store_metadata.jpg) 
+
+### Post-requirements
+
+Because this software is not modifying the internal databse (due to time constraints) upon running the software you *may* end up with a good nubmer of **Missing** books as audiobookshelf. I believe the setting **Enable folder watcher for library** in your library config may inhibit this from happening - but - if it does occur you will see an error like this:
+
+![issue](docs/issues.jpg)
+
+To resolve these issues simply click on the **Issues** button
+
+![remove button](docs/remove_books.jpg) 
+
+next use the **Remove All x Books** button to clean up the errors.
+
 
 ### Ubuntu/Debian
 
@@ -148,6 +161,7 @@ Proceed with move? [y/N]
 ## Metadata Format
 
 Expects metadata.json files with structure:
+
 ```json
 {
   "authors": ["Author Name"],
@@ -159,21 +173,25 @@ Expects metadata.json files with structure:
 ## Directory Structure
 
 Without series:
+
 ```
 /output/Author Name/Book Title/
 ```
 
 With series:
+
 ```
 /output/Author Name/Series Name #1/Book Title/
 ```
 
 With multiple authors:
+
 ```
 /output/Author One,Author Two/Book Title/
 ```
 
 With space replacement (--replace_space="."):
+
 ```
 /output/Author.Name/Series.Name.#1/Book.Title/
 ```
@@ -190,7 +208,7 @@ docker run \
   jeffsui/audiobook-organizer --dir=/input --out=/output --undo
 ```
 
-
+<!--
 ## FileFlows Docker Mod
 
 If you want to include this in FileFlows you can add the following docker-mod script:
@@ -257,4 +275,4 @@ fi
 
 echo "Failed to install audiobook-organizer."
 exit 1
-```
+```-->
