@@ -1,4 +1,4 @@
-# Audiobook Organizer
+# Audiobook Organizer for AudiobookShelf
 
 CLI tool to organize audiobooks based on metadata.json files.
 
