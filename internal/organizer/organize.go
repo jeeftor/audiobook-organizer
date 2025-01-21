@@ -3,6 +3,7 @@ package organizer
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,6 +37,53 @@ func (o *Organizer) processDirectory(path string, info os.FileInfo, err error) e
 		}
 	}
 	return nil
+}
+
+// moveFile handles moving files between directories, even across devices
+func (o *Organizer) moveFile(sourcePath, destPath string) error {
+	// First attempt to rename (move) the file
+	err := os.Rename(sourcePath, destPath)
+	if err == nil {
+		return nil
+	}
+
+	// If cross-device error, fallback to copy and delete
+	if strings.Contains(err.Error(), "cross-device link") {
+		// Open source file
+		sourceFile, err := os.Open(sourcePath)
+		if err != nil {
+			return fmt.Errorf("failed to open source file: %v", err)
+		}
+		defer sourceFile.Close()
+
+		// Create destination file
+		destFile, err := os.Create(destPath)
+		if err != nil {
+			return fmt.Errorf("failed to create destination file: %v", err)
+		}
+		defer destFile.Close()
+
+		// Copy the contents
+		_, err = io.Copy(destFile, sourceFile)
+		if err != nil {
+			return fmt.Errorf("failed to copy file contents: %v", err)
+		}
+
+		// Close files before attempting removal
+		sourceFile.Close()
+		destFile.Close()
+
+		// Remove the source file
+		err = os.Remove(sourcePath)
+		if err != nil {
+			return fmt.Errorf("failed to remove source file: %v", err)
+		}
+
+		return nil
+	}
+
+	// If it's not a cross-device error, return the original error
+	return err
 }
 
 func (o *Organizer) OrganizeAudiobook(sourcePath, metadataPath string) error {
@@ -132,7 +180,7 @@ func (o *Organizer) OrganizeAudiobook(sourcePath, metadataPath string) error {
 		}
 
 		if !o.dryRun {
-			if err := os.Rename(sourceName, targetName); err != nil {
+			if err := o.moveFile(sourceName, targetName); err != nil {
 				color.Red("❌ Error moving %s: %v", sourceName, err)
 			}
 		}
