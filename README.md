@@ -1,5 +1,7 @@
 # Audiobook Organizer
 
+![docs/logo.png](docs/logo.png)
+
 CLI tool to organize audiobooks based on `metadata.json` files.
 
 
