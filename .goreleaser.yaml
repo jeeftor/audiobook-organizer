@@ -1,19 +1,9 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
-
-# The lines below are called `modelines`. See `:help modeline`
-# Feel free to remove those if you don't want/need to use them.
-# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
-# vim: set ts=2 sw=2 tw=0 fo=cnqoj
-
-version: 1
+version: 2.2
+project_name: audiobook-organizer
 
 before:
   hooks:
-    # You may remove this if you don't use go modules.
     - go mod tidy
-    # you may remove this if you don't need go generate
-    - go generate ./...
 
 builds:
   - env:
@@ -25,6 +15,10 @@ builds:
     goarch:
       - amd64
       - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+    binary: audiobook-organizer
+
 
 archives:
   - format: tar.gz
@@ -40,14 +34,18 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
+    files:
+      - README.md
+      - LICENSE*
+      - CHANGELOG*
 
 # Add this new section for .deb package generation
 nfpms:
   - vendor: jeffsui  # Replace with your name/organization
     homepage: https://github.com/jeffsui/audiobook-organizer
-    maintainer: Jeff Stein <jeffstein@gmail.com>  # Replace with your details
+    maintainer: Jeff Stein <jeffstein@gmail.com>
     description: CLI tool to organize audiobooks based on metadata.json files
-    license: MIT  # Adjust based on your license
+    license: MIT
     formats:
       - deb
     dependencies:
@@ -65,12 +63,53 @@ nfpms:
         dst: /usr/share/doc/audiobook-organizer/LICENSE
     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
+
+brews:
+  - name: audiobook-organizer
+    repository:
+      owner: jeeftor
+      name: homebrew-tap
+    directory: Formula
+    homepage: https://github.com/jeeftor/license-manager
+    description: License Manager Tool
+    license: MIT
+    test: |
+      system "#{bin}/audiobook-organizer --version"
+    install: |
+      bin.install "audiobook-organizer"
+
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+
 changelog:
   sort: asc
   filters:
     exclude:
-      - "^docs:"
-      - "^test:"
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - 'Merge pull request'
+      - 'Merge branch'
+
+
 
 release:
+  github:
+    owner: jeeftor
+    name: audiobook-organizer
   draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## Release Notes
+    For full details, see the [CHANGELOG.md](CHANGELOG.md).
+  footer: |
+    ## Thanks!
+    Thanks to all contributors who helped make this release possible.
+  name_template: "v{{ .Version }}"
