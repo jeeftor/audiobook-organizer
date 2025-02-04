@@ -9,6 +9,30 @@ import (
 	"github.com/fatih/color"
 )
 
+// PromptForDirectoryRemoval asks the user for confirmation before removing an empty directory
+func (o *Organizer) PromptForDirectoryRemoval(dir string, isParent bool) bool {
+	if isParent {
+		color.Yellow("\n📁 Parent directory is now empty:")
+	} else {
+		color.Yellow("\n📁 Empty directory found:")
+	}
+
+	color.White("  Path: ")
+	color.Yellow(dir)
+
+	fmt.Print("\n❓ Remove empty directory? [y/N] ")
+
+	reader := bufio.NewReader(os.Stdin)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		color.Red("Error reading response: %v", err)
+		return false
+	}
+
+	response = strings.TrimSpace(strings.ToLower(response))
+	return response == "y" || response == "yes"
+}
+
 // PromptForConfirmation asks the user for confirmation before moving files.
 // It displays the book metadata and the proposed move operation.
 // Returns true if the user confirms with 'y' or 'yes' (case insensitive),

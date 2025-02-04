@@ -54,6 +54,17 @@ func (o *Organizer) processDirectory(path string, info os.FileInfo, err error) e
 			if o.verbose {
 				color.Yellow("🗑️  Found empty directory during scan: %s", path)
 			}
+
+			// Prompt for removal if enabled
+			if o.prompt {
+				if !o.PromptForDirectoryRemoval(path, false) {
+					if o.verbose {
+						color.Yellow("⏩ Skipping removal of %s", path)
+					}
+					return nil
+				}
+			}
+
 			if !o.dryRun {
 				// Store the parent directory before removing current directory
 				parentDir := filepath.Dir(path)
@@ -119,6 +130,16 @@ func (o *Organizer) cleanEmptyParents(dir string, stopAt string) error {
 		return nil
 	}
 
+	// Prompt for removal of parent directory if enabled
+	if o.prompt {
+		if !o.PromptForDirectoryRemoval(dir, true) {
+			if o.verbose {
+				color.Yellow("⏩ Skipping removal of parent directory %s", dir)
+			}
+			return nil
+		}
+	}
+
 	if o.verbose {
 		color.Yellow("🗑️  Removing newly empty parent directory: %s", dir)
 	}
@@ -127,12 +148,14 @@ func (o *Organizer) cleanEmptyParents(dir string, stopAt string) error {
 	parentDir := filepath.Dir(dir)
 
 	// Remove the empty directory
-	if err := os.Remove(dir); err != nil {
-		return fmt.Errorf("failed to remove empty parent directory %s: %v", dir, err)
-	}
+	if !o.dryRun {
+		if err := os.Remove(dir); err != nil {
+			return fmt.Errorf("failed to remove empty parent directory %s: %v", dir, err)
+		}
 
-	// Add to summary
-	o.summary.EmptyDirsRemoved = append(o.summary.EmptyDirsRemoved, dir)
+		// Add to summary
+		o.summary.EmptyDirsRemoved = append(o.summary.EmptyDirsRemoved, dir)
+	}
 
 	// Recursively check the parent directory
 	return o.cleanEmptyParents(parentDir, stopAt)
