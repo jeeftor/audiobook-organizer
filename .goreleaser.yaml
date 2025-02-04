@@ -49,6 +49,8 @@ nfpms:
     license: MIT
     formats:
       - deb
+      - rpm
+      - apk
     dependencies:
       - git
     recommends:
@@ -63,7 +65,8 @@ nfpms:
       - src: ./LICENSE  # If you have a license file
         dst: /usr/share/doc/audiobook-organizer/LICENSE
     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-
+    rpm:
+      group: Applications/Utilities
 
 brews:
   - name: audiobook-organizer

@@ -62,6 +62,40 @@ sudo apt-get install -f -y
 rm audiobook-organizer.deb
 ```
 
+### Redhat
+
+```bash
+curl -s https://api.github.com/repos/jeeftor/audiobook-organizer/releases/latest | \
+grep "browser_download_url.*rpm" | \
+cut -d : -f 2,3 | \
+tr -d \" | \
+wget -qi -
+```
+
+
+### Alpine
+
+```bash
+# Download the latest .apk package
+curl -s https://api.github.com/repos/jeeftor/audiobook-organizer/releases/latest | \
+  grep "browser_download_url.*apk" | \
+  cut -d : -f 2,3 | \
+  tr -d \" | \
+  wget -qi -
+
+# Install the package
+sudo apk add --allow-untrusted ./audiobook-organizer_*.apk
+
+# Clean up
+rm audiobook-organizer_*.apk
+```
+
+# Install the package
+sudo rpm -i audiobook-organizer_*.rpm
+
+# Clean up
+rm audiobook-organizer_*.rpm
+
 ### Go Install
 
 ```bash
