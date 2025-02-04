@@ -309,6 +309,7 @@ You can create a YAML configuration file in either:
 - Or specify a custom location: `--config /path/to/config.yaml`
 
 Example configuration file:
+
 ```yaml
 # Input directory (use either dir/input)
 dir: "/path/to/audiobooks"
