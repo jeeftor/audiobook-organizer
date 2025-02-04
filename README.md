@@ -69,6 +69,7 @@ go install github.com/yourusername/audiobook-organizer@latest
 ```
 
 ### Docker
+
 ```bash
 docker pull jeffsui/audiobook-organizer:latest
 ```
@@ -76,7 +77,9 @@ docker pull jeffsui/audiobook-organizer:latest
 ## Usage
 
 Basic organization:
+
 ```bash
+
 # Organize in place
 audiobook-organizer --dir=/path/to/audiobooks
 
@@ -85,8 +88,11 @@ audiobook-organizer --dir=/path/to/source/audiobooks --out=/path/to/organized/au
 ```
 
 Options:
+
 - `--dir`: Base directory to scan (required)
+- `--input`: same as `--dir`
 - `--out`: Output directory for organized files (optional, defaults to --dir if not specified)
+- `--output`: same as `--out`
 - `--replace_space`: Character to replace spaces (optional)
 - `--dry-run`: Preview changes without moving files
 - `--verbose`: Show detailed progress
@@ -96,6 +102,7 @@ Options:
 ### Docker Usage Examples
 
 Basic usage with single directory:
+
 ```bash
 # Process current directory
 docker run -v $(pwd):/books \
@@ -107,6 +114,7 @@ docker run -v /path/to/audiobooks:/books \
 ```
 
 Separate input and output directories:
+
 ```bash
 # Mount source and destination directories
 docker run \
@@ -131,6 +139,7 @@ docker run -it \
 ```
 
 Dry run with verbose output:
+
 ```bash
 # Preview changes without moving files
 docker run \
@@ -283,3 +292,92 @@ fi
 echo "Failed to install audiobook-organizer."
 exit 1
 ```-->
+
+
+
+
+
+## Configuration
+
+The audiobook organizer supports multiple ways to configure its behavior:
+
+### Configuration File
+
+You can create a YAML configuration file in either:
+- Your home directory: `~/.audiobook-organizer.yaml`
+- The current directory: `.audiobook-organizer.yaml`
+- Or specify a custom location: `--config /path/to/config.yaml`
+
+Example configuration file:
+```yaml
+# Input directory (use either dir/input)
+dir: "/path/to/audiobooks"
+# or
+input: "/path/to/audiobooks"
+
+# Output directory (use either out/output)
+out: "/path/to/organized/audiobooks"
+# or
+output: "/path/to/organized/audiobooks"
+
+replace_space: "_"
+verbose: true
+dry-run: false
+prompt: true
+```
+
+### Environment Variables
+
+All options can be set using environment variables with either the prefix `AO_` or `AUDIOBOOK_ORGANIZER_`:
+
+```bash
+# Input directory (use any)
+export AO_DIR="/path/to/audiobooks"
+export AO_INPUT="/path/to/audiobooks"
+export AUDIOBOOK_ORGANIZER_DIR="/path/to/audiobooks"
+export AUDIOBOOK_ORGANIZER_INPUT="/path/to/audiobooks"
+
+# Output directory (use any)
+export AO_OUT="/path/to/output"
+export AO_OUTPUT="/path/to/output"
+export AUDIOBOOK_ORGANIZER_OUT="/path/to/output"
+export AUDIOBOOK_ORGANIZER_OUTPUT="/path/to/output"
+
+# Other settings (use either prefix)
+export AO_REPLACE_SPACE="_"
+export AO_VERBOSE=true
+# or
+export AUDIOBOOK_ORGANIZER_REPLACE_SPACE="_"
+export AUDIOBOOK_ORGANIZER_VERBOSE=true
+```
+
+### Command Line Flags
+
+Command line flags take precedence over configuration files and environment variables. The input and output directories can be specified using either of their respective aliases:
+
+```bash
+# Using --dir and --out
+audiobook-organizer \
+  --dir=/path/to/audiobooks \
+  --out=/path/to/output \
+  --replace_space=_ \
+  --verbose
+
+# Or using --input and --output
+audiobook-organizer \
+  --input=/path/to/audiobooks \
+  --output=/path/to/output \
+  --replace_space=_ \
+  --verbose
+```
+
+# Configuration Precedence
+
+The configuration values are loaded in the following order (later sources override earlier ones):
+
+1. Default values
+2. Configuration file (`~/.audiobook-organizer.yaml` or specified with `--config`)
+3. Environment variables
+4. Command line flags
+
+For the input and output directories, both aliases (`--dir`/`--input` and `--out`/`--output`) are treated equally, with the last specified value taking precedence.
