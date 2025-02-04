@@ -11,13 +11,14 @@ import (
 )
 
 var (
-	inputDir     string
-	outputDir    string
+	inputDir     string // Combined input from --dir and --input
+	outputDir    string // Combined output from --out and --output
 	replaceSpace string
 	verbose      bool
 	dryRun       bool
 	undo         bool
 	prompt       bool
+	removeEmpty  bool
 	cfgFile      string
 )
 
@@ -32,12 +33,15 @@ var envAliases = map[string][]string{
 	"dry-run":       {"AO_DRY_RUN", "AUDIOBOOK_ORGANIZER_DRY_RUN"},
 	"undo":          {"AO_UNDO", "AUDIOBOOK_ORGANIZER_UNDO"},
 	"prompt":        {"AO_PROMPT", "AUDIOBOOK_ORGANIZER_PROMPT"},
+	"remove-empty":  {"AO_REMOVE_EMPTY", "AUDIOBOOK_ORGANIZER_REMOVE_EMPTY"},
 }
 
 var rootCmd = &cobra.Command{
 	Use:   "audiobook-organizer",
 	Short: "Organize audiobooks based on metadata.json files",
 	PreRun: func(cmd *cobra.Command, args []string) {
+		// Store the original PreRun logic in a separate function
+		handleInputAliases(cmd)
 		// Handle input directory aliases
 		if cmd.Flags().Changed("input") {
 			viper.Set("dir", viper.GetString("input"))
@@ -73,6 +77,7 @@ var rootCmd = &cobra.Command{
 			viper.GetBool("dry-run"),
 			viper.GetBool("undo"),
 			viper.GetBool("prompt"),
+			viper.GetBool("remove-empty"),
 		)
 
 		if err := org.Execute(); err != nil {
@@ -101,6 +106,23 @@ func Execute() error {
 }
 
 // getEnvValue checks all possible environment variable names for a config key
+// handleInputAliases handles the aliasing between dir/input and out/output flags
+func handleInputAliases(cmd *cobra.Command) {
+	// Handle input directory aliases
+	if cmd.Flags().Changed("input") {
+		viper.Set("dir", viper.GetString("input"))
+	} else if cmd.Flags().Changed("dir") {
+		viper.Set("input", viper.GetString("dir"))
+	}
+
+	// Handle output directory aliases
+	if cmd.Flags().Changed("output") {
+		viper.Set("out", viper.GetString("output"))
+	} else if cmd.Flags().Changed("out") {
+		viper.Set("output", viper.GetString("out"))
+	}
+}
+
 func getEnvValue(key string) string {
 	if aliases, ok := envAliases[key]; ok {
 		for _, alias := range aliases {
@@ -128,6 +150,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would happen without making changes")
 	rootCmd.Flags().BoolVar(&undo, "undo", false, "Restore files to their original locations")
 	rootCmd.Flags().BoolVar(&prompt, "prompt", false, "Prompt for confirmation before moving each book")
+	rootCmd.Flags().BoolVar(&removeEmpty, "remove-empty", false, "Remove empty directories after moving files")
 
 	// Bind flags to viper
 	viper.BindPFlag("dir", rootCmd.Flags().Lookup("dir"))
@@ -139,6 +162,7 @@ func init() {
 	viper.BindPFlag("dry-run", rootCmd.Flags().Lookup("dry-run"))
 	viper.BindPFlag("undo", rootCmd.Flags().Lookup("undo"))
 	viper.BindPFlag("prompt", rootCmd.Flags().Lookup("prompt"))
+	viper.BindPFlag("remove-empty", rootCmd.Flags().Lookup("remove-empty"))
 
 	// Set up environment variable handling
 	viper.SetEnvPrefix("AUDIOBOOK_ORGANIZER") // This will still be used for unmapped variables
@@ -152,8 +176,19 @@ func init() {
 		}
 	}
 
-	// Mark either --dir or --input as required
-	rootCmd.MarkFlagRequired("dir")
+	// Custom validation instead of using MarkFlagRequired
+	rootCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		// First run the existing PreRun function
+		if cmd.PreRun != nil {
+			cmd.PreRun(cmd, args)
+		}
+
+		// Check if either dir or input flag is set
+		if !cmd.Flags().Changed("dir") && !cmd.Flags().Changed("input") {
+			return fmt.Errorf("either --dir or --input must be specified")
+		}
+		return nil
+	}
 }
 
 func initConfig() {
@@ -174,6 +209,9 @@ func initConfig() {
 		viper.SetConfigType("yaml")
 		viper.SetConfigName(".audiobook-organizer")
 	}
+
+	// Read in environment variables that match
+	viper.AutomaticEnv()
 
 	// If a config file is found, read it in
 	if err := viper.ReadInConfig(); err == nil {

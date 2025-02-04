@@ -98,6 +98,7 @@ Options:
 - `--verbose`: Show detailed progress
 - `--undo`: Restore files to original locations
 - `--prompt`: Review and confirm each book move interactively
+- `--remove-empty`: Remove empty directories after moving files and during initial scan
 
 ### Docker Usage Examples
 
@@ -325,6 +326,7 @@ replace_space: "_"
 verbose: true
 dry-run: false
 prompt: true
+remove-empty: true  # Remove empty directories
 ```
 
 ### Environment Variables
@@ -338,6 +340,7 @@ export AO_INPUT="/path/to/audiobooks"
 export AUDIOBOOK_ORGANIZER_DIR="/path/to/audiobooks"
 export AUDIOBOOK_ORGANIZER_INPUT="/path/to/audiobooks"
 
+
 # Output directory (use any)
 export AO_OUT="/path/to/output"
 export AO_OUTPUT="/path/to/output"
@@ -347,9 +350,12 @@ export AUDIOBOOK_ORGANIZER_OUTPUT="/path/to/output"
 # Other settings (use either prefix)
 export AO_REPLACE_SPACE="_"
 export AO_VERBOSE=true
+export AO_REMOVE_EMPTY=true
+
 # or
 export AUDIOBOOK_ORGANIZER_REPLACE_SPACE="_"
 export AUDIOBOOK_ORGANIZER_VERBOSE=true
+export AUDIOBOOK_ORGANIZER_REMOVE_EMPTY=true
 ```
 
 ### Command Line Flags

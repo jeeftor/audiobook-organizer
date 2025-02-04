@@ -23,20 +23,143 @@ func (o *Organizer) processDirectory(path string, info os.FileInfo, err error) e
 		return err
 	}
 
-	if info.IsDir() {
-		metadataPath := filepath.Join(path, "metadata.json")
-		if _, err := os.Stat(metadataPath); err == nil {
-			o.summary.MetadataFound = append(o.summary.MetadataFound, metadataPath)
-			if err := o.OrganizeAudiobook(path, metadataPath); err != nil {
-				color.Red("❌ Error organizing %s: %v", path, err)
+	if !info.IsDir() {
+		return nil
+	}
+
+	// Skip if this is the output directory
+	if o.outputDir != "" && path == o.outputDir {
+		return filepath.SkipDir
+	}
+
+	// Check for metadata.json
+	metadataPath := filepath.Join(path, "metadata.json")
+	if _, err := os.Stat(metadataPath); err == nil {
+		o.summary.MetadataFound = append(o.summary.MetadataFound, metadataPath)
+		if err := o.OrganizeAudiobook(path, metadataPath); err != nil {
+			color.Red("❌ Error organizing %s: %v", path, err)
+		}
+		return filepath.SkipDir
+	}
+
+	// Handle directories without metadata
+	if o.verbose {
+		o.summary.MetadataMissing = append(o.summary.MetadataMissing, path)
+		color.Yellow("⚠️  No metadata.json found in %s", path)
+	}
+
+	// Check if directory is empty and should be removed
+	if o.removeEmpty && path != o.baseDir {
+		if isEmptyDir(path) {
+			if o.verbose {
+				color.Yellow("🗑️  Found empty directory during scan: %s", path)
 			}
+			if !o.dryRun {
+				// Store the parent directory before removing current directory
+				parentDir := filepath.Dir(path)
+
+				if err := os.Remove(path); err != nil {
+					color.Red("❌ Error removing empty directory %s: %v", path, err)
+					return nil
+				}
+
+				// Add to summary
+				o.summary.EmptyDirsRemoved = append(o.summary.EmptyDirsRemoved, path)
+
+				// After removing the directory, check if parent is now empty,
+				// but don't go beyond the input directory
+				if parentDir != o.baseDir {
+					if err := o.cleanEmptyParents(parentDir, o.baseDir); err != nil {
+						color.Red("❌ Error cleaning parent directories: %v", err)
+					}
+				}
+			}
+
+			// Skip further processing of this directory since it's been removed
 			return filepath.SkipDir
-		} else if o.verbose {
-			o.summary.MetadataMissing = append(o.summary.MetadataMissing, path)
-			color.Yellow("⚠️  No metadata.json found in %s", path)
 		}
 	}
+
 	return nil
+}
+
+// cleanEmptyParents checks if a directory is empty and removes it if it is,
+// then recursively checks and removes empty parent directories up to but not including stopAt
+func (o *Organizer) cleanEmptyParents(dir string, stopAt string) error {
+	// Stop if we've reached the boundary directory
+	if dir == stopAt || (o.outputDir != "" && dir == o.outputDir) {
+		return nil
+	}
+
+	// Get absolute paths for more reliable comparison
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return err
+	}
+	absStopAt, err := filepath.Abs(stopAt)
+	if err != nil {
+		return err
+	}
+
+	// Extra safety check: make sure we don't go above the stop directory
+	if absDir == absStopAt || isSubPathOf(absStopAt, absDir) {
+		return nil
+	}
+
+	// Check if directory exists (it might have been removed by another operation)
+	_, err = os.Stat(dir)
+	if os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	// Check if directory is empty
+	if !isEmptyDir(dir) {
+		return nil
+	}
+
+	if o.verbose {
+		color.Yellow("🗑️  Removing newly empty parent directory: %s", dir)
+	}
+
+	// Store parent before removing current directory
+	parentDir := filepath.Dir(dir)
+
+	// Remove the empty directory
+	if err := os.Remove(dir); err != nil {
+		return fmt.Errorf("failed to remove empty parent directory %s: %v", dir, err)
+	}
+
+	// Add to summary
+	o.summary.EmptyDirsRemoved = append(o.summary.EmptyDirsRemoved, dir)
+
+	// Recursively check the parent directory
+	return o.cleanEmptyParents(parentDir, stopAt)
+}
+
+// isSubPathOf checks if child is a subdirectory of parent
+func isSubPathOf(parent, child string) bool {
+	parent = filepath.Clean(parent)
+	child = filepath.Clean(child)
+
+	// Split both paths into components
+	parentParts := strings.Split(parent, string(filepath.Separator))
+	childParts := strings.Split(child, string(filepath.Separator))
+
+	// Child path must be longer than parent path
+	if len(childParts) <= len(parentParts) {
+		return false
+	}
+
+	// Check if child starts with parent
+	for i := range parentParts {
+		if parentParts[i] != childParts[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 // moveFile handles moving files between directories, even across devices
@@ -197,6 +320,11 @@ func (o *Organizer) OrganizeAudiobook(sourcePath, metadataPath string) error {
 		// Save log after each successful move
 		if err := o.saveLog(); err != nil {
 			color.Yellow("⚠️  Warning: couldn't save log: %v", err)
+		}
+
+		// Check and remove empty source directory
+		if err := o.removeEmptyDirs(sourcePath); err != nil {
+			color.Yellow("⚠️  Warning: couldn't remove empty directory: %v", err)
 		}
 	}
 

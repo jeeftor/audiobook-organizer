@@ -16,9 +16,10 @@ type LogEntry struct {
 }
 
 type Summary struct {
-	MetadataFound   []string
-	MetadataMissing []string
-	Moves           []MoveSummary
+	MetadataFound    []string
+	MetadataMissing  []string
+	Moves            []MoveSummary
+	EmptyDirsRemoved []string
 }
 
 type MoveSummary struct {

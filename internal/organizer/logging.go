@@ -100,8 +100,18 @@ func (o *Organizer) printSummary(startTime time.Time) {
 		fmt.Printf("  From: %s\n  To: %s\n\n", move.From, move.To)
 	}
 
+	// Print information about removed empty directories
+	if o.removeEmpty && len(o.summary.EmptyDirsRemoved) > 0 {
+		color.Yellow("\n🗑️  Empty directories removed: %d", len(o.summary.EmptyDirsRemoved))
+		if o.verbose {
+			for _, path := range o.summary.EmptyDirsRemoved {
+				fmt.Printf("  - %s\n", path)
+			}
+		}
+	}
+
 	if o.dryRun {
-		color.Yellow("\n🔍 This was a dry run - no files were actually moved")
+		color.Yellow("\n🔍 This was a dry run - no files were actually moved or directories removed")
 	} else {
 		color.Green("\n✅ Organization complete!")
 	}
