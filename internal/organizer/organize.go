@@ -124,13 +124,14 @@ func (o *Organizer) processFlatDirectory(path string, info os.FileInfo) error {
 		return filepath.SkipDir
 	}
 
-	// Only process EPUB files in flat mode
-	if !strings.HasSuffix(strings.ToLower(path), ".epub") {
+	// Only process EPUB, MP3, and M4B files in flat mode
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext != ".epub" && ext != ".mp3" && ext != ".m4b" {
 		return nil
 	}
 
-	// Create a metadata provider for this specific EPUB file
-	provider := NewEPUBMetadataProvider(path)
+	// Create a metadata provider for this specific file (audio or epub)
+	provider := NewFileMetadataProvider(path)
 
 	// Try to get metadata - we don't need the actual metadata here,
 	// just checking if we can extract it successfully

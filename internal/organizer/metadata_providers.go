@@ -2,17 +2,18 @@
 package organizer
 
 import (
+	"archive/zip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
-	"strings"
-	"archive/zip"
-	"io"
 	"regexp"
+	"strings"
 
-	"github.com/meskio/epubgo"
+	"github.com/dhowden/tag"
 	"github.com/fatih/color"
+	"github.com/meskio/epubgo"
 )
 
 // JSONMetadataProvider extracts metadata from a JSON file
@@ -411,8 +412,8 @@ func extractSeriesFromTitle(title string) string {
 		if start < end {
 			potentialSeries := title[start+1 : end]
 			if strings.Contains(potentialSeries, "Book") ||
-			   strings.Contains(potentialSeries, "#") ||
-			   strings.Contains(potentialSeries, "Series") {
+				strings.Contains(potentialSeries, "#") ||
+				strings.Contains(potentialSeries, "Series") {
 				return potentialSeries
 			}
 		}
@@ -424,7 +425,7 @@ func extractSeriesFromTitle(title string) string {
 		for _, part := range parts {
 			trimmed := strings.TrimSpace(part)
 			if strings.HasPrefix(strings.ToLower(trimmed), "book") ||
-			   strings.Contains(trimmed, "#") {
+				strings.Contains(trimmed, "#") {
 				// This is likely a book number indicator, so the series is the part before this
 				return strings.TrimSpace(parts[0])
 			}
@@ -520,4 +521,58 @@ func SetVerboseMode(verbose bool) {
 // IsVerboseMode returns true if verbose mode is enabled
 func IsVerboseMode() bool {
 	return isVerboseMode
+}
+
+// AudioMetadataProvider extracts metadata from audio files (MP3, M4B, M4A)
+type AudioMetadataProvider struct {
+	path string
+}
+
+func NewAudioMetadataProvider(path string) *AudioMetadataProvider {
+	return &AudioMetadataProvider{path: path}
+}
+
+func (p *AudioMetadataProvider) GetMetadata() (Metadata, error) {
+	f, err := os.Open(p.path)
+	if err != nil {
+		return Metadata{}, fmt.Errorf("error opening audio file: %v", err)
+	}
+	defer f.Close()
+
+	// Use github.com/dhowden/tag for reading audio metadata
+	m, err := tag.ReadFrom(f)
+	if err != nil {
+		return Metadata{}, fmt.Errorf("error reading audio metadata: %v", err)
+	}
+
+	return Metadata{
+		Title:   m.Title(),
+		Authors: []string{m.Artist()},
+		Series:  []string{m.Album()},
+		// You can add more fields as needed
+	}, nil
+}
+
+// FileMetadataProvider auto-detects file type and delegates to the appropriate provider
+type FileMetadataProvider struct {
+	path string
+}
+
+func NewFileMetadataProvider(path string) *FileMetadataProvider {
+	return &FileMetadataProvider{path: path}
+}
+
+func (p *FileMetadataProvider) GetMetadata() (Metadata, error) {
+	ext := strings.ToLower(filepath.Ext(p.path))
+	switch ext {
+	case ".epub":
+		return NewEPUBMetadataProvider(p.path).GetMetadata()
+	case ".json":
+		return NewJSONMetadataProvider(p.path).GetMetadata()
+	case ".mp3", ".m4b", ".m4a":
+		return NewAudioMetadataProvider(p.path).GetMetadata()
+	// Add more formats as needed
+	default:
+		return Metadata{}, fmt.Errorf("unsupported file type: %s", ext)
+	}
 }

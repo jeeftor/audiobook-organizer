@@ -3,6 +3,7 @@ module audiobook-organizer
 go 1.22.4
 
 require (
+	github.com/dhowden/tag v0.0.0-20240417053706-3d75831295e8
 	github.com/fatih/color v1.18.0
 	github.com/meskio/epubgo v0.0.0-20160213181628-90dd5d78197f
 	github.com/spf13/cobra v1.8.1

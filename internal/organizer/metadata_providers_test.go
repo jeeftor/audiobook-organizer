@@ -5,11 +5,12 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"os"
 )
 
 func TestEPUBMetadataPathDetermination(t *testing.T) {
-	// Skip this test if testdata directory doesn't exist
-	testDataDir := filepath.Join("..", "..", "testdata")
+	// Skip this test if books directory doesn't exist
+	testDataDir := filepath.Join("..", "..", "books")
 
 	// Create a test organizer with dry-run mode
 	config := &OrganizerConfig{
@@ -23,7 +24,7 @@ func TestEPUBMetadataPathDetermination(t *testing.T) {
 	}
 	org := NewOrganizer(config)
 
-	// Test all EPUB files in the testdata directory
+	// Test all EPUB files in the books directory
 	tests := []struct {
 		filename      string
 		expectedPath  string
@@ -113,7 +114,7 @@ func TestEPUBMetadataPathDetermination(t *testing.T) {
 
 func TestExtractCalibreSeriesFromOPF(t *testing.T) {
 	// Test the direct OPF parsing function
-	testDataDir := filepath.Join("..", "..", "testdata")
+	testDataDir := filepath.Join("..", "..", "books")
 
 	tests := []struct {
 		filename      string
@@ -162,8 +163,8 @@ func TestEPUBMetadataWithProblematicFiles(t *testing.T) {
 	// This test processes EPUB files with problematic metadata
 	// and verifies that the paths are correctly sanitized
 
-	// Skip this test if testdata directory doesn't exist
-	testDataDir := filepath.Join("..", "..", "testdata")
+	// Skip this test if books directory doesn't exist
+	testDataDir := filepath.Join("..", "..", "books")
 
 	// Create a test organizer with various configurations to test sanitization
 	configs := []struct {
@@ -196,7 +197,7 @@ func TestEPUBMetadataWithProblematicFiles(t *testing.T) {
 
 			// Skip this test if no files are found
 			if len(files) == 0 {
-				t.Skip("No strange_book_*.epub files found in testdata directory")
+				t.Skip("No strange_book_*.epub files found in books directory")
 			}
 
 			t.Logf("Found %d problematic EPUB files to test", len(files))
@@ -232,12 +233,76 @@ func TestEPUBMetadataWithProblematicFiles(t *testing.T) {
 	}
 }
 
+func TestMP3MetadataWithProblematicFiles(t *testing.T) {
+	testDataDir := "../../testdata/mp3"
+
+	cwd, _ := os.Getwd()
+	t.Logf("Current working directory: %s", cwd)
+
+	dirEntries, err := os.ReadDir(testDataDir)
+	if err != nil {
+		t.Fatalf("Failed to read directory %s: %v", testDataDir, err)
+	}
+
+	var found bool
+	for _, entry := range dirEntries {
+		if entry.Type().IsRegular() && filepath.Ext(entry.Name()) == ".mp3" {
+			found = true
+			filename := entry.Name()
+			filePath := filepath.Join(testDataDir, filename)
+			t.Run(filename, func(t *testing.T) {
+				provider := NewFileMetadataProvider(filePath)
+				metadata, err := provider.GetMetadata()
+				if err != nil {
+					t.Fatalf("Failed to get metadata for %s: %v", filename, err)
+				}
+				t.Logf("File: %s\nMetadata: %+v", filename, metadata)
+			})
+		}
+	}
+	if !found {
+		t.Fatalf("No mp3 files found in %s (cwd: %s)", testDataDir, cwd)
+	}
+}
+
+func TestM4BMetadataWithProblematicFiles(t *testing.T) {
+	testDataDir := "../../testdata/m4b"
+
+	cwd, _ := os.Getwd()
+	t.Logf("Current working directory: %s", cwd)
+
+	dirEntries, err := os.ReadDir(testDataDir)
+	if err != nil {
+		t.Fatalf("Failed to read directory %s: %v", testDataDir, err)
+	}
+
+	var found bool
+	for _, entry := range dirEntries {
+		if entry.Type().IsRegular() && filepath.Ext(entry.Name()) == ".m4b" {
+			found = true
+			filename := entry.Name()
+			filePath := filepath.Join(testDataDir, filename)
+			t.Run(filename, func(t *testing.T) {
+				provider := NewFileMetadataProvider(filePath)
+				metadata, err := provider.GetMetadata()
+				if err != nil {
+					t.Fatalf("Failed to get metadata for %s: %v", filename, err)
+				}
+				t.Logf("File: %s\nMetadata: %+v", filename, metadata)
+			})
+		}
+	}
+	if !found {
+		t.Fatalf("No m4b files found in %s (cwd: %s)", testDataDir, cwd)
+	}
+}
+
 // verifyPathSanitization checks that a path doesn't contain invalid characters
 func verifyPathSanitization(t *testing.T, path string, replaceSpace string) {
-	// Extract the sanitized part of the path (after testdata/)
-	parts := strings.Split(path, "testdata/")
+	// Extract the sanitized part of the path (after books/)
+	parts := strings.Split(path, "books/")
 	if len(parts) < 2 {
-		t.Errorf("Path does not contain 'testdata/': %s", path)
+		t.Errorf("Path does not contain 'books/': %s", path)
 		return
 	}
 	sanitizedPath := parts[1]
