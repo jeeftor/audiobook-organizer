@@ -78,17 +78,21 @@ func TestOrganizer(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			org := New(
-				tempDir,
-				"", // no output dir
-				tt.replaceSpace,
-				false, // verbose
-				false, // dryRun
-				false, // undo
-				false, // prompt
-			)
+			config := &OrganizerConfig{
+				BaseDir:             tempDir,
+				OutputDir:           "",
+				ReplaceSpace:        tt.replaceSpace,
+				Verbose:             false,
+				DryRun:              false,
+				Undo:                false,
+				Prompt:              false,
+				RemoveEmpty:         false,
+				UseEmbeddedMetadata: false,
+			}
+			org := NewOrganizer(config)
 
-			if err := org.OrganizeAudiobook(sourceDir, filepath.Join(sourceDir, "metadata.json")); err != nil {
+			provider := NewJSONMetadataProvider(filepath.Join(sourceDir, "metadata.json"))
+			if err := org.OrganizeAudiobook(sourceDir, provider); err != nil {
 				t.Fatal(err)
 			}
 
@@ -141,17 +145,20 @@ func TestOutputDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	org := New(
-		sourceDir,
-		outputDir,
-		"",    // replaceSpace
-		false, // verbose
-		false, // dryRun
-		false, // undo
-		false, // prompt
-	)
+	config := &OrganizerConfig{
+		BaseDir:      sourceDir,
+		OutputDir:    outputDir,
+		ReplaceSpace: "",
+		Verbose:      false,
+		DryRun:       false,
+		Undo:         false,
+		Prompt:       false,
+		RemoveEmpty:  false,
+	}
+	org := NewOrganizer(config)
 
-	if err := org.OrganizeAudiobook(sourceDir, filepath.Join(sourceDir, "metadata.json")); err != nil {
+	provider := NewJSONMetadataProvider(filepath.Join(sourceDir, "metadata.json"))
+	if err := org.OrganizeAudiobook(sourceDir, provider); err != nil {
 		t.Fatal(err)
 	}
 

@@ -33,17 +33,23 @@ func TestLogFileCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	org := New(
-		tempDir,
-		"",    // outputDir
-		"",    // replaceSpace
-		false, // verbose
-		false, // dryRun
-		false, // undo
-		false, // prompt
-	)
+	config := &OrganizerConfig{
+		BaseDir:             tempDir,
+		OutputDir:           "",
+		ReplaceSpace:        "",
+		Verbose:             false,
+		DryRun:              false,
+		Undo:                false,
+		Prompt:              false,
+		RemoveEmpty:         false,
+		UseEmbeddedMetadata: false,
+	}
+	org := NewOrganizer(config)
 
-	if err := org.OrganizeAudiobook(sourceDir, filepath.Join(sourceDir, "metadata.json")); err != nil {
+	// Create the metadata provider
+	provider := NewJSONMetadataProvider(filepath.Join(sourceDir, "metadata.json"))
+
+	if err := org.OrganizeAudiobook(sourceDir, provider); err != nil {
 		t.Fatal(err)
 	}
 
@@ -80,7 +86,7 @@ func TestUndoMoves(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create test file and metadata
+	// Create test file and metadata using JSONMetadataProvider for new metadata handling
 	metadata := Metadata{
 		Authors: []string{"Test Author"},
 		Title:   "Test Book",
@@ -100,18 +106,23 @@ func TestUndoMoves(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// First, organize the files
-	org := New(
-		tempDir,
-		"",    // outputDir
-		"",    // replaceSpace
-		false, // verbose
-		false, // dryRun
-		false, // undo
-		false, // prompt
-	)
+	// Create an organizer using the new config struct and constructor
+	config := &OrganizerConfig{
+		BaseDir:             tempDir,
+		OutputDir:           "",
+		ReplaceSpace:        "",
+		Verbose:             false,
+		DryRun:              false,
+		Undo:                false,
+		Prompt:              false,
+		RemoveEmpty:         false,
+		UseEmbeddedMetadata: false,
+	}
+	org := NewOrganizer(config)
 
-	if err := org.OrganizeAudiobook(sourceDir, filepath.Join(sourceDir, "metadata.json")); err != nil {
+	provider := NewJSONMetadataProvider(filepath.Join(sourceDir, "metadata.json"))
+
+	if err := org.OrganizeAudiobook(sourceDir, provider); err != nil {
 		t.Fatal(err)
 	}
 
@@ -122,16 +133,18 @@ func TestUndoMoves(t *testing.T) {
 		t.Fatal("file was not moved to target location")
 	}
 
-	// Now undo the moves
-	undoOrg := New(
-		tempDir,
-		"",    // outputDir
-		"",    // replaceSpace
-		false, // verbose
-		false, // dryRun
-		true,  // undo
-		false, // prompt
-	)
+	// Now Undo the moves with a new organizer
+	undoConfig := &OrganizerConfig{
+		BaseDir:      tempDir,
+		OutputDir:    "",
+		ReplaceSpace: "",
+		Verbose:      false,
+		DryRun:       false,
+		Undo:         true,
+		Prompt:       false,
+		RemoveEmpty:  false,
+	}
+	undoOrg := NewOrganizer(undoConfig)
 
 	if err := undoOrg.Execute(); err != nil {
 		t.Fatal(err)
@@ -147,7 +160,7 @@ func TestUndoMoves(t *testing.T) {
 	if _, err := os.Stat(targetPath); !os.IsNotExist(err) {
 		entries, _ := os.ReadDir(targetPath)
 		if len(entries) > 0 {
-			t.Error("target directory still contains files after undo")
+			t.Error("target directory still contains files after Undo")
 		}
 	}
 
@@ -163,7 +176,7 @@ func TestUndoMoves(t *testing.T) {
 	// Verify log file was removed
 	logPath := filepath.Join(tempDir, LogFileName)
 	if _, err := os.Stat(logPath); !os.IsNotExist(err) {
-		t.Error("log file was not removed after undo")
+		t.Error("log file was not removed after Undo")
 	}
 }
 
@@ -197,17 +210,21 @@ func TestLogFileInOutputDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	org := New(
-		sourceDir,
-		outputDir,
-		"",    // replaceSpace
-		false, // verbose
-		false, // dryRun
-		false, // undo
-		false, // prompt
-	)
+	config := &OrganizerConfig{
+		BaseDir:      sourceDir,
+		OutputDir:    outputDir,
+		ReplaceSpace: "",
+		Verbose:      false,
+		DryRun:       false,
+		Undo:         false,
+		Prompt:       false,
+		RemoveEmpty:  false,
+	}
+	org := NewOrganizer(config)
 
-	if err := org.OrganizeAudiobook(sourceDir, filepath.Join(sourceDir, "metadata.json")); err != nil {
+	provider := NewJSONMetadataProvider(filepath.Join(sourceDir, "metadata.json"))
+
+	if err := org.OrganizeAudiobook(sourceDir, provider); err != nil {
 		t.Fatal(err)
 	}
 

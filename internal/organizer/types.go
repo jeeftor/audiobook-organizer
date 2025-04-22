@@ -26,3 +26,9 @@ type MoveSummary struct {
 	From string
 	To   string
 }
+
+// MetadataProvider represents a source of book metadata
+type MetadataProvider interface {
+	// GetMetadata returns book metadata or an error if metadata cannot be extracted
+	GetMetadata() (Metadata, error)
+}

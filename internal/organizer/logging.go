@@ -42,7 +42,7 @@ func (o *Organizer) undoMoves() error {
 		for _, file := range entry.Files {
 			oldPath := filepath.Join(entry.TargetPath, file)
 			newPath := filepath.Join(entry.SourcePath, file)
-			if o.verbose {
+			if o.config.Verbose {
 				color.Blue("📦 Moving %s to %s", oldPath, newPath)
 			}
 			if err := os.Rename(oldPath, newPath); err != nil {
@@ -88,7 +88,7 @@ func (o *Organizer) printSummary(startTime time.Time) {
 
 	if len(o.summary.MetadataMissing) > 0 {
 		color.Yellow("\n⚠️  Directories without metadata: %d", len(o.summary.MetadataMissing))
-		if o.verbose {
+		if o.config.Verbose {
 			for _, path := range o.summary.MetadataMissing {
 				fmt.Printf("  - %s\n", path)
 			}
@@ -101,16 +101,16 @@ func (o *Organizer) printSummary(startTime time.Time) {
 	}
 
 	// Print information about removed empty directories
-	if o.removeEmpty && len(o.summary.EmptyDirsRemoved) > 0 {
+	if o.config.RemoveEmpty && len(o.summary.EmptyDirsRemoved) > 0 {
 		color.Yellow("\n🗑️  Empty directories removed: %d", len(o.summary.EmptyDirsRemoved))
-		if o.verbose {
+		if o.config.Verbose {
 			for _, path := range o.summary.EmptyDirsRemoved {
 				fmt.Printf("  - %s\n", path)
 			}
 		}
 	}
 
-	if o.dryRun {
+	if o.config.DryRun {
 		color.Yellow("\n🔍 This was a dry run - no files were actually moved or directories removed")
 	} else {
 		color.Green("\n✅ Organization complete!")
