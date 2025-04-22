@@ -10,7 +10,7 @@ import (
 
 func TestEPUBMetadataPathDetermination(t *testing.T) {
 	// Skip this test if books directory doesn't exist
-	testDataDir := filepath.Join("..", "..", "books")
+	testDataDir := filepath.Join("..", "..", "testdata", "epub")
 
 	// Create a test organizer with dry-run mode
 	config := &OrganizerConfig{
@@ -114,7 +114,7 @@ func TestEPUBMetadataPathDetermination(t *testing.T) {
 
 func TestExtractCalibreSeriesFromOPF(t *testing.T) {
 	// Test the direct OPF parsing function
-	testDataDir := filepath.Join("..", "..", "books")
+	testDataDir := filepath.Join("..", "..", "testdata", "epub")
 
 	tests := []struct {
 		filename      string
@@ -164,7 +164,7 @@ func TestEPUBMetadataWithProblematicFiles(t *testing.T) {
 	// and verifies that the paths are correctly sanitized
 
 	// Skip this test if books directory doesn't exist
-	testDataDir := filepath.Join("..", "..", "books")
+	testDataDir := filepath.Join("..", "..", "testdata", "epub")
 
 	// Create a test organizer with various configurations to test sanitization
 	configs := []struct {
