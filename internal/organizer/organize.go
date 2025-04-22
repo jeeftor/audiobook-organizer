@@ -421,7 +421,7 @@ func (o *Organizer) calculateTargetPath(metadata Metadata) (string, error) {
 	}
 
 	var targetPath string
-	if len(metadata.Series) > 0 {
+	if len(metadata.Series) > 0 && metadata.Series[0] != "__INVALID_SERIES__" {
 		cleanedSeries := cleanSeriesName(metadata.Series[0])
 		seriesDir := o.SanitizePath(cleanedSeries)
 		targetPath = filepath.Join(targetBase, authorDir, seriesDir, titleDir)
