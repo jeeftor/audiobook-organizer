@@ -213,9 +213,13 @@ Proposed move:
 Proceed with move? [y/N]
 ```
 
-## Metadata Format
+## Metadata Sources
 
-Expects metadata.json files with structure:
+The tool can obtain metadata from two sources:
+
+### 1. metadata.json Files
+
+The tool primarily looks for `metadata.json` files in the same directory as your audiobook files. These files should have the following structure:
 
 ```json
 {
@@ -225,7 +229,15 @@ Expects metadata.json files with structure:
 }
 ```
 
-However, as of recent releases it can also look at files to see if they have embedded metadatas :)
+### 2. Embedded EPUB Metadata
+
+When using the `--use-embedded-metadata` flag (which is automatically enabled with `--flat`), the tool can extract metadata directly from EPUB files. This is useful when:
+
+- No metadata.json file exists
+- Processing a flat directory of EPUB files
+- Working with EPUBs that contain their own metadata
+
+The tool will extract author, title, and series information from the EPUB's internal metadata structure.
 
 ## Directory Structure
 
@@ -367,6 +379,7 @@ verbose: true
 dry-run: false
 prompt: true
 remove-empty: true  # Remove empty directories
+use-embedded-metadata: true # Use metadata embedded in EPUB files
 ```
 
 ### Environment Variables
@@ -391,11 +404,13 @@ export AUDIOBOOK_ORGANIZER_OUTPUT="/path/to/output"
 export AO_REPLACE_SPACE="_"
 export AO_VERBOSE=true
 export AO_REMOVE_EMPTY=true
+export AO_USE_EMBEDDED_METADATA=true
 
 # or
 export AUDIOBOOK_ORGANIZER_REPLACE_SPACE="_"
 export AUDIOBOOK_ORGANIZER_VERBOSE=true
 export AUDIOBOOK_ORGANIZER_REMOVE_EMPTY=true
+export AUDIOBOOK_ORGANIZER_USE_EMBEDDED_METADATA=true
 ```
 
 ### Command Line Flags
@@ -408,14 +423,16 @@ audiobook-organizer \
   --dir=/path/to/audiobooks \
   --out=/path/to/output \
   --replace_space=_ \
-  --verbose
+  --verbose \
+  --use-embedded-metadata
 
 # Or using --input and --output
 audiobook-organizer \
   --input=/path/to/audiobooks \
   --output=/path/to/output \
   --replace_space=_ \
-  --verbose
+  --verbose \
+  --use-embedded-metadata
 ```
 
 # Configuration Precedence
