@@ -4,7 +4,7 @@
 
 ![docs/logo.png](docs/logo.png)
 
-CLI tool to organize audiobooks based on `metadata.json` files or embedded metadata in EPUB files.
+CLI tool to organize audiobooks based on **EITHER** `metadata.json` files **OR** embedded metadata in `.epub`, `.mp3` and `.m4b` files.
 
 
 ## Features
@@ -224,6 +224,8 @@ Expects metadata.json files with structure:
   "series": ["Series Name #1"]
 }
 ```
+
+However, as of recent releases it can also look at files to see if they have embedded metadatas :)
 
 ## Directory Structure
 
