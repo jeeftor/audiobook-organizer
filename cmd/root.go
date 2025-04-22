@@ -11,29 +11,33 @@ import (
 )
 
 var (
-	inputDir     string // Combined input from --dir and --input
-	outputDir    string // Combined output from --out and --output
-	replaceSpace string
-	verbose      bool
-	dryRun       bool
-	undo         bool
-	prompt       bool
-	removeEmpty  bool
-	cfgFile      string
+	inputDir            string // Combined input from --dir and --input
+	outputDir           string // Combined output from --out and --output
+	replaceSpace        string
+	verbose             bool
+	dryRun              bool
+	undo                bool
+	prompt              bool
+	removeEmpty         bool
+	useEmbeddedMetadata bool
+	flat                bool
+	cfgFile             string
 )
 
 // envAliases maps config keys to their possible environment variable names
 var envAliases = map[string][]string{
-	"dir":           {"AO_DIR", "AO_INPUT", "AUDIOBOOK_ORGANIZER_DIR", "AUDIOBOOK_ORGANIZER_INPUT"},
-	"input":         {"AO_DIR", "AO_INPUT", "AUDIOBOOK_ORGANIZER_DIR", "AUDIOBOOK_ORGANIZER_INPUT"},
-	"out":           {"AO_OUT", "AO_OUTPUT", "AUDIOBOOK_ORGANIZER_OUT", "AUDIOBOOK_ORGANIZER_OUTPUT"},
-	"output":        {"AO_OUT", "AO_OUTPUT", "AUDIOBOOK_ORGANIZER_OUT", "AUDIOBOOK_ORGANIZER_OUTPUT"},
-	"replace_space": {"AO_REPLACE_SPACE", "AUDIOBOOK_ORGANIZER_REPLACE_SPACE"},
-	"verbose":       {"AO_VERBOSE", "AUDIOBOOK_ORGANIZER_VERBOSE"},
-	"dry-run":       {"AO_DRY_RUN", "AUDIOBOOK_ORGANIZER_DRY_RUN"},
-	"undo":          {"AO_UNDO", "AUDIOBOOK_ORGANIZER_UNDO"},
-	"prompt":        {"AO_PROMPT", "AUDIOBOOK_ORGANIZER_PROMPT"},
-	"remove-empty":  {"AO_REMOVE_EMPTY", "AUDIOBOOK_ORGANIZER_REMOVE_EMPTY"},
+	"dir":                   {"AO_DIR", "AO_INPUT", "AUDIOBOOK_ORGANIZER_DIR", "AUDIOBOOK_ORGANIZER_INPUT"},
+	"input":                 {"AO_DIR", "AO_INPUT", "AUDIOBOOK_ORGANIZER_DIR", "AUDIOBOOK_ORGANIZER_INPUT"},
+	"out":                   {"AO_OUT", "AO_OUTPUT", "AUDIOBOOK_ORGANIZER_OUT", "AUDIOBOOK_ORGANIZER_OUTPUT"},
+	"output":                {"AO_OUT", "AO_OUTPUT", "AUDIOBOOK_ORGANIZER_OUT", "AUDIOBOOK_ORGANIZER_OUTPUT"},
+	"replace_space":         {"AO_REPLACE_SPACE", "AUDIOBOOK_ORGANIZER_REPLACE_SPACE"},
+	"verbose":               {"AO_VERBOSE", "AUDIOBOOK_ORGANIZER_VERBOSE"},
+	"dry-run":               {"AO_DRY_RUN", "AUDIOBOOK_ORGANIZER_DRY_RUN"},
+	"undo":                  {"AO_UNDO", "AUDIOBOOK_ORGANIZER_UNDO"},
+	"prompt":                {"AO_PROMPT", "AUDIOBOOK_ORGANIZER_PROMPT"},
+	"remove-empty":          {"AO_REMOVE_EMPTY", "AUDIOBOOK_ORGANIZER_REMOVE_EMPTY"},
+	"use-embedded-metadata": {"AO_USE_EMBEDDED_METADATA", "AUDIOBOOK_ORGANIZER_USE_EMBEDDED_METADATA"},
+	"flat":                  {"AO_FLAT", "AUDIOBOOK_ORGANIZER_FLAT"},
 }
 
 var rootCmd = &cobra.Command{
@@ -55,6 +59,14 @@ var rootCmd = &cobra.Command{
 		} else if cmd.Flags().Changed("out") {
 			viper.Set("output", viper.GetString("out"))
 		}
+
+		// If flat mode is enabled, automatically enable embedded metadata
+		if viper.GetBool("flat") {
+			viper.Set("use-embedded-metadata", true)
+			if viper.GetBool("verbose") {
+				color.Cyan("ℹ️ Flat mode enabled: automatically using embedded metadata")
+			}
+		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get the final input directory (either from --dir or --input)
@@ -69,15 +81,19 @@ var rootCmd = &cobra.Command{
 			outputDir = viper.GetString("output")
 		}
 
-		org := organizer.New(
-			inputDir,
-			outputDir,
-			viper.GetString("replace_space"),
-			viper.GetBool("verbose"),
-			viper.GetBool("dry-run"),
-			viper.GetBool("undo"),
-			viper.GetBool("prompt"),
-			viper.GetBool("remove-empty"),
+		org := organizer.NewOrganizer(
+			&organizer.OrganizerConfig{
+				BaseDir:             inputDir,
+				OutputDir:           outputDir,
+				ReplaceSpace:        viper.GetString("replace_space"),
+				Verbose:             viper.GetBool("verbose"),
+				DryRun:              viper.GetBool("dry-run"),
+				Undo:                viper.GetBool("undo"),
+				Prompt:              viper.GetBool("prompt"),
+				RemoveEmpty:         viper.GetBool("remove-empty"),
+				UseEmbeddedMetadata: viper.GetBool("use-embedded-metadata"),
+				Flat:                viper.GetBool("flat"),
+			},
 		)
 
 		if err := org.Execute(); err != nil {
@@ -151,6 +167,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&undo, "undo", false, "Restore files to their original locations")
 	rootCmd.Flags().BoolVar(&prompt, "prompt", false, "Prompt for confirmation before moving each book")
 	rootCmd.Flags().BoolVar(&removeEmpty, "remove-empty", false, "Remove empty directories after moving files")
+	rootCmd.Flags().BoolVar(&useEmbeddedMetadata, "use-embedded-metadata", false, "Use metadata embedded in EPUB files if metadata.json is not found")
+	rootCmd.Flags().BoolVar(&flat, "flat", false, "Process files in a flat directory structure (automatically enables --use-embedded-metadata)")
 
 	// Bind flags to viper
 	viper.BindPFlag("dir", rootCmd.Flags().Lookup("dir"))
@@ -163,6 +181,8 @@ func init() {
 	viper.BindPFlag("undo", rootCmd.Flags().Lookup("undo"))
 	viper.BindPFlag("prompt", rootCmd.Flags().Lookup("prompt"))
 	viper.BindPFlag("remove-empty", rootCmd.Flags().Lookup("remove-empty"))
+	viper.BindPFlag("use-embedded-metadata", rootCmd.Flags().Lookup("use-embedded-metadata"))
+	viper.BindPFlag("flat", rootCmd.Flags().Lookup("flat"))
 
 	// Set up environment variable handling
 	viper.SetEnvPrefix("AUDIOBOOK_ORGANIZER") // This will still be used for unmapped variables

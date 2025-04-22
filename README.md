@@ -1,8 +1,10 @@
 # Audiobook Organizer
+[![codecov](https://codecov.io/gh/jeeftor/audiobook-organizer/branch/main/graph/badge.svg)](https://codecov.io/gh/jeeftor/audiobook-organizer)
+[![Coverage Status](https://coveralls.io/repos/github/jeeftor/audiobook-organizer/badge.svg?branch=main)](https://coveralls.io/github/jeeftor/audiobook-organizer?branch=main)
 
 ![docs/logo.png](docs/logo.png)
 
-CLI tool to organize audiobooks based on `metadata.json` files.
+CLI tool to organize audiobooks based on `metadata.json` files or embedded metadata in EPUB files.
 
 
 ## Features
@@ -17,8 +19,8 @@ CLI tool to organize audiobooks based on `metadata.json` files.
 - Colored output
 - Operation logs for recovery
 - Separate input/output directory support
-
-
+- **NEW**: Extract metadata directly from EPUB files
+- **NEW**: Process files in a flat directory structure
 
 ## Pre-requirements
 
@@ -133,6 +135,8 @@ Options:
 - `--undo`: Restore files to original locations
 - `--prompt`: Review and confirm each book move interactively
 - `--remove-empty`: Remove empty directories after moving files and during initial scan
+- `--use-embedded-metadata`: Use metadata embedded in EPUB files if metadata.json is not found
+- `--flat`: Process files in a flat directory structure (automatically enables --use-embedded-metadata)
 
 ### Docker Usage Examples
 

@@ -11,36 +11,41 @@ import (
 
 const LogFileName = ".abook-org.log"
 
-type Organizer struct {
-	baseDir      string
-	outputDir    string
-	replaceSpace string
-	verbose      bool
-	dryRun       bool
-	undo         bool
-	prompt       bool
-	removeEmpty  bool
-	summary      Summary
-	logEntries   []LogEntry
+// OrganizerConfig contains all configuration parameters for an Organizer
+type OrganizerConfig struct {
+	BaseDir             string
+	OutputDir           string
+	ReplaceSpace        string
+	Verbose             bool
+	DryRun              bool
+	Undo                bool
+	Prompt              bool
+	RemoveEmpty         bool
+	UseEmbeddedMetadata bool
+	Flat                bool
 }
 
-func New(baseDir, outputDir, replaceSpace string, verbose, dryRun, undo, prompt, removeEmpty bool) *Organizer {
+// Organizer is the main struct that performs audiobook organization
+type Organizer struct {
+	config     OrganizerConfig
+	summary    Summary
+	logEntries []LogEntry
+}
+
+// NewOrganizer creates a new Organizer with the provided configuration
+func NewOrganizer(config *OrganizerConfig) *Organizer {
+	// Set the verbose mode flag for the metadata providers
+	SetVerboseMode(config.Verbose)
+
 	return &Organizer{
-		baseDir:      baseDir,
-		outputDir:    outputDir,
-		replaceSpace: replaceSpace,
-		verbose:      verbose,
-		dryRun:       dryRun,
-		undo:         undo,
-		prompt:       prompt,
-		removeEmpty:  removeEmpty,
+		config: *config,
 	}
 }
 
 func (o *Organizer) GetLogPath() string {
-	logBase := o.baseDir
-	if o.outputDir != "" {
-		logBase = o.outputDir
+	logBase := o.config.BaseDir
+	if o.config.OutputDir != "" {
+		logBase = o.config.OutputDir
 	}
 	return filepath.Join(logBase, LogFileName)
 }
@@ -48,37 +53,37 @@ func (o *Organizer) GetLogPath() string {
 func (o *Organizer) Execute() error {
 	// Clean and resolve the paths
 	color.Blue("🔍 Resolving paths...")
-	resolvedBaseDir, err := filepath.EvalSymlinks(filepath.Clean(o.baseDir))
+	resolvedBaseDir, err := filepath.EvalSymlinks(filepath.Clean(o.config.BaseDir))
 	if err != nil {
 		return fmt.Errorf("error resolving base directory path: %v", err)
 	}
-	o.baseDir = resolvedBaseDir
+	o.config.BaseDir = resolvedBaseDir
 
-	if o.outputDir != "" {
-		resolvedOutputDir, err := filepath.EvalSymlinks(filepath.Clean(o.outputDir))
+	if o.config.OutputDir != "" {
+		resolvedOutputDir, err := filepath.EvalSymlinks(filepath.Clean(o.config.OutputDir))
 		if err != nil {
 			return fmt.Errorf("error resolving output directory path: %v", err)
 		}
-		o.outputDir = resolvedOutputDir
+		o.config.OutputDir = resolvedOutputDir
 	}
 
-	if o.undo {
+	if o.config.Undo {
 		color.Yellow("↩️  Undoing previous operations...")
 		return o.undoMoves()
 	}
 
-	if o.dryRun {
+	if o.config.DryRun {
 		color.Yellow("🔍 Running in dry-run mode - no files will be moved")
 	}
 
 	startTime := time.Now()
 	color.Blue("📚 Scanning for audiobooks...")
-	err = filepath.Walk(o.baseDir, o.processDirectory)
+	err = filepath.Walk(o.config.BaseDir, o.processDirectory)
 	if err != nil {
 		return fmt.Errorf("error walking directory: %v", err)
 	}
 
-	if !o.dryRun && len(o.logEntries) > 0 {
+	if !o.config.DryRun && len(o.logEntries) > 0 {
 		color.Blue("💾 Saving operation log...")
 		if err := o.saveLog(); err != nil {
 			return fmt.Errorf("error saving log: %v", err)
@@ -104,9 +109,9 @@ func isEmptyDir(dir string) bool {
 }
 
 // removeEmptyDirs removes empty directories recursively up the tree
-// It stops when it encounters a non-empty directory or reaches the baseDir
+// It stops when it encounters a non-empty directory or reaches the BaseDir
 func (o *Organizer) removeEmptyDirs(dir string) error {
-	if !o.removeEmpty || dir == o.baseDir {
+	if !o.config.RemoveEmpty || dir == o.config.BaseDir {
 		return nil
 	}
 
@@ -121,11 +126,11 @@ func (o *Organizer) removeEmptyDirs(dir string) error {
 		return nil
 	}
 
-	if o.verbose {
+	if o.config.Verbose {
 		color.Yellow("🗑️  Removing empty directory: %s", dir)
 	}
 
-	if !o.dryRun {
+	if !o.config.DryRun {
 		if err := os.Remove(dir); err != nil {
 			return fmt.Errorf("failed to remove directory %s: %v", dir, err)
 		}
@@ -133,7 +138,7 @@ func (o *Organizer) removeEmptyDirs(dir string) error {
 
 	// Recursively check parent directory
 	parent := filepath.Dir(dir)
-	if parent != o.baseDir {
+	if parent != o.config.BaseDir {
 		return o.removeEmptyDirs(parent)
 	}
 
@@ -142,16 +147,16 @@ func (o *Organizer) removeEmptyDirs(dir string) error {
 
 // removeEmptySourceDirs scans the source directory for empty directories
 func (o *Organizer) removeEmptySourceDirs() error {
-	if !o.removeEmpty {
+	if !o.config.RemoveEmpty {
 		return nil
 	}
 
-	if o.verbose {
+	if o.config.Verbose {
 		color.Blue("🔍 Scanning for empty directories...")
 	}
 
 	var emptyDirs []string
-	err := filepath.Walk(o.baseDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(o.config.BaseDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -161,7 +166,7 @@ func (o *Organizer) removeEmptySourceDirs() error {
 		}
 
 		// Skip the base directory itself and the output directory
-		if path == o.baseDir || (o.outputDir != "" && path == o.outputDir) {
+		if path == o.config.BaseDir || (o.config.OutputDir != "" && path == o.config.OutputDir) {
 			return nil
 		}
 
@@ -179,10 +184,10 @@ func (o *Organizer) removeEmptySourceDirs() error {
 	// Remove empty directories in reverse order (deepest first)
 	for i := len(emptyDirs) - 1; i >= 0; i-- {
 		dir := emptyDirs[i]
-		if o.verbose {
+		if o.config.Verbose {
 			color.Yellow("🗑️  Removing empty directory: %s", dir)
 		}
-		if !o.dryRun {
+		if !o.config.DryRun {
 			if err := os.Remove(dir); err != nil {
 				color.Red("❌ Error removing directory %s: %v", dir, err)
 			}
