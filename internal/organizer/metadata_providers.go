@@ -308,6 +308,17 @@ func (p *EPUBMetadataProvider) tryStandardSeriesFields(book *epubgo.Epub, metada
 	// Check for series metadata
 	series, err := book.Metadata("series")
 	if err == nil && len(series) > 0 && series[0] != "" {
+		// Try to unmarshal JSON if it looks like a serialized object
+		var m map[string]interface{}
+		if json.Unmarshal([]byte(series[0]), &m) == nil {
+			if name, ok := m["name"].(string); ok && name != "" {
+				metadata.Series = []string{name}
+				return true
+			}
+			// If it's a dictionary but no valid name, treat as no series
+			return false
+		}
+		// Fallback to original string if not JSON
 		metadata.Series = []string{series[0]}
 		return true
 	}
