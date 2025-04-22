@@ -1,3 +1,4 @@
+---
 version: 2.2
 project_name: audiobook-organizer
 
@@ -10,42 +11,60 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-      - darwin
       - windows
+      - darwin
     goarch:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+      - >
+        -s -w
+        -X audiobook-organizer/cmd.buildVersion={{.Version}}
+        -X audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
+        -X audiobook-organizer/cmd.buildTime={{.Timestamp}}
     binary: audiobook-organizer
 
-
 archives:
-  - formats: ['tar.gz']
-    # this name template makes the OS and Arch compatible with the results of `uname`.
-    name_template: >-
+  - formats:
+      - tar.gz
+    name_template: >
       {{ .ProjectName }}_
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
-    # use zip for windows archives
     format_overrides:
       - goos: windows
-        formats: [ 'zip' ]
-
+        formats:
+          - zip
     files:
       - README.md
       - LICENSE*
       - CHANGELOG*
 
-# Add this new section for .deb package generation
+sboms:
+  - id: source-sbom
+    artifacts: source
+    documents:
+      - '{{ .ProjectName }}_{{ .Version }}_source.sbom.cyclonedx.json'
+    cmd: syft
+    args:
+      - .
+      - -o
+      - cyclonedx-json={{ .Document }}
+      - --source-name={{ .ProjectName }}
+      - --source-version={{ .Version }}
+    env:
+      - SYFT_FILE_METADATA_CATALOGER_ENABLED=true
+      - SYFT_GO_CATALOGER_ENABLED=true
+      - SYFT_PACKAGE_CATALOGER_ENABLED=true
+
 nfpms:
-  - vendor: jeffsui  # Replace with your name/organization
-    homepage: https://github.com/jeffsui/audiobook-organizer
+  - package_name: audiobook-organizer
+    vendor: jeeftor
+    homepage: https://github.com/jeeftor/audiobook-organizer
     maintainer: Jeff Stein <jeffstein@gmail.com>
-    description: CLI tool to organize audiobooks based on metadata.json files
+    description: Audiobook Organizer Tool
     license: MIT
     formats:
       - deb
@@ -53,20 +72,12 @@ nfpms:
       - apk
     dependencies:
       - git
-    recommends:
-      - golang
-    suggests:
-      - docker
-    section: utils
-    priority: optional
     contents:
+      - src: ./LICENSE
+        dst: /usr/share/doc/audiobook-organizer/LICENSE
       - src: ./README.md
         dst: /usr/share/doc/audiobook-organizer/README.md
-      - src: ./LICENSE  # If you have a license file
-        dst: /usr/share/doc/audiobook-organizer/LICENSE
-    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    rpm:
-      group: Applications/Utilities
+    file_name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
 
 brews:
   - name: audiobook-organizer
@@ -74,21 +85,19 @@ brews:
       owner: jeeftor
       name: homebrew-tap
     directory: Formula
-    homepage: https://github.com/jeeftor/license-manager
-    description: License Manager Tool
+    homepage: https://github.com/jeeftor/audiobook-organizer
+    description: Audiobook Organizer Tool
     license: MIT
     test: |
-      system "#{bin}/audiobook-organizer --version"
+      system "#{bin}/audiobook-organizer version -s"
     install: |
       bin.install "audiobook-organizer"
 
-
 checksum:
-  name_template: 'checksums.txt'
+  name_template: checksums.txt
 
 snapshot:
-  version_template: "{{ incpatch .Version }}-next"
-
+  version_template: '{{ incpatch .Version }}-next'
 
 changelog:
   sort: asc
@@ -98,10 +107,8 @@ changelog:
       - '^test:'
       - '^ci:'
       - '^chore:'
-      - 'Merge pull request'
-      - 'Merge branch'
-
-
+      - Merge pull request
+      - Merge branch
 
 release:
   github:
@@ -116,4 +123,4 @@ release:
   footer: |
     ## Thanks!
     Thanks to all contributors who helped make this release possible.
-  name_template: "v{{ .Version }}"
+  name_template: v{{ .Version }}
