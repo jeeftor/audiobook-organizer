@@ -99,3 +99,11 @@ jobs:
           echo "GitHub Ref: ${{ github.ref }}"
           echo "GitHub Ref Name: ${{ github.ref_name }}"
           echo "Version to be released: ${GITHUB_REF#refs/tags/v}"
+
+      - name: Verify Binary Version
+        run: |
+          # Find the binary for the current platform (linux/amd64)
+          BINARY=$(find dist -name "audiobook-organizer_linux_x86_64*" -not -name "*.tar.gz" -not -name "*.rpm" -not -name "*.deb" -not -name "*.apk" -type f -executable)
+          echo "Found binary: $BINARY"
+          # Run the version command
+          $BINARY version
