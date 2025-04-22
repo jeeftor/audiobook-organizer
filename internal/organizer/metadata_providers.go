@@ -271,29 +271,73 @@ func (p *EPUBMetadataProvider) extractBasicMetadata(book *epubgo.Epub, metadata 
 
 // extractSeriesMetadata attempts to find series information from various metadata fields
 func (p *EPUBMetadataProvider) extractSeriesMetadata(book *epubgo.Epub, metadata *Metadata) {
+	invalidSeries := false
+
 	// Try standard series fields first
-	if p.tryStandardSeriesFields(book, metadata) {
-		return
-	}
+	if !p.tryStandardSeriesFields(book, metadata) {
+		// Try subject fields next
+		if !p.trySubjectFields(book, metadata) {
+			// Try direct OPF parsing for Calibre metadata
+			if series, ok := extractCalibreSeriesFromOPF(p.path); ok {
+				if isValidSeries(series) {
+					metadata.Series = []string{series}
+					return
+				} else if series != "" {
+					invalidSeries = true
+				}
+			}
 
-	// Try subject fields next
-	if p.trySubjectFields(book, metadata) {
-		return
-	}
-
-	// Try direct OPF parsing for Calibre metadata
-	if series, ok := extractCalibreSeriesFromOPF(p.path); ok {
-		metadata.Series = []string{series}
-		return
-	}
-
-	// Finally, try to extract from title
-	if metadata.Title != "" {
-		seriesInfo := extractSeriesFromTitle(metadata.Title)
-		if seriesInfo != "" {
-			metadata.Series = []string{seriesInfo}
+			// Finally, try to extract from title
+			if metadata.Title != "" {
+				seriesInfo := extractSeriesFromTitle(metadata.Title)
+				if isValidSeries(seriesInfo) {
+					metadata.Series = []string{seriesInfo}
+					return
+				} else if seriesInfo != "" {
+					invalidSeries = true
+				}
+			}
 		}
 	}
+
+	// Scan meta tags for invalid series-like data if we didn't find a valid series
+	if len(metadata.Series) == 0 || metadata.Series[0] == "" {
+		meta, err := book.MetadataAttr("meta")
+		if err == nil && len(meta) > 0 {
+			for _, attr := range meta {
+				if name, ok := attr["name"]; ok && (name == "calibre:series" || strings.Contains(name, "series")) {
+					if content, ok := attr["content"]; ok && content != "" {
+						if !isValidSeries(content) {
+							invalidSeries = true
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// If we found an invalid series anywhere, set Series to a sentinel value for logging
+	if invalidSeries && (len(metadata.Series) == 0 || metadata.Series[0] == "") {
+		metadata.Series = []string{"__INVALID_SERIES__"}
+	}
+}
+
+// isValidSeries returns true if the series string is a valid, human-readable name
+func isValidSeries(series string) bool {
+	series = strings.TrimSpace(series)
+	if series == "" {
+		return false
+	}
+	if strings.HasPrefix(series, "{") || strings.HasPrefix(series, "[") {
+		return false
+	}
+	if strings.Contains(series, "is_category") || strings.Contains(series, "kind") {
+		return false
+	}
+	if len(series) > 100 {
+		return false
+	}
+	return true
 }
 
 // tryStandardSeriesFields checks dedicated series metadata fields
@@ -301,33 +345,29 @@ func (p *EPUBMetadataProvider) tryStandardSeriesFields(book *epubgo.Epub, metada
 	// Check for calibre:series metadata
 	calibreSeries, err := book.Metadata("calibre:series")
 	if err == nil && len(calibreSeries) > 0 && calibreSeries[0] != "" {
-		metadata.Series = []string{calibreSeries[0]}
-		return true
+		if isValidSeries(calibreSeries[0]) {
+			metadata.Series = []string{calibreSeries[0]}
+			return true
+		}
 	}
 
 	// Check for series metadata
 	series, err := book.Metadata("series")
 	if err == nil && len(series) > 0 && series[0] != "" {
-		// Try to unmarshal JSON if it looks like a serialized object
-		var m map[string]interface{}
-		if json.Unmarshal([]byte(series[0]), &m) == nil {
-			if name, ok := m["name"].(string); ok && name != "" {
-				metadata.Series = []string{name}
-				return true
-			}
-			// If it's a dictionary but no valid name, treat as no series
-			return false
+		if isValidSeries(series[0]) {
+			metadata.Series = []string{series[0]}
+			return true
 		}
-		// Fallback to original string if not JSON
-		metadata.Series = []string{series[0]}
-		return true
+		return false
 	}
 
 	// Check for belongs-to-collection metadata (used in some EPUB 3.0 files)
 	collection, err := book.Metadata("belongs-to-collection")
 	if err == nil && len(collection) > 0 && collection[0] != "" {
-		metadata.Series = []string{collection[0]}
-		return true
+		if isValidSeries(collection[0]) {
+			metadata.Series = []string{collection[0]}
+			return true
+		}
 	}
 
 	// Check for dc:description that might contain series info (Calibre sometimes puts it here)
@@ -342,8 +382,10 @@ func (p *EPUBMetadataProvider) tryStandardSeriesFields(book *epubgo.Epub, metada
 				if idx := strings.Index(seriesInfo, "."); idx > 0 {
 					seriesInfo = strings.TrimSpace(seriesInfo[:idx])
 				}
-				metadata.Series = []string{seriesInfo}
-				return true
+				if isValidSeries(seriesInfo) {
+					metadata.Series = []string{seriesInfo}
+					return true
+				}
 			}
 		}
 	}
@@ -357,8 +399,10 @@ func (p *EPUBMetadataProvider) tryStandardSeriesFields(book *epubgo.Epub, metada
 				seriesInfo := strings.TrimSpace(parts[1])
 				// Remove leading colon or other punctuation
 				seriesInfo = strings.TrimLeft(seriesInfo, ":- ")
-				metadata.Series = []string{seriesInfo}
-				return true
+				if isValidSeries(seriesInfo) {
+					metadata.Series = []string{seriesInfo}
+					return true
+				}
 			}
 		}
 	}
@@ -374,16 +418,20 @@ func (p *EPUBMetadataProvider) tryStandardSeriesFields(book *epubgo.Epub, metada
 				// Check for Calibre series metadata
 				if name, ok := attr["name"]; ok && name == "calibre:series" {
 					if content, ok := attr["content"]; ok && content != "" {
-						metadata.Series = []string{content}
-						return true
+						if isValidSeries(content) {
+							metadata.Series = []string{content}
+							return true
+						}
 					}
 				}
 
 				// Check for generic series metadata
 				if name, ok := attr["name"]; ok && (name == "series" || strings.Contains(name, "series")) {
 					if content, ok := attr["content"]; ok && content != "" {
-						metadata.Series = []string{content}
-						return true
+						if isValidSeries(content) {
+							metadata.Series = []string{content}
+							return true
+						}
 					}
 				}
 			}
