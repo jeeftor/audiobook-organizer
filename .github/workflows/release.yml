@@ -48,6 +48,12 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
+    needs: [pre-commit]
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        attempt: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -87,6 +93,7 @@ jobs:
       # Run GoReleaser with the GitHub App token
       - name: GoReleaser
         uses: goreleaser/goreleaser-action@v6
+        timeout-minutes: 15
         with:
           distribution: goreleaser
           version: latest
@@ -94,6 +101,15 @@ jobs:
         env:
           # Use the GitHub App token for both operations
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+
+      # Backup artifacts in case release upload fails
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: audiobook-organizer-binaries-attempt-${{ matrix.attempt }}
+          path: dist/*
+          retention-days: 5
+
       - name: Print Version Info
         run: |
           echo "GitHub Ref: ${{ github.ref }}"
