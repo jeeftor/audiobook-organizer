@@ -27,8 +27,10 @@ func (o *Organizer) SanitizePath(s string) string {
 	var invalidChars []string
 	if runtime.GOOS == "windows" {
 		invalidChars = windowsInvalidChars
+	} else if runtime.GOOS == "darwin" {
+		invalidChars = []string{":"}
 	} else {
-		// For Unix systems, we'll sanitize both Unix-specific and common problematic characters
+		// Linux/Unix: strict, replace both / and common problematic chars
 		invalidChars = append(unixInvalidChars, commonProblematicChars...)
 	}
 

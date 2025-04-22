@@ -1,11 +1,11 @@
 package organizer
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
-	"os"
 )
 
 func TestEPUBMetadataPathDetermination(t *testing.T) {
@@ -26,39 +26,39 @@ func TestEPUBMetadataPathDetermination(t *testing.T) {
 
 	// Test all EPUB files in the books directory
 	tests := []struct {
-		filename      string
-		expectedPath  string
-		expectedTitle string
+		filename       string
+		expectedPath   string
+		expectedTitle  string
 		expectedSeries string
-		hasSeries     bool
+		hasSeries      bool
 	}{
 		{
-			filename:      "title-author-series1.epub",
-			expectedPath:  "Jeef of Github,Some random guy/Test Books",
-			expectedTitle: "First book of testing knowledge",
+			filename:       "title-author-series1.epub",
+			expectedPath:   "Jeef of Github,Some random guy/Test Books",
+			expectedTitle:  "First book of testing knowledge",
 			expectedSeries: "Test Books",
-			hasSeries:     true,
+			hasSeries:      true,
 		},
 		{
-			filename:      "title-author-series2.epub",
-			expectedPath:  "Jeef of Github,Some random guy/Test Books",
-			expectedTitle: "Testing is dumb",
+			filename:       "title-author-series2.epub",
+			expectedPath:   "Jeef of Github,Some random guy/Test Books",
+			expectedTitle:  "Testing is dumb",
 			expectedSeries: "Test Books",
-			hasSeries:     true,
+			hasSeries:      true,
 		},
 		{
-			filename:      "title-author-series3.epub",
-			expectedPath:  "Jeef of Github,Some random guy/Test Books",
-			expectedTitle: "Why is everything broken",
+			filename:       "title-author-series3.epub",
+			expectedPath:   "Jeef of Github,Some random guy/Test Books",
+			expectedTitle:  "Why is everything broken",
 			expectedSeries: "Test Books",
-			hasSeries:     true,
+			hasSeries:      true,
 		},
 		{
-			filename:      "title-author.epub",
-			expectedPath:  "Jeef of Github,Some random guy",
-			expectedTitle: "The book of cool stuff",
+			filename:       "title-author.epub",
+			expectedPath:   "Jeef of Github,Some random guy",
+			expectedTitle:  "The book of cool stuff",
 			expectedSeries: "",
-			hasSeries:     false,
+			hasSeries:      false,
 		},
 	}
 
@@ -117,29 +117,29 @@ func TestExtractCalibreSeriesFromOPF(t *testing.T) {
 	testDataDir := filepath.Join("..", "..", "testdata", "epub")
 
 	tests := []struct {
-		filename      string
+		filename       string
 		expectedSeries string
-		expectFound   bool
+		expectFound    bool
 	}{
 		{
-			filename:      "title-author-series1.epub",
+			filename:       "title-author-series1.epub",
 			expectedSeries: "Test Books",
-			expectFound:   true,
+			expectFound:    true,
 		},
 		{
-			filename:      "title-author-series2.epub",
+			filename:       "title-author-series2.epub",
 			expectedSeries: "Test Books",
-			expectFound:   true,
+			expectFound:    true,
 		},
 		{
-			filename:      "title-author-series3.epub",
+			filename:       "title-author-series3.epub",
 			expectedSeries: "Test Books",
-			expectFound:   true,
+			expectFound:    true,
 		},
 		{
-			filename:      "title-author.epub",
+			filename:       "title-author.epub",
 			expectedSeries: "",
-			expectFound:   false, // No series
+			expectFound:    false, // No series
 		},
 	}
 
@@ -299,10 +299,10 @@ func TestM4BMetadataWithProblematicFiles(t *testing.T) {
 
 // verifyPathSanitization checks that a path doesn't contain invalid characters
 func verifyPathSanitization(t *testing.T, path string, replaceSpace string) {
-	// Extract the sanitized part of the path (after books/)
-	parts := strings.Split(path, "books/")
+	// Extract the sanitized part of the path (after epub/)
+	parts := strings.Split(path, "epub/")
 	if len(parts) < 2 {
-		t.Errorf("Path does not contain 'books/': %s", path)
+		t.Errorf("Path does not contain 'epub/': %s", path)
 		return
 	}
 	sanitizedPath := parts[1]

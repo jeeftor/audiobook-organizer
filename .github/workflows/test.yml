@@ -29,14 +29,30 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
+    - name: Install gotestsum
+      run: go install gotest.tools/gotestsum@latest
+
     - name: Run tests
       run: |
-        go test -v -coverprofile=coverage.out ./...
+        $(go env GOPATH)/bin/gotestsum --format=short -- -coverprofile=coverage.out ./...
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: coverage.out
+        flags: unittests
+        fail_ci_if_error: true
+
+    - name: Send coverage to Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: coverage.out
 
     - name: Upload coverage artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: coverage-report
+        name: coverage
         path: coverage.out
 
     - name: Display coverage summary
