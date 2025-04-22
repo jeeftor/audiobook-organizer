@@ -396,9 +396,18 @@ func (o *Organizer) logMetadataIfVerbose(metadata Metadata, provider MetadataPro
 	color.Green("📚 Metadata detected from %s:", providerType)
 	color.White("  Authors: %v", metadata.Authors)
 	color.White("  Title: %s", metadata.Title)
+
+	// Series logic: blank if none, show series if valid, or 'invalid series data' if invalid was detected
+	seriesMsg := ""
 	if len(metadata.Series) > 0 {
-		cleanedSeries := cleanSeriesName(metadata.Series[0])
-		color.White("  Series: %s (%s)", metadata.Series[0], cleanedSeries)
+		if metadata.Series[0] == "__INVALID_SERIES__" {
+			seriesMsg = "invalid series data"
+		} else if cleanSeriesName(metadata.Series[0]) != "" && isValidSeries(metadata.Series[0]) {
+			seriesMsg = metadata.Series[0]
+		}
+	}
+	if seriesMsg != "" {
+		color.White("  Series: %s", seriesMsg)
 	}
 }
 

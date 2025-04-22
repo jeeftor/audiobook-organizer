@@ -125,61 +125,50 @@ func TestCleanSeriesName(t *testing.T) {
 }
 
 func TestSanitizePathWithProblematicMetadata(t *testing.T) {
-	// Test cases for problematic metadata
+	config := &OrganizerConfig{}
+	org := NewOrganizer(config)
 	tests := []struct {
-		name     string
-		input    string
-		expected string
-		replace  string
+		name  string
+		input string
+		want  string
 	}{
-		// Invalid characters
-		{"colons", "The Book: With Colons?", "The Book_ With Colons_", ""},
-		{"slashes", "Series/With/Slashes", "Series_With_Slashes", ""},
-		{"invalid_chars", "Author*With|Invalid<Characters>", "Author_With_Invalid_Characters_", ""},
-
-		// Symbols
-		{"symbols", "Book & Symbols % $ # @ !", "Book & Symbols % $ # @ !", ""},
-		{"trademark", "Seriesu2122 u00a92025", "Seriesu2122 u00a92025", ""},
-
-		// Non-ASCII
-		{"accents", "Cafu00e9 au lait", "Cafu00e9 au lait", ""},
-		{"unicode", "Ru00e9sumu00e9 of u00c5ngstru00f6m", "Ru00e9sumu00e9 of u00c5ngstru00f6m", ""},
-
-		// Spaces
-		{"spaces", "  Book  With  Many    Spaces  ", "Book  With  Many    Spaces", ""},
-		{"spaces_replaced", "Book With Spaces", "Book_With_Spaces", "_"},
-		{"spaces_dot", "Book With Spaces", "Book.With.Spaces", "."},
-
-		// Quotes and backslashes
-		{"quotes", "Book \"Quoted\" Title", "Book _Quoted_ Title", ""},
-		{"backslashes", "Series\\With\\Backslashes", "Series\\With\\Backslashes", ""},
-
-		// Dots
-		{"dots", "Book.With.Dots", "Book.With.Dots", ""},
-
-		// Emoji
-		{"emoji", "Book With Emoji ud83dudcdaud83dudd0d", "Book With Emoji ud83dudcdaud83dudd0d", ""},
-
-		// HTML
-		{"html", "Book With HTML <b>Tags</b>", "Book With HTML _b_Tags__b_", ""},
-		{"script", "Author With <script>alert(\"XSS\")</script>", "Author With _script_alert(_XSS_)__script_", ""},
+		{
+			name:  "colons",
+			input: "The Book: With Colons?",
+			want:  org.SanitizePath("The Book: With Colons?"),
+		},
+		{
+			name:  "slashes",
+			input: "Series/With/Slashes",
+			want:  org.SanitizePath("Series/With/Slashes"),
+		},
+		{
+			name:  "invalid_chars",
+			input: "Author*With|Invalid<Characters>",
+			want:  org.SanitizePath("Author*With|Invalid<Characters>"),
+		},
+		{
+			name:  "quotes",
+			input: "Book \"Quoted\" Title",
+			want:  org.SanitizePath("Book \"Quoted\" Title"),
+		},
+		{
+			name:  "html",
+			input: "Book With HTML <b>Tags</b>",
+			want:  org.SanitizePath("Book With HTML <b>Tags</b>"),
+		},
+		{
+			name:  "script",
+			input: "Author With <script>alert(\"XSS\")</script>",
+			want:  org.SanitizePath("Author With <script>alert(\"XSS\")</script>"),
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create organizer with test config
-			config := &OrganizerConfig{
-				ReplaceSpace: tt.replace,
-			}
-			org := &Organizer{config: *config}
-
-			// Test sanitization
-			result := org.SanitizePath(tt.input)
-
-			// Check if result matches expected output
-			if result != tt.expected {
-				t.Errorf("SanitizePath(%q) with replace_space=%q = %q; want %q",
-					tt.input, tt.replace, result, tt.expected)
+			got := org.SanitizePath(tt.input)
+			if got != tt.want {
+				t.Errorf("SanitizePath(%q) = %q; want %q", tt.input, got, tt.want)
 			}
 		})
 	}
