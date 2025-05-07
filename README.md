@@ -135,7 +135,7 @@ Options:
 - `--undo`: Restore files to original locations
 - `--prompt`: Review and confirm each book move interactively
 - `--remove-empty`: Remove empty directories after moving files and during initial scan
-- `--use-embedded-metadata`: Use metadata embedded in EPUB files if metadata.json is not found
+- `--use-embedded-metadata`: Use metadata embedded in EPUB/MP3/M4B files if metadata.json is not found
 - `--flat`: Process files in a flat directory structure (automatically enables --use-embedded-metadata)
 
 ### Docker Usage Examples
