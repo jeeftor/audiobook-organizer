@@ -4,7 +4,7 @@
 
 ![docs/logo.png](docs/logo.png)
 
-CLI tool to organize audiobooks based on **EITHER** `metadata.json` files **OR** embedded metadata in `.epub`, `.mp3` and `.m4b` files.
+CLI tool to organize audiobooks based on **EITHER** `metadata.json` files **OR** embedded metadata in `.epub`, `.mp3`, and `.m4b` files.
 
 
 ## Features
@@ -19,7 +19,7 @@ CLI tool to organize audiobooks based on **EITHER** `metadata.json` files **OR**
 - Colored output
 - Operation logs for recovery
 - Separate input/output directory support
-- **NEW**: Extract metadata directly from EPUB files
+- **NEW**: Extract metadata directly from EPUB, MP3, and M4B files
 - **NEW**: Process files in a flat directory structure
 
 ## Pre-requirements
@@ -135,7 +135,7 @@ Options:
 - `--undo`: Restore files to original locations
 - `--prompt`: Review and confirm each book move interactively
 - `--remove-empty`: Remove empty directories after moving files and during initial scan
-- `--use-embedded-metadata`: Use metadata embedded in EPUB/MP3/M4B files if metadata.json is not found
+- `--use-embedded-metadata`: Use metadata embedded in EPUB, MP3, and M4B files if metadata.json is not found
 - `--flat`: Process files in a flat directory structure (automatically enables --use-embedded-metadata)
 
 ### Docker Usage Examples
@@ -229,15 +229,15 @@ The tool primarily looks for `metadata.json` files in the same directory as your
 }
 ```
 
-### 2. Embedded EPUB Metadata
+### 2. Embedded EPUB, MP3, and M4B Metadata
 
-When using the `--use-embedded-metadata` flag (which is automatically enabled with `--flat`), the tool can extract metadata directly from EPUB files. This is useful when:
+When using the `--use-embedded-metadata` flag (which is automatically enabled with `--flat`), the tool can extract metadata directly from EPUB, MP3, and M4B files. This is useful when:
 
 - No metadata.json file exists
-- Processing a flat directory of EPUB files
-- Working with EPUBs that contain their own metadata
+- Processing a flat directory of EPUB, MP3, or M4B files
+- Working with EPUBs, MP3s, or M4Bs that contain their own metadata
 
-The tool will extract author, title, and series information from the EPUB's internal metadata structure.
+The tool will extract author, title, and series information from the EPUB's, MP3's, or M4B's internal metadata structure.
 
 ## Directory Structure
 
@@ -379,7 +379,7 @@ verbose: true
 dry-run: false
 prompt: true
 remove-empty: true  # Remove empty directories
-use-embedded-metadata: true # Use metadata embedded in EPUB files
+use-embedded-metadata: true # Use metadata embedded in EPUB, MP3, and M4B files
 ```
 
 ### Environment Variables
