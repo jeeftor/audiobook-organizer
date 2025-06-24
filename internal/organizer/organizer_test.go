@@ -118,6 +118,126 @@ func TestOrganizer(t *testing.T) {
 	}
 }
 
+func TestFlatDirectoryWithSeriesAsTitle(t *testing.T) {
+	// Test cases with expected directory structures
+	tests := []struct {
+		name            string
+		mp3File         string
+		useSeriesAsTitle bool
+		expectedPath    string
+	}{
+		{
+			name:            "lovecraft_with_series_as_title",
+			mp3File:         "charlesdexterward_01_lovecraft_64kb.mp3",
+			useSeriesAsTitle: true,
+			expectedPath:    "H. P. Lovecraft/The Case of Charles Dexter Ward",
+		},
+		{
+			name:            "lovecraft_without_series_as_title",
+			mp3File:         "charlesdexterward_01_lovecraft_64kb.mp3",
+			useSeriesAsTitle: false,
+			expectedPath:    "H. P. Lovecraft/The Case of Charles Dexter Ward/01 - Chapter 1_ A Result and a Prologue",
+		},
+		{
+			name:            "kenrick_with_series_as_title",
+			mp3File:         "falstaffswedding1766version_1_kenrick_64kb.mp3",
+			useSeriesAsTitle: true,
+			expectedPath:    "William Kenrick/Falstaff's Wedding (1766 Version)",
+		},
+		{
+			name:            "kenrick_without_series_as_title",
+			mp3File:         "falstaffswedding1766version_1_kenrick_64kb.mp3",
+			useSeriesAsTitle: false,
+			expectedPath:    "William Kenrick/Falstaff's Wedding (1766 Version)/01 - Act 1",
+		},
+		{
+			name:            "scott_with_series_as_title",
+			mp3File:         "perouse_01_scott_64kb.mp3",
+			useSeriesAsTitle: true,
+			expectedPath:    "Ernest Scott/Lapérouse",
+		},
+		{
+			name:            "scott_without_series_as_title",
+			mp3File:         "perouse_01_scott_64kb.mp3",
+			useSeriesAsTitle: false,
+			expectedPath:    "Ernest Scott/Lapérouse/01 - Family, youth and influences",
+		},
+	}
+
+	// Get the project root directory
+	projectRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatalf("Failed to get project root: %v", err)
+	}
+
+	// Path to the testdata/mp3flat directory
+	mp3FlatDir := filepath.Join(projectRoot, "testdata", "mp3flat")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a temporary directory for the test
+			tempDir := t.TempDir()
+			
+			// Copy the MP3 file to the temp directory
+			sourcePath := filepath.Join(mp3FlatDir, tt.mp3File)
+			destPath := filepath.Join(tempDir, tt.mp3File)
+			
+			sourceData, err := os.ReadFile(sourcePath)
+			if err != nil {
+				t.Fatalf("Failed to read source file: %v", err)
+			}
+			
+			err = os.WriteFile(destPath, sourceData, 0644)
+			if err != nil {
+				t.Fatalf("Failed to write destination file: %v", err)
+			}
+			
+			// Create organizer with appropriate configuration
+			config := &OrganizerConfig{
+				BaseDir:             tempDir,
+				OutputDir:           "",
+				ReplaceSpace:        "",
+				Verbose:             false,
+				DryRun:              false,
+				Undo:                false,
+				Prompt:              false,
+				RemoveEmpty:         false,
+				UseEmbeddedMetadata: true,
+				Flat:                true,
+				Layout:              "author-series-title",
+				UseSeriesAsTitle:    tt.useSeriesAsTitle,
+			}
+			
+			org := NewOrganizer(config)
+			
+			// Process the file using the public OrganizeSingleFile method
+			// Create a metadata provider that can read from the MP3 file
+			provider := NewAudioMetadataProvider(destPath)
+			err = org.OrganizeSingleFile(destPath, provider)
+			if err != nil {
+				t.Fatalf("Failed to process file: %v", err)
+			}
+			
+			// Check if the file was moved to the expected location
+			expectedDir := filepath.Join(tempDir, tt.expectedPath)
+			expectedFilePath := filepath.Join(expectedDir, tt.mp3File)
+			
+			if _, err := os.Stat(expectedFilePath); os.IsNotExist(err) {
+				t.Errorf("File not found at expected path: %s", expectedFilePath)
+				
+				// List the contents of the temp directory to help debug
+				files, err := filepath.Glob(filepath.Join(tempDir, "*", "*", "*", "*"))
+				if err == nil {
+					t.Logf("Files found in temp directory:")
+					for _, file := range files {
+						t.Logf("  %s", file)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestOutputDirectory(t *testing.T) {
 	tempDir := t.TempDir()
 	sourceDir := filepath.Join(tempDir, "source")

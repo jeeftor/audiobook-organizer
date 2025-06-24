@@ -124,17 +124,12 @@ func (o *Organizer) processFlatDirectory(path string, info os.FileInfo) error {
 		return filepath.SkipDir
 	}
 
-	// Only process EPUB, MP3, and M4B files in flat mode
 	ext := strings.ToLower(filepath.Ext(path))
 	if ext != ".epub" && ext != ".mp3" && ext != ".m4b" {
 		return nil
 	}
 
-	// Create a metadata provider for this specific file (audio or epub)
 	provider := NewFileMetadataProvider(path)
-
-	// Try to get metadata - we don't need the actual metadata here,
-	// just checking if we can extract it successfully
 	_, err := provider.GetMetadata()
 	if err != nil {
 		if o.config.Verbose {
@@ -143,8 +138,7 @@ func (o *Organizer) processFlatDirectory(path string, info os.FileInfo) error {
 		return nil
 	}
 
-	// Organize this individual file
-	if err := o.OrganizeAudiobook(filepath.Dir(path), provider); err != nil {
+	if err := o.OrganizeSingleFile(path, provider); err != nil {
 		color.Red("❌ Error organizing %s: %v", path, err)
 	}
 
@@ -373,9 +367,92 @@ func (o *Organizer) OrganizeAudiobook(sourcePath string, provider MetadataProvid
 }
 
 func (o *Organizer) validateMetadata(metadata Metadata) error {
-	if len(metadata.Authors) == 0 || metadata.Title == "" {
-		return fmt.Errorf("missing required metadata fields")
+	if len(metadata.Authors) == 0 || metadata.Authors[0] == "" {
+		return fmt.Errorf("missing author information")
 	}
+
+	if metadata.Title == "" {
+		return fmt.Errorf("missing title information")
+	}
+
+	return nil
+}
+
+// OrganizeSingleFile organizes a single file based on its metadata
+// This is used in flat mode to move only the specific file being processed
+func (o *Organizer) OrganizeSingleFile(filePath string, provider MetadataProvider) error {
+	// Get metadata from provider
+	metadata, err := provider.GetMetadata()
+	if err != nil {
+		return fmt.Errorf("error getting metadata: %v", err)
+	}
+
+	// Validate metadata
+	if err := o.validateMetadata(metadata); err != nil {
+		return err
+	}
+
+	// Log metadata if Verbose
+	o.logMetadataIfVerbose(metadata, provider)
+
+	// Calculate target path
+	targetDir, err := o.calculateTargetPath(metadata)
+	if err != nil {
+		return err
+	}
+
+	// Get the filename from the path
+	fileName := filepath.Base(filePath)
+	targetPath := filepath.Join(targetDir, fileName)
+
+	// Check if already in correct location
+	cleanSourcePath := filepath.Clean(filePath)
+	cleanTargetPath := filepath.Clean(targetPath)
+	if cleanSourcePath == cleanTargetPath {
+		if o.config.Verbose {
+			color.Green("✅ File already in correct location: %s", cleanSourcePath)
+		}
+		return nil
+	}
+
+	// Prompt for confirmation if needed
+	if o.config.Prompt && !o.promptForMoveConfirmation(metadata, filePath, targetPath) {
+		color.Yellow("⏩ Skipping %s", metadata.Title)
+		return nil
+	}
+
+	// Create target directory if it doesn't exist
+	if !o.config.DryRun {
+		if err := os.MkdirAll(targetDir, 0755); err != nil {
+			return fmt.Errorf("error creating target directory: %v", err)
+		}
+	}
+
+	// Move the single file
+	if o.config.Verbose || o.config.DryRun {
+		prefix := "[DRY-RUN] "
+		if !o.config.DryRun {
+			prefix = ""
+		}
+		color.Blue("📦 %sMoving %s to %s", prefix, filePath, targetPath)
+	}
+
+	if !o.config.DryRun {
+		if err := o.moveFile(filePath, targetPath); err != nil {
+			color.Red("❌ Error moving %s: %v", filePath, err)
+			return err
+		}
+
+		// Add to move log
+		o.summary.Moves = append(o.summary.Moves, MoveSummary{
+			From: filePath,
+			To:   targetPath,
+		})
+
+		// Update the undo log
+		o.updateLogAndCleanup(filepath.Dir(filePath), filepath.Dir(targetPath), []string{filepath.Base(filePath)})
+	}
+
 	return nil
 }
 
@@ -420,12 +497,41 @@ func (o *Organizer) calculateTargetPath(metadata Metadata) (string, error) {
 		targetBase = o.config.OutputDir
 	}
 
-	var targetPath string
-	if len(metadata.Series) > 0 && metadata.Series[0] != "__INVALID_SERIES__" {
+	// Handle the UseSeriesAsTitle flag - use series as the title directory
+	if o.config.UseSeriesAsTitle && len(metadata.Series) > 0 && metadata.Series[0] != "__INVALID_SERIES__" {
+		// Use series as the main title directory
 		cleanedSeries := cleanSeriesName(metadata.Series[0])
-		seriesDir := o.SanitizePath(cleanedSeries)
-		targetPath = filepath.Join(targetBase, authorDir, seriesDir, titleDir)
-	} else {
+		// Use series as the main title
+		titleDir = o.SanitizePath(cleanedSeries)
+		
+		// For MP3 files where Series contains the book title
+		// Use a simple Author/Title structure
+		return filepath.Join(targetBase, authorDir, titleDir), nil
+	}
+
+	// Standard directory structure based on layout flag
+	var targetPath string
+	switch o.config.Layout {
+	case "author-only":
+		// Just put everything under author directory
+		targetPath = filepath.Join(targetBase, authorDir)
+	
+	case "author-title":
+		// Skip series level, use author/title structure
+		targetPath = filepath.Join(targetBase, authorDir, titleDir)
+	
+	case "author-series-title", "": // Default to author-series-title if not specified
+		// Use full author/series/title structure if series exists
+		if len(metadata.Series) > 0 && metadata.Series[0] != "__INVALID_SERIES__" {
+			cleanedSeries := cleanSeriesName(metadata.Series[0])
+			seriesDir := o.SanitizePath(cleanedSeries)
+			targetPath = filepath.Join(targetBase, authorDir, seriesDir, titleDir)
+		} else {
+			targetPath = filepath.Join(targetBase, authorDir, titleDir)
+		}
+	
+	default:
+		// Default to author/title if unknown layout
 		targetPath = filepath.Join(targetBase, authorDir, titleDir)
 	}
 

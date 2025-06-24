@@ -23,6 +23,8 @@ type OrganizerConfig struct {
 	RemoveEmpty         bool
 	UseEmbeddedMetadata bool
 	Flat                bool
+	Layout              string // Directory structure layout (author-series-title, author-title, author-only)
+	UseSeriesAsTitle    bool   // Use Series field as the main title directory
 }
 
 // Organizer is the main struct that performs audiobook organization
