@@ -100,10 +100,20 @@ sudo rpm -i audiobook-organizer_*.rpm
 # Clean up
 rm audiobook-organizer_*.rpm
 
+### Homebrew (macOS/Linux)
+
+```bash
+# Add the tap repository
+brew tap jeeftor/tap
+
+# Install the application
+brew install audiobook-organizer
+```
+
 ### Go Install
 
 ```bash
-go install github.com/yourusername/audiobook-organizer@latest
+go install github.com/jeeftor/audiobook-organizer@latest
 ```
 
 ### Docker
