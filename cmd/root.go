@@ -21,6 +21,8 @@ var (
 	removeEmpty         bool
 	useEmbeddedMetadata bool
 	flat                bool
+	layout              string // Directory structure layout
+	useSeriesAsTitle    bool   // Use Series field as the main title directory
 	cfgFile             string
 )
 
@@ -38,6 +40,8 @@ var envAliases = map[string][]string{
 	"remove-empty":          {"AO_REMOVE_EMPTY", "AUDIOBOOK_ORGANIZER_REMOVE_EMPTY"},
 	"use-embedded-metadata": {"AO_USE_EMBEDDED_METADATA", "AUDIOBOOK_ORGANIZER_USE_EMBEDDED_METADATA"},
 	"flat":                  {"AO_FLAT", "AUDIOBOOK_ORGANIZER_FLAT"},
+	"layout":                {"AO_LAYOUT", "AUDIOBOOK_ORGANIZER_LAYOUT"},
+	"use-series-as-title":   {"AO_USE_SERIES_AS_TITLE", "AUDIOBOOK_ORGANIZER_USE_SERIES_AS_TITLE"},
 }
 
 var rootCmd = &cobra.Command{
@@ -93,6 +97,8 @@ var rootCmd = &cobra.Command{
 				RemoveEmpty:         viper.GetBool("remove-empty"),
 				UseEmbeddedMetadata: viper.GetBool("use-embedded-metadata"),
 				Flat:                viper.GetBool("flat"),
+				Layout:              viper.GetString("layout"),
+				UseSeriesAsTitle:    viper.GetBool("use-series-as-title"),
 			},
 		)
 
@@ -169,6 +175,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&removeEmpty, "remove-empty", false, "Remove empty directories after moving files")
 	rootCmd.Flags().BoolVar(&useEmbeddedMetadata, "use-embedded-metadata", false, "Use metadata embedded in EPUB files if metadata.json is not found")
 	rootCmd.Flags().BoolVar(&flat, "flat", false, "Process files in a flat directory structure (automatically enables --use-embedded-metadata)")
+	rootCmd.Flags().StringVar(&layout, "layout", "author-series-title", "Directory structure layout (options: author-series-title, author-title, author-only)")
+	rootCmd.Flags().BoolVar(&useSeriesAsTitle, "use-series-as-title", false, "Use Series field as the main title directory (useful for MP3 files where Series contains the book title)")
 
 	// Bind flags to viper
 	viper.BindPFlag("dir", rootCmd.Flags().Lookup("dir"))
@@ -183,6 +191,8 @@ func init() {
 	viper.BindPFlag("remove-empty", rootCmd.Flags().Lookup("remove-empty"))
 	viper.BindPFlag("use-embedded-metadata", rootCmd.Flags().Lookup("use-embedded-metadata"))
 	viper.BindPFlag("flat", rootCmd.Flags().Lookup("flat"))
+	viper.BindPFlag("layout", rootCmd.Flags().Lookup("layout"))
+	viper.BindPFlag("use-series-as-title", rootCmd.Flags().Lookup("use-series-as-title"))
 
 	// Set up environment variable handling
 	viper.SetEnvPrefix("AUDIOBOOK_ORGANIZER") // This will still be used for unmapped variables

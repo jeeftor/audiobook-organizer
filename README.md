@@ -21,6 +21,8 @@ CLI tool to organize audiobooks based on **EITHER** `metadata.json` files **OR**
 - Separate input/output directory support
 - **NEW**: Extract metadata directly from EPUB, MP3, and M4B files
 - **NEW**: Process files in a flat directory structure
+- **NEW**: Flexible directory layout options (author/series/title, author/title, author-only)
+- **NEW**: Special handling for MP3 files with non-standard metadata structure
 
 ## Pre-requirements
 
@@ -137,6 +139,8 @@ Options:
 - `--remove-empty`: Remove empty directories after moving files and during initial scan
 - `--use-embedded-metadata`: Use metadata embedded in EPUB, MP3, and M4B files if metadata.json is not found
 - `--flat`: Process files in a flat directory structure (automatically enables --use-embedded-metadata)
+- `--layout`: Directory structure layout (options: author-series-title, author-title, author-only)
+- `--use-series-as-title`: Use Series field as the main title directory (useful for MP3 files where Series contains the book title)
 
 ### Docker Usage Examples
 
@@ -241,6 +245,8 @@ The tool will extract author, title, and series information from the EPUB's, MP3
 
 ## Directory Structure
 
+### Standard Layout (--layout=author-series-title)
+
 Without series:
 
 ```
@@ -253,13 +259,33 @@ With series:
 /output/Author Name/Series Name #1/Book Title/
 ```
 
-With multiple authors:
+### Author-Title Layout (--layout=author-title)
+
+```
+/output/Author Name/Book Title/
+```
+
+### Author-Only Layout (--layout=author-only)
+
+```
+/output/Author Name/
+```
+
+### Using Series as Title (--use-series-as-title)
+
+For MP3 files where the Series field contains the actual book title and Title contains chapter info:
+
+```
+/output/Author Name/Series Name/
+```
+
+### Multiple Authors
 
 ```
 /output/Author One,Author Two/Book Title/
 ```
 
-With space replacement (--replace_space="."):
+### Space Replacement (--replace_space=".")
 
 ```
 /output/Author.Name/Series.Name.#1/Book.Title/
@@ -380,6 +406,9 @@ dry-run: false
 prompt: true
 remove-empty: true  # Remove empty directories
 use-embedded-metadata: true # Use metadata embedded in EPUB, MP3, and M4B files
+flat: false  # Process files in a flat directory structure
+layout: "author-series-title"  # Directory structure layout options: author-series-title, author-title, author-only
+use-series-as-title: false  # Use Series field as the main title directory for MP3 files
 ```
 
 ### Environment Variables
@@ -405,12 +434,16 @@ export AO_REPLACE_SPACE="_"
 export AO_VERBOSE=true
 export AO_REMOVE_EMPTY=true
 export AO_USE_EMBEDDED_METADATA=true
+export AO_LAYOUT="author-series-title"  # Options: author-series-title, author-title, author-only
+export AO_USE_SERIES_AS_TITLE=false
 
 # or
 export AUDIOBOOK_ORGANIZER_REPLACE_SPACE="_"
 export AUDIOBOOK_ORGANIZER_VERBOSE=true
 export AUDIOBOOK_ORGANIZER_REMOVE_EMPTY=true
 export AUDIOBOOK_ORGANIZER_USE_EMBEDDED_METADATA=true
+export AUDIOBOOK_ORGANIZER_LAYOUT="author-series-title"
+export AUDIOBOOK_ORGANIZER_USE_SERIES_AS_TITLE=false
 ```
 
 ### Command Line Flags
