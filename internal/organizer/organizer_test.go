@@ -287,3 +287,152 @@ func TestOutputDirectory(t *testing.T) {
 		t.Errorf("directory %s was not created in output directory", wantPath)
 	}
 }
+
+func TestLayoutOptions(t *testing.T) {
+	tests := []struct {
+		name       string
+		layout     string
+		metadata   Metadata
+		wantDir    string
+	}{
+		{
+			name:   "author_series_title_layout",
+			layout: "author-series-title",
+			metadata: Metadata{
+				Authors: []string{"John Smith"},
+				Title:   "Test Book",
+				Series:  []string{"Test Series"},
+			},
+			wantDir: "John Smith/Test Series/Test Book",
+		},
+		{
+			name:   "author_title_layout",
+			layout: "author-title",
+			metadata: Metadata{
+				Authors: []string{"John Smith"},
+				Title:   "Test Book",
+				Series:  []string{"Test Series"},
+			},
+			wantDir: "John Smith/Test Book",
+		},
+		{
+			name:   "author_only_layout",
+			layout: "author-only",
+			metadata: Metadata{
+				Authors: []string{"John Smith"},
+				Title:   "Test Book",
+				Series:  []string{"Test Series"},
+			},
+			wantDir: "John Smith",
+		},
+		{
+			name:   "default_layout_when_empty",
+			layout: "",
+			metadata: Metadata{
+				Authors: []string{"John Smith"},
+				Title:   "Test Book",
+				Series:  []string{"Test Series"},
+			},
+			wantDir: "John Smith/Test Series/Test Book",
+		},
+		{
+			name:   "unknown_layout_defaults_to_author_title",
+			layout: "invalid-layout",
+			metadata: Metadata{
+				Authors: []string{"John Smith"},
+				Title:   "Test Book",
+				Series:  []string{"Test Series"},
+			},
+			wantDir: "John Smith/Test Book",
+		},
+		{
+			name:   "author_series_title_layout_no_series",
+			layout: "author-series-title",
+			metadata: Metadata{
+				Authors: []string{"John Smith"},
+				Title:   "Test Book",
+				Series:  []string{},
+			},
+			wantDir: "John Smith/Test Book",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tempDir := t.TempDir() // Using t.TempDir() for automatic cleanup
+
+			sourceDir := filepath.Join(tempDir, "source")
+			if err := os.MkdirAll(sourceDir, 0755); err != nil {
+				t.Fatal(err)
+			}
+
+			metadataBytes, err := json.Marshal(tt.metadata)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(sourceDir, "metadata.json"), metadataBytes, 0644); err != nil {
+				t.Fatal(err)
+			}
+
+			testData := []byte("test data")
+			testFile := filepath.Join(sourceDir, "test.mp3")
+			if err := os.WriteFile(testFile, testData, 0644); err != nil {
+				t.Fatal(err)
+			}
+
+			config := &OrganizerConfig{
+				BaseDir:             tempDir,
+				OutputDir:           "",
+				ReplaceSpace:        "",
+				Verbose:             false,
+				DryRun:              false,
+				Undo:                false,
+				Prompt:              false,
+				RemoveEmpty:         false,
+				UseEmbeddedMetadata: false,
+				Layout:              tt.layout,
+			}
+			org := NewOrganizer(config)
+
+			provider := NewJSONMetadataProvider(filepath.Join(sourceDir, "metadata.json"))
+			if err := org.OrganizeAudiobook(sourceDir, provider); err != nil {
+				t.Fatal(err)
+			}
+
+			wantPath := filepath.Join(tempDir, tt.wantDir)
+			if _, err := os.Stat(wantPath); os.IsNotExist(err) {
+				t.Errorf("directory %s was not created", wantPath)
+			}
+
+			// For author-only layout, the file should be directly in the author directory
+			var wantFile string
+			if tt.layout == "author-only" {
+				wantFile = filepath.Join(wantPath, "test.mp3")
+			} else {
+				wantFile = filepath.Join(wantPath, "test.mp3")
+			}
+			
+			if _, err := os.Stat(wantFile); os.IsNotExist(err) {
+				t.Errorf("file was not moved to %s", wantFile)
+				
+				// List the contents of the temp directory to help debug
+				files, err := filepath.Glob(filepath.Join(tempDir, "*", "*", "*"))
+				if err == nil {
+					t.Logf("Files found in temp directory:")
+					for _, file := range files {
+						t.Logf("  %s", file)
+					}
+				}
+			}
+
+			// Verify file contents
+			movedData, err := os.ReadFile(wantFile)
+			if err != nil {
+				t.Errorf("error reading moved file: %v", err)
+			}
+			if !bytes.Equal(movedData, testData) {
+				t.Error("moved file contents do not match original")
+			}
+		})
+	}
+}
