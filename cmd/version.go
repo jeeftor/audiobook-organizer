@@ -28,13 +28,26 @@ func GetFormattedBuildTime() string {
 		return buildTime
 	}
 
-	// Try to parse the timestamp
-	t, err := time.Parse(time.RFC3339, buildTime)
-	if err != nil {
-		return buildTime // Return original if parsing fails
+	// First try to parse as Unix timestamp
+	if unixTime, err := parseInt64(buildTime); err == nil {
+		t := time.Unix(unixTime, 0)
+		return t.Format("2006-01-02 15:04:05 MST")
 	}
 
-	return t.Format("2006-01-02 15:04:05 MST")
+	// Then try to parse as RFC3339 format
+	if t, err := time.Parse(time.RFC3339, buildTime); err == nil {
+		return t.Format("2006-01-02 15:04:05 MST")
+	}
+
+	// Return original if parsing fails
+	return buildTime
+}
+
+// Helper function to parse string to int64
+func parseInt64(s string) (int64, error) {
+	var i int64
+	_, err := fmt.Sscanf(s, "%d", &i)
+	return i, err
 }
 
 // GetDisplayVersion returns a formatted version string
