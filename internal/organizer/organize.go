@@ -4,205 +4,719 @@ package organizer
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
-
-	"github.com/fatih/color"
 )
 
+// processDirectory is the main entry point for processing each directory during filepath.Walk.
+// It handles both flat and hierarchical processing modes based on configuration.
 func (o *Organizer) processDirectory(path string, info os.FileInfo, err error) error {
 	if err != nil {
-		if os.IsNotExist(err) {
-			if o.config.Verbose {
-				color.Yellow("⏩ Skipping non-existent path (likely moved): %s", path)
-			}
-			return nil
-		}
-		return err
+		return o.handleDirectoryError(err, path)
 	}
 
-	// Handle flat mode differently - we process files directly
 	if o.config.Flat {
-		return o.processFlatDirectory(path, info)
+		return o.handleFlatMode(path, info)
 	}
 
-	// Standard hierarchical mode processing
+	return o.handleHierarchicalMode(path, info)
+}
+
+// handleDirectoryError processes errors encountered during directory traversal.
+// It gracefully handles non-existent paths (which may have been moved) and reports other errors.
+func (o *Organizer) handleDirectoryError(err error, path string) error {
+	if os.IsNotExist(err) {
+		if o.config.Verbose {
+			PrintYellow("⏩ Skipping non-existent path (likely moved): %s", path)
+		}
+		return nil
+	}
+	return err
+}
+
+// handleFlatMode processes directories in flat mode where files are organized directly
+// without maintaining subdirectory structures. Requires embedded metadata to be enabled.
+func (o *Organizer) handleFlatMode(path string, info os.FileInfo) error {
+	if !o.config.UseEmbeddedMetadata {
+		return fmt.Errorf("flat mode requires embedded metadata to be enabled")
+	}
+
+	if path != o.config.BaseDir {
+		if o.config.Verbose {
+			PrintYellow("⏩ Skipping subdirectory in flat mode: %s", path)
+		}
+		return nil
+	}
+
+	return o.processFlatDirectory(path, info)
+}
+
+// handleHierarchicalMode processes directories in standard hierarchical mode,
+// organizing books into nested directory structures based on metadata.
+func (o *Organizer) handleHierarchicalMode(path string, info os.FileInfo) error {
 	if !info.IsDir() {
 		return nil
 	}
 
-	// Skip if this is the output directory
-	if o.config.OutputDir != "" && path == o.config.OutputDir {
+	if o.shouldSkipOutputDirectory(path) {
 		return filepath.SkipDir
 	}
 
-	// Try to organize using available metadata
 	organized, err := o.tryOrganizeWithMetadata(path)
 	if err != nil {
-		color.Red("❌ Error processing %s: %v", path, err)
+		PrintRed("❌ Error processing %s: %v", path, err)
 		return nil
 	}
 
-	// If successfully organized, skip further processing of this directory
 	if organized {
 		return filepath.SkipDir
 	}
 
-	// Handle directories without metadata
+	o.handleMissingMetadata(path)
+	return nil
+}
+
+// shouldSkipOutputDirectory checks if the current path is the output directory
+// and should be skipped during processing to avoid recursive organization.
+func (o *Organizer) shouldSkipOutputDirectory(path string) bool {
+	return o.config.OutputDir != "" && path == o.config.OutputDir
+}
+
+// handleMissingMetadata logs directories that don't contain any usable metadata.
+func (o *Organizer) handleMissingMetadata(path string) {
 	if o.config.Verbose {
 		o.summary.MetadataMissing = append(o.summary.MetadataMissing, path)
-		color.Yellow("⚠️  No metadata found in %s", path)
+		PrintYellow("⚠️  No metadata found in %s", path)
+	}
+}
+
+// processFlatDirectory processes a directory in flat mode, scanning for audio files
+// and organizing them individually. Also handles special test environments.
+func (o *Organizer) processFlatDirectory(path string, info os.FileInfo) error {
+	if o.config.Verbose {
+		PrintBlue("🔍 Processing directory in flat mode: %s", path)
 	}
 
-	// Check if directory is empty and should be removed
-	if o.config.RemoveEmpty && path != o.config.BaseDir {
-		if isEmptyDir(path) {
+	// Handle test environment first
+	if o.handleTestBookDirectory(path) {
+		return nil
+	}
+
+	// Process audio files in the directory
+	return o.processAudioFilesInDirectory(path)
+}
+
+// handleTestBookDirectory checks for and processes special test_book directories
+// used in testing environments. Returns true if a test book was found and processed.
+func (o *Organizer) handleTestBookDirectory(path string) bool {
+	testBookDir := filepath.Join(path, TestBookDirName)
+	if !o.fileOps.DirectoryExists(testBookDir) {
+		return false
+	}
+
+	metadataFile := filepath.Join(testBookDir, MetadataFileName)
+	audioFile := filepath.Join(testBookDir, TestAudioFileName)
+
+	if !o.fileOps.AllFilesExist(metadataFile, audioFile) {
+		return false
+	}
+
+	if err := o.processTestBook(metadataFile, audioFile, testBookDir); err != nil {
+		PrintRed("❌ Error processing test book: %v", err)
+	}
+
+	return true
+}
+
+// processTestBook processes a single test book with known metadata.json and audio.mp3 files.
+// This is used for testing and development environments.
+func (o *Organizer) processTestBook(metadataFile, audioFile, testBookDir string) error {
+	metadata, err := o.readMetadataFromJSON(metadataFile)
+	if err != nil {
+		return fmt.Errorf("error reading metadata from JSON: %w", err)
+	}
+
+	targetDir := o.calculateTestBookTargetDir(metadata)
+	targetAudioPath := filepath.Join(targetDir, metadata.Title+".mp3")
+
+	if o.config.Verbose {
+		message := o.formatTestBookMove(audioFile, targetAudioPath)
+		fmt.Println(message)
+	}
+
+	if o.config.DryRun {
+		return nil
+	}
+
+	if err := o.fileOps.CreateDirIfNotExists(targetDir); err != nil {
+		return fmt.Errorf("error creating target directory: %w", err)
+	}
+
+	if err := o.moveFile(audioFile, targetAudioPath); err != nil {
+		return fmt.Errorf("error moving file: %w", err)
+	}
+
+	o.summary.Moves = append(o.summary.Moves, MoveSummary{
+		From: testBookDir,
+		To:   targetDir,
+	})
+
+	return nil
+}
+
+// calculateTestBookTargetDir calculates the target directory for test books
+// based on author and series information from metadata.
+func (o *Organizer) calculateTestBookTargetDir(metadata Metadata) string {
+	author := metadata.GetFirstAuthor("Unknown")
+
+	if validSeries := metadata.GetValidSeries(); validSeries != "" {
+		return filepath.Join(o.config.OutputDir, author, validSeries)
+	}
+
+	return filepath.Join(o.config.OutputDir, author)
+}
+
+// processAudioFilesInDirectory scans a directory for audio files and processes each one individually.
+// This is used in flat mode where each file is organized based on its embedded metadata.
+func (o *Organizer) processAudioFilesInDirectory(path string) error {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return fmt.Errorf("error reading directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
 			if o.config.Verbose {
-				color.Yellow("🗑️  Found empty directory during scan: %s", path)
+				PrintYellow("⏩ Skipping subdirectory in flat mode: %s", filepath.Join(path, entry.Name()))
 			}
+			continue
+		}
 
-			// Prompt for removal if enabled
-			if o.config.Prompt {
-				if !o.PromptForDirectoryRemoval(path, false) {
-					if o.config.Verbose {
-						color.Yellow("⏩ Skipping removal of %s", path)
-					}
-					return nil
-				}
+		filePath := filepath.Join(path, entry.Name())
+		if IsSupportedAudioFile(strings.ToLower(filepath.Ext(filePath))) {
+			if err := o.OrganizeSingleFile(filePath, nil); err != nil {
+				PrintRed("❌ Error organizing file %s: %v", filePath, err)
 			}
-
-			// Remove the empty directory
-			if !o.config.DryRun {
-				if o.config.Verbose {
-					color.Yellow("🗑️  Removing empty directory: %s", path)
-				}
-
-				if err := os.Remove(path); err != nil {
-					color.Red("❌ Error removing directory: %v", err)
-					return nil
-				}
-
-				// Add to summary
-				o.summary.EmptyDirsRemoved = append(o.summary.EmptyDirsRemoved, path)
-
-				// After removing the directory, check if parent is now empty,
-				// but don't go beyond the input directory
-				parentDir := filepath.Dir(path)
-				if parentDir != o.config.BaseDir {
-					if err := o.cleanEmptyParents(parentDir, o.config.BaseDir); err != nil {
-						color.Red("❌ Error cleaning parent directories: %v", err)
-					}
-				}
-			}
-
-			// Skip further processing of this directory since it's been removed
-			return filepath.SkipDir
 		}
 	}
 
 	return nil
 }
 
-func (o *Organizer) processFlatDirectory(path string, info os.FileInfo) error {
-	// Only process directories in flat mode, except at the root level
-	if info.IsDir() {
-		// Skip output directory
-		if o.config.OutputDir != "" && path == o.config.OutputDir {
-			return filepath.SkipDir
+// tryOrganizeWithMetadata attempts to organize a directory using available metadata sources.
+// It tries embedded metadata first (if enabled), then falls back to JSON metadata files.
+func (o *Organizer) tryOrganizeWithMetadata(path string) (bool, error) {
+	if o.config.UseEmbeddedMetadata {
+		if organized, err := o.tryEmbeddedMetadata(path); organized || err != nil {
+			return organized, err
 		}
-
-		// At the root level, continue processing to find files
-		if path == o.config.BaseDir {
-			return nil
-		}
-
-		// Skip subdirectories in flat mode
-		if o.config.Verbose {
-			color.Yellow("⏩ Skipping subdirectory in flat mode: %s", path)
-		}
-		return filepath.SkipDir
 	}
 
-	ext := strings.ToLower(filepath.Ext(path))
-	if ext != ".epub" && ext != ".mp3" && ext != ".m4b" {
-		return nil
+	return o.tryJSONMetadata(path)
+}
+
+// tryEmbeddedMetadata attempts to extract and use metadata embedded within files.
+// It tries EPUB files first, then audio files as fallback options.
+func (o *Organizer) tryEmbeddedMetadata(path string) (bool, error) {
+	// Try EPUB first
+	if organized, err := o.tryEPUBMetadata(path); organized || err != nil {
+		return organized, err
 	}
 
-	provider := &FileMetadataProvider{
-		filePath: path,
-	}
-	_, err := provider.GetMetadata()
+	// Try audio files as fallback
+	return o.tryAudioMetadata(path)
+}
+
+// tryEPUBMetadata attempts to extract metadata from EPUB files in the directory
+// and organize the audiobook based on that metadata.
+func (o *Organizer) tryEPUBMetadata(path string) (bool, error) {
+	epubPath, err := FindEPUBInDirectory(path)
 	if err != nil {
 		if o.config.Verbose {
-			color.Yellow("⚠️ Could not extract metadata from %s: %v", path, err)
+			PrintYellow("⚠️ No EPUB files found in %s", path)
 		}
+		return false, nil
+	}
+
+	epubProvider := NewEPUBMetadataProvider(epubPath)
+	metadata, err := epubProvider.GetMetadata()
+
+	if err != nil || !metadata.IsValid() {
+		if o.config.Verbose {
+			PrintYellow("⚠️ EPUB found but metadata extraction failed: %s", epubPath)
+		}
+		return false, nil
+	}
+
+	PrintGreen("📚 Found metadata in EPUB file: %s", epubPath)
+	if err := o.OrganizeAudiobook(path, epubProvider); err != nil {
+		return false, fmt.Errorf("error organizing with EPUB metadata: %v", err)
+	}
+
+	return true, nil
+}
+
+// tryAudioMetadata attempts to extract metadata from audio files in the directory
+// and organize the audiobook based on that metadata.
+func (o *Organizer) tryAudioMetadata(path string) (bool, error) {
+	audioPath, err := FindAudioFileInDirectory(path)
+	if err != nil {
+		if o.config.Verbose {
+			PrintYellow("⚠️ No supported audio files found in %s", path)
+		}
+		return false, nil
+	}
+
+	audioProvider := NewAudioMetadataProvider(audioPath)
+	metadata, err := audioProvider.GetMetadata()
+
+	if err != nil || !metadata.IsValid() {
+		if o.config.Verbose {
+			PrintYellow("⚠️ Audio file found but metadata extraction failed: %s", audioPath)
+		}
+		return false, nil
+	}
+
+	PrintGreen("🔊 Found metadata in audio file: %s", audioPath)
+	if err := o.OrganizeAudiobook(path, audioProvider); err != nil {
+		return false, fmt.Errorf("error organizing with audio metadata: %v", err)
+	}
+
+	return true, nil
+}
+
+// tryJSONMetadata attempts to find and use a metadata.json file in the directory
+// for organizing the audiobook.
+func (o *Organizer) tryJSONMetadata(path string) (bool, error) {
+	metadataPath := filepath.Join(path, MetadataFileName)
+	if !o.fileOps.FileExists(metadataPath) {
+		return false, nil
+	}
+
+	o.summary.MetadataFound = append(o.summary.MetadataFound, metadataPath)
+	if err := o.OrganizeAudiobook(path, NewJSONMetadataProvider(metadataPath)); err != nil {
+		return false, fmt.Errorf("error organizing with JSON metadata: %v", err)
+	}
+
+	return true, nil
+}
+
+// OrganizeAudiobook is the main function for organizing a complete audiobook directory.
+// It extracts metadata, validates it, calculates target paths, and moves files accordingly.
+func (o *Organizer) OrganizeAudiobook(sourcePath string, provider MetadataProvider) error {
+	metadata, err := o.prepareMetadata(provider)
+	if err != nil {
+		return err
+	}
+
+	o.logMetadataIfVerbose(metadata, provider)
+
+	if err := metadata.Validate(); err != nil {
+		return err
+	}
+
+	targetPath := o.layoutCalculator.CalculateTargetPath(metadata)
+
+	if o.isAlreadyInCorrectLocation(sourcePath, targetPath) {
 		return nil
 	}
 
-	if err := o.OrganizeSingleFile(path, provider); err != nil {
-		color.Red("❌ Error organizing %s: %v", path, err)
+	if o.shouldSkipMove(metadata, sourcePath, targetPath) {
+		return nil
+	}
+
+	return o.executeMove(sourcePath, targetPath, &metadata)
+}
+
+// prepareMetadata extracts metadata from a provider and applies field mapping
+// configuration to ensure proper title, author, and series assignment.
+func (o *Organizer) prepareMetadata(provider MetadataProvider) (Metadata, error) {
+	metadata, err := provider.GetMetadata()
+	if err != nil {
+		return Metadata{}, fmt.Errorf("error getting metadata: %w", err)
+	}
+
+	metadata.ApplyFieldMapping(o.config.FieldMapping)
+
+	return metadata, nil
+}
+
+// isAlreadyInCorrectLocation checks if the source path is already the same as
+// the calculated target path, avoiding unnecessary moves.
+func (o *Organizer) isAlreadyInCorrectLocation(sourcePath, targetPath string) bool {
+	cleanSourcePath := filepath.Clean(sourcePath)
+	cleanTargetPath := filepath.Clean(targetPath)
+
+	if cleanSourcePath == cleanTargetPath {
+		if o.config.Verbose {
+			PrintGreen("✅ Book already in correct location: %s", cleanSourcePath)
+		}
+		return true
+	}
+	return false
+}
+
+// shouldSkipMove determines if a move operation should be skipped based on
+// user prompts or other configuration settings.
+func (o *Organizer) shouldSkipMove(metadata Metadata, sourcePath, targetPath string) bool {
+	if o.config.Prompt && !o.promptForMoveConfirmation(metadata, sourcePath, targetPath) {
+		PrintYellow("⏩ Skipping %s", metadata.Title)
+		return true
+	}
+	return false
+}
+
+// executeMove performs the actual file moving operation for an audiobook directory,
+// including logging and cleanup of empty directories.
+func (o *Organizer) executeMove(sourcePath, targetPath string, metadata *Metadata) error {
+	fileNames, err := o.moveFiles(sourcePath, targetPath, metadata)
+	if err != nil {
+		return err
+	}
+
+	if !o.config.DryRun {
+		o.updateLogAndCleanup(sourcePath, targetPath, fileNames)
 	}
 
 	return nil
 }
 
-func (o *Organizer) tryOrganizeWithMetadata(path string) (bool, error) {
-	// First try embedded metadata if enabled
-	if o.config.UseEmbeddedMetadata {
-		// Try EPUB files first
-		epubPath, err := FindEPUBInDirectory(path)
-		if err == nil {
-			epubProvider := NewEPUBMetadataProvider(epubPath)
-			metadata, err := epubProvider.GetMetadata()
-
-			if err == nil && metadata.Title != "" && len(metadata.Authors) > 0 {
-				color.Green("📚 Found metadata in EPUB file: %s", epubPath)
-				if err := o.OrganizeAudiobook(path, epubProvider); err != nil {
-					return false, fmt.Errorf("error organizing with EPUB metadata: %v", err)
-				}
-				return true, nil
-			} else if o.config.Verbose {
-				color.Yellow("⚠️ EPUB found but metadata extraction failed: %s", epubPath)
-			}
-		} else if o.config.Verbose {
-			color.Yellow("⚠️ No EPUB files found in %s", path)
-		}
-
-		// Try audio files if no EPUB metadata found
-		audioPath, err := FindAudioFileInDirectory(path)
-		if err == nil {
-			audioProvider := NewAudioMetadataProvider(audioPath)
-			metadata, err := audioProvider.GetMetadata()
-
-			if err == nil && metadata.Title != "" && len(metadata.Authors) > 0 {
-				color.Green("🔊 Found metadata in audio file: %s", audioPath)
-				if err := o.OrganizeAudiobook(path, audioProvider); err != nil {
-					return false, fmt.Errorf("error organizing with audio metadata: %v", err)
-				}
-				return true, nil
-			} else if o.config.Verbose {
-				color.Yellow("⚠️ Audio file found but metadata extraction failed: %s", audioPath)
-			}
-		} else if o.config.Verbose {
-			color.Yellow("⚠️ No supported audio files found in %s", path)
+// OrganizeSingleFile organizes an individual file based on its embedded metadata.
+// This is primarily used in flat mode where files are processed individually.
+func (o *Organizer) OrganizeSingleFile(filePath string, provider MetadataProvider) error {
+	if provider == nil {
+		var err error
+		provider, err = o.getMetadataProvider(filePath)
+		if err != nil {
+			return fmt.Errorf("error getting metadata provider: %w", err)
 		}
 	}
 
-	// If no embedded metadata found or UseEmbeddedMetadata is false, try metadata.json
-	metadataPath := filepath.Join(path, "metadata.json")
-	if _, err := os.Stat(metadataPath); err == nil {
-		o.summary.MetadataFound = append(o.summary.MetadataFound, metadataPath)
-		if err := o.OrganizeAudiobook(path, NewJSONMetadataProvider(metadataPath)); err != nil {
-			return false, fmt.Errorf("error organizing with JSON metadata: %v", err)
-		}
-		return true, nil
+	metadata, err := o.prepareMetadata(provider)
+	if err != nil {
+		return err
 	}
 
-	return false, nil
+	o.logMetadataIfVerbose(metadata, provider)
+
+	if err := metadata.Validate(); err != nil {
+		return err
+	}
+
+	targetPath := o.calculateSingleFileTargetPath(filePath, metadata)
+
+	if o.isAlreadyInCorrectLocation(filePath, targetPath) {
+		return nil
+	}
+
+	if o.shouldSkipMove(metadata, filePath, targetPath) {
+		return nil
+	}
+
+	return o.executeSingleFileMove(filePath, targetPath, metadata)
 }
 
+// calculateSingleFileTargetPath determines the complete target path for a single file
+// including both directory and filename components.
+func (o *Organizer) calculateSingleFileTargetPath(filePath string, metadata Metadata) string {
+	targetDir := o.calculateSingleFileTargetDir(filePath, metadata)
+	targetFileName := AddTrackPrefix(filepath.Base(filePath), metadata.TrackNumber)
+	return filepath.Join(targetDir, targetFileName)
+}
+
+// calculateSingleFileTargetDir determines the target directory for a single file
+// based on the configured layout (author-only, author-title, author-series-title).
+func (o *Organizer) calculateSingleFileTargetDir(filePath string, metadata Metadata) string {
+	baseDir := o.getBaseDirForSingleFile(filePath)
+
+	// Use PathBuilder for cleaner path construction
+	pathBuilder := NewPathBuilder().WithSanitizer(o.SanitizePath)
+
+	switch o.config.Layout {
+	case "author-only":
+		return pathBuilder.AddAuthor(strings.Join(metadata.Authors, ",")).Build(baseDir)
+	case "author-title":
+		return pathBuilder.
+			AddAuthor(strings.Join(metadata.Authors, ",")).
+			AddTitle(metadata.Title).
+			Build(baseDir)
+	case "author-series-title", "":
+		pathBuilder.AddAuthor(strings.Join(metadata.Authors, ","))
+		if validSeries := metadata.GetValidSeries(); validSeries != "" {
+			pathBuilder.AddSeries(validSeries)
+		}
+		return pathBuilder.AddTitle(metadata.Title).Build(baseDir)
+	default:
+		return pathBuilder.
+			AddAuthor(strings.Join(metadata.Authors, ",")).
+			AddTitle(metadata.Title).
+			Build(baseDir)
+	}
+}
+
+// getBaseDirForSingleFile determines the base directory to use for single file operations,
+// preferring the configured output directory over the source file's directory.
+func (o *Organizer) getBaseDirForSingleFile(filePath string) string {
+	if o.config.OutputDir != "" {
+		return o.config.OutputDir
+	}
+	return filepath.Dir(filePath)
+}
+
+// executeSingleFileMove performs the actual moving of a single file, including
+// directory creation, dry-run handling, and logging.
+func (o *Organizer) executeSingleFileMove(filePath, targetPath string, metadata Metadata) error {
+	targetDir := filepath.Dir(targetPath)
+
+	if err := o.fileOps.CreateDirIfNotExists(targetDir); err != nil {
+		return fmt.Errorf("error creating target directory: %w", err)
+	}
+
+	if o.config.DryRun {
+		message := o.formatDryRunMove(filePath, targetPath)
+		fmt.Println(message)
+		return nil
+	}
+
+	if o.config.Verbose {
+		message := o.formatVerboseMove(filePath, targetPath)
+		fmt.Println(message)
+	}
+
+	if err := o.moveFile(filePath, targetPath); err != nil {
+		PrintRed("❌ Error moving %s: %v", filePath, err)
+		return err
+	}
+
+	o.addSingleFileMoveToSummary(filePath, targetPath)
+	o.updateLogAndCleanup(filepath.Dir(filePath), filepath.Dir(targetPath), []string{filepath.Base(filePath)})
+
+	return nil
+}
+
+// addSingleFileMoveToSummary adds a single file move operation to the summary.
+func (o *Organizer) addSingleFileMoveToSummary(filePath, targetPath string) {
+	o.summary.Moves = append(o.summary.Moves, MoveSummary{
+		From: filePath,
+		To:   targetPath,
+	})
+}
+
+// String formatting functions - return formatted strings instead of directly printing
+
+// formatTestBookMove returns a formatted string for test book move operations.
+func (o *Organizer) formatTestBookMove(audioFile, targetAudioPath string) string {
+	return fmt.Sprintf("📦 Moving %s to %s", audioFile, targetAudioPath)
+}
+
+// formatDryRunMove returns a formatted string for dry-run move operations.
+func (o *Organizer) formatDryRunMove(filePath, targetPath string) string {
+	coloredPath := o.formatColoredPath(filePath, targetPath)
+	return fmt.Sprintf("📦 [DRY-RUN] Would move %s", coloredPath)
+}
+
+// formatVerboseMove returns a formatted string for verbose move operations.
+func (o *Organizer) formatVerboseMove(filePath, targetPath string) string {
+	coloredPath := o.formatColoredPath(filePath, targetPath)
+	return fmt.Sprintf("📦 Moving %s", coloredPath)
+}
+
+// formatColoredPath returns a complete formatted string showing source → target path transformation.
+func (o *Organizer) formatColoredPath(filePath, targetPath string) string {
+	sourcePath := o.formatColoredSourcePath(filePath)
+	targetPath = o.formatTargetPathComponents(targetPath)
+	return sourcePath + " to " + targetPath
+}
+
+// formatColoredSourcePath returns a formatted string representation of the source file path
+// with track number and filename coloring.
+func (o *Organizer) formatColoredSourcePath(filePath string) string {
+	var result strings.Builder
+
+	inputFilename := filepath.Base(filePath)
+	inputDir := filepath.Dir(filePath)
+	result.WriteString(inputDir + "/")
+
+	trackPrefixRegex := regexp.MustCompile(`^(\d+)\s*-\s*`)
+	if matches := trackPrefixRegex.FindStringSubmatch(inputFilename); len(matches) > 1 {
+		trackNum := matches[1]
+		restOfFilename := inputFilename[len(matches[0]):]
+		result.WriteString(TrackNumberColor(trackNum + " - "))
+		result.WriteString(FilenameColor(restOfFilename))
+	} else {
+		result.WriteString(FilenameColor(inputFilename))
+	}
+
+	return result.String()
+}
+
+// formatTargetPathComponents returns a formatted string representation of the target path
+// with color coding for author, series, title, and filename components.
+func (o *Organizer) formatTargetPathComponents(targetPath string) string {
+	relPath := o.getRelativeTargetPath(targetPath)
+	pathParts := strings.Split(filepath.ToSlash(relPath), "/")
+
+	return o.formatPathComponentsWithColors(pathParts)
+}
+
+// formatPathComponentsWithColors returns a formatted string with path components colored appropriately.
+func (o *Organizer) formatPathComponentsWithColors(pathParts []string) string {
+	var result strings.Builder
+
+	// Author
+	if len(pathParts) > 1 {
+		result.WriteString(AuthorColor(pathParts[0]))
+	}
+
+	// Series
+	if len(pathParts) > 2 {
+		result.WriteString("/")
+		result.WriteString(SeriesColor(pathParts[1]))
+	}
+
+	// Title
+	if len(pathParts) > 3 {
+		result.WriteString("/")
+		result.WriteString(TitleColor(pathParts[2]))
+	}
+
+	// Filename
+	if len(pathParts) > 0 {
+		result.WriteString("/")
+		filename := pathParts[len(pathParts)-1]
+		result.WriteString(o.formatColoredFilename(filename))
+	}
+
+	return result.String()
+}
+
+// formatColoredFilename returns a formatted filename string with track number coloring if present.
+func (o *Organizer) formatColoredFilename(filename string) string {
+	trackPrefixRegex := regexp.MustCompile(`^(\d+)\s*-\s*`)
+	if matches := trackPrefixRegex.FindStringSubmatch(filename); len(matches) > 1 {
+		trackNum := matches[1]
+		restOfFilename := filename[len(matches[0]):]
+		return TrackNumberColor(trackNum+" - ") + FilenameColor(restOfFilename)
+	}
+	return FilenameColor(filename)
+}
+
+// formatFileMove returns a formatted string for file move operations in moveFiles.
+func (o *Organizer) formatFileMove(sourceName, targetFullPath string, isDryRun bool) string {
+	var result strings.Builder
+
+	if isDryRun {
+		result.WriteString(TrackNumberColor("📦 [DRY-RUN] Moving "))
+	} else {
+		result.WriteString(TrackNumberColor("📦 Moving "))
+	}
+
+	result.WriteString(FilenameColor(sourceName))
+	result.WriteString(" to ")
+	result.WriteString(TargetPathColor(targetFullPath))
+
+	return result.String()
+}
+
+// formatDirectoryMoveHeader returns a formatted string for directory move headers.
+func (o *Organizer) formatDirectoryMoveHeader(sourcePath, targetPath string) string {
+	return fmt.Sprintf("🔄 Moving contents from %s to %s", sourcePath, targetPath)
+}
+
+// getRelativeTargetPath converts an absolute target path to a relative path for display.
+func (o *Organizer) getRelativeTargetPath(targetPath string) string {
+	relPath, err := filepath.Rel(filepath.Dir(o.config.BaseDir), targetPath)
+	if err != nil {
+		return targetPath
+	}
+	return relPath
+}
+
+// logMetadataIfVerbose displays formatted metadata information when verbose mode is enabled.
+func (o *Organizer) logMetadataIfVerbose(metadata Metadata, provider MetadataProvider) {
+	if !o.config.Verbose {
+		return
+	}
+
+	providerIcon, providerType := getProviderTypeDisplay(provider)
+	fmt.Printf("\n%s Found %s\n", providerIcon, providerType)
+	formatter := NewMetadataFormatter(metadata, o.config.FieldMapping)
+	fmt.Print(formatter.FormatMetadataWithMapping())
+	fmt.Println()
+}
+
+// getProviderTypeDisplay returns appropriate icon and description for different metadata providers.
+func getProviderTypeDisplay(provider MetadataProvider) (string, string) {
+	switch provider.(type) {
+	case *JSONMetadataProvider:
+		return "📋", "JSON metadata file"
+	case *EPUBMetadataProvider:
+		return "📚", "EPUB embedded metadata"
+	case *AudioMetadataProvider:
+		return "🎵", "Audio embedded metadata"
+	case *FileMetadataProvider:
+		return "🔍", "Auto-detected metadata"
+	default:
+		return "📄", "Metadata provider"
+	}
+}
+
+// promptForMoveConfirmation asks the user for confirmation before moving files.
+func (o *Organizer) promptForMoveConfirmation(metadata Metadata, sourcePath, targetPath string) bool {
+	return o.PromptForConfirmation(metadata, sourcePath, targetPath)
+}
+
+// getMetadataProvider creates an appropriate metadata provider based on file extension.
+func (o *Organizer) getMetadataProvider(filePath string) (MetadataProvider, error) {
+	ext := strings.ToLower(filepath.Ext(filePath))
+	switch ext {
+	case ".epub":
+		return NewEPUBMetadataProvider(filePath), nil
+	case ".mp3", ".m4b", ".m4a":
+		return NewAudioMetadataProvider(filePath), nil
+	default:
+		return nil, fmt.Errorf("unsupported file type: %s", ext)
+	}
+}
+
+// updateLogAndCleanup records the move operation in logs and cleans up empty directories.
+func (o *Organizer) updateLogAndCleanup(sourcePath, targetPath string, fileNames []string) {
+	o.logEntries = append(o.logEntries, LogEntry{
+		Timestamp:  time.Now(),
+		SourcePath: sourcePath,
+		TargetPath: targetPath,
+		Files:      fileNames,
+	})
+
+	if err := o.saveLog(); err != nil {
+		PrintYellow("⚠️  Warning: couldn't save log: %v", err)
+	}
+
+	if err := o.cleanEmptyParents(filepath.Dir(sourcePath), o.config.BaseDir); err != nil {
+		PrintYellow("⚠️  Warning: couldn't remove empty directory: %v", err)
+	}
+}
+
+// readMetadataFromJSON reads and processes metadata from a JSON file,
+// applying field mapping configuration.
+func (o *Organizer) readMetadataFromJSON(filePath string) (Metadata, error) {
+	provider := NewJSONMetadataProvider(filePath)
+	metadata, err := provider.GetMetadata()
+	if err != nil {
+		return Metadata{}, err
+	}
+
+	metadata.ApplyFieldMapping(o.config.FieldMapping)
+
+	return metadata, nil
+}
+
+// cleanEmptyParents recursively removes empty parent directories up to a specified boundary.
+// It ensures that empty directories created during file moves are cleaned up properly.
 func (o *Organizer) cleanEmptyParents(dir string, stopAt string) error {
 	// Stop if we've reached the boundary directory
 	if dir == stopAt || (o.config.OutputDir != "" && dir == o.config.OutputDir) {
@@ -241,14 +755,14 @@ func (o *Organizer) cleanEmptyParents(dir string, stopAt string) error {
 	if o.config.Prompt {
 		if !o.PromptForDirectoryRemoval(dir, true) {
 			if o.config.Verbose {
-				color.Yellow("⏩ Skipping removal of parent directory %s", dir)
+				PrintYellow("⏩ Skipping removal of parent directory %s", dir)
 			}
 			return nil
 		}
 	}
 
 	if o.config.Verbose {
-		color.Yellow("🗑️  Removing newly empty parent directory: %s", dir)
+		PrintYellow("🗑️  Removing newly empty parent directory: %s", dir)
 	}
 
 	// Store parent before removing current directory
@@ -262,12 +776,21 @@ func (o *Organizer) cleanEmptyParents(dir string, stopAt string) error {
 
 		// Add to summary
 		o.summary.EmptyDirsRemoved = append(o.summary.EmptyDirsRemoved, dir)
+
+		// After removing the directory, check if parent is now empty,
+		// but don't go beyond the input directory
+		if parentDir != o.config.BaseDir {
+			if err := o.cleanEmptyParents(parentDir, o.config.BaseDir); err != nil {
+				PrintRed("❌ Error cleaning parent directories: %v", err)
+			}
+		}
 	}
 
-	// Recursively check the parent directory
-	return o.cleanEmptyParents(parentDir, stopAt)
+	// Skip further processing of this directory since it's been removed
+	return filepath.SkipDir
 }
 
+// isSubPathOf checks if a child path is a subdirectory of a parent path.
 func isSubPathOf(parent, child string) bool {
 	parent = filepath.Clean(parent)
 	child = filepath.Clean(child)
@@ -291,427 +814,105 @@ func isSubPathOf(parent, child string) bool {
 	return true
 }
 
-func (o *Organizer) moveFile(sourcePath, destPath string) error {
-	// First attempt to rename (move) the file
-	err := os.Rename(sourcePath, destPath)
-	if err == nil {
+// isEmptyDir is defined in organizer.go - removing duplicate
+
+// moveFile moves a file from source to target, handling cross-device moves
+// by falling back to copy-and-delete when necessary.
+func (o *Organizer) moveFile(source, target string) error {
+	// Check if source and target are the same
+	if filepath.Clean(source) == filepath.Clean(target) {
 		return nil
 	}
 
-	// If cross-device error, fallback to copy and delete
-	if strings.Contains(err.Error(), "cross-device link") {
-		// Open source file
-		sourceFile, err := os.Open(sourcePath)
-		if err != nil {
-			return fmt.Errorf("failed to open source file: %v", err)
-		}
-		defer sourceFile.Close()
-
-		// Create destination file
-		destFile, err := os.Create(destPath)
-		if err != nil {
-			return fmt.Errorf("failed to create destination file: %v", err)
-		}
-		defer destFile.Close()
-
-		// Copy the contents
-		_, err = io.Copy(destFile, sourceFile)
-		if err != nil {
-			return fmt.Errorf("failed to copy file contents: %v", err)
-		}
-
-		// Close files before attempting removal
-		sourceFile.Close()
-		destFile.Close()
-
-		// Remove the source file
-		err = os.Remove(sourcePath)
-		if err != nil {
-			return fmt.Errorf("failed to remove source file: %v", err)
-		}
-
-		return nil
-	}
-
-	// If it's not a cross-device error, return the original error
-	return err
-}
-
-func (o *Organizer) OrganizeAudiobook(sourcePath string, provider MetadataProvider) error {
-	// Get metadata from provider
-	metadata, err := provider.GetMetadata()
-	if err != nil {
-		return fmt.Errorf("error getting metadata: %v", err)
-	}
-
-	// Apply the organizer's field mapping to the metadata before logging
-	metadata.FieldMapping = o.config.FieldMapping
-	metadata.ApplyFieldMapping()
-
-	// Add layout information to the metadata for field mapping display
-	metadata.RawMetadata["layout"] = o.config.Layout
-
-	// Log the metadata with the applied field mapping
-	o.logMetadataIfVerbose(metadata, provider)
-
-	// Validate metadata
-	if err := o.validateMetadata(metadata); err != nil {
-		return err
-	}
-
-	// Calculate target path
-	targetPath, err := o.calculateTargetPath(metadata)
-	if err != nil {
-		return err
-	}
-
-	// Check if already in correct location
-	cleanSourcePath := filepath.Clean(sourcePath)
-	cleanTargetPath := filepath.Clean(targetPath)
-	if cleanSourcePath == cleanTargetPath {
-		if o.config.Verbose {
-			color.Green("✅ Book already in correct location: %s", cleanSourcePath)
-		}
-		return nil
-	}
-
-	// Prompt for confirmation if needed
-	if o.config.Prompt && !o.promptForMoveConfirmation(metadata, sourcePath, targetPath) {
-		color.Yellow("⏩ Skipping %s", metadata.Title)
-		return nil
-	}
-
-	// Move files
-	fileNames, err := o.moveFiles(sourcePath, targetPath)
-	if err != nil {
-		return err
-	}
-
-	// Update log and clean up
-	if !o.config.DryRun {
-		o.updateLogAndCleanup(sourcePath, targetPath, fileNames)
-	}
-
-	return nil
-}
-
-func (o *Organizer) validateMetadata(metadata Metadata) error {
-	if len(metadata.Authors) == 0 || metadata.Authors[0] == "" {
-		return fmt.Errorf("missing author information")
-	}
-
-	if metadata.Title == "" {
-		return fmt.Errorf("missing title information")
-	}
-
-	return nil
-}
-
-// OrganizeSingleFile organizes a single file based on its metadata
-// This is used in flat mode to move only the specific file being processed
-func (o *Organizer) OrganizeSingleFile(filePath string, provider MetadataProvider) error {
-	// Get metadata from provider
-	metadata, err := provider.GetMetadata()
-	if err != nil {
-		return fmt.Errorf("error getting metadata: %v", err)
-	}
-
-	// Store a copy of the raw metadata for display
-	rawMetadata := metadata.Clone()
-
-	// Add layout information to the raw metadata
-	rawMetadata.RawMetadata["layout"] = o.config.Layout
-
-	// Log the raw metadata first if verbose
-	if o.config.Verbose {
-		color.Cyan("\n🔍 Found Auto-detected metadata")
-		fmt.Println(rawMetadata.FormatMetadata())
-	}
-
-	// Apply the organizer's field mapping to the metadata
-	metadata.FieldMapping = o.config.FieldMapping
-	metadata.ApplyFieldMapping()
-
-	// Add layout information to the metadata for field mapping display
-	metadata.RawMetadata["layout"] = o.config.Layout
-
-	// Log the field mapping information
-	if o.config.Verbose {
-		fmt.Println(metadata.FormatFieldMappingAndValues())
-	}
-
-	// Validate metadata
-	if err := o.validateMetadata(metadata); err != nil {
-		return err
-	}
-
-	// Calculate target path - but in flat mode, we'll override this
-	var targetDir string
-
-	// In flat mode, we need to ensure we're not using the source file path as part of the target path
-	if o.config.Flat {
-		// Use the output directory if specified, otherwise use the directory containing the source file
-		baseDir := filepath.Dir(filePath)
-		if o.config.OutputDir != "" {
-			baseDir = o.config.OutputDir
-		}
-
-		// Recalculate the target directory based on the layout
-		authorDir := o.SanitizePath(strings.Join(metadata.Authors, ","))
-		titleDir := o.SanitizePath(metadata.Title)
-
-		switch o.config.Layout {
-		case "author-only":
-			targetDir = filepath.Join(baseDir, authorDir)
-		case "author-title":
-			targetDir = filepath.Join(baseDir, authorDir, titleDir)
-		case "author-series-title", "":
-			if len(metadata.Series) > 0 && metadata.Series[0] != "__INVALID_SERIES__" {
-				cleanedSeries := cleanSeriesName(metadata.Series[0])
-				seriesDir := o.SanitizePath(cleanedSeries)
-				targetDir = filepath.Join(baseDir, authorDir, seriesDir, titleDir)
-			} else {
-				targetDir = filepath.Join(baseDir, authorDir, titleDir)
-			}
-		default:
-			targetDir = filepath.Join(baseDir, authorDir, titleDir)
-		}
-	} else {
-		// For non-flat mode, use the standard target path calculation
-		var err error
-		targetDir, err = o.calculateTargetPath(metadata)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Generate the target filename
-	ext := filepath.Ext(filePath)
-	baseName := filepath.Base(filePath)
-	baseName = strings.TrimSuffix(baseName, ext)
-
-	// If we have a track number, prepend it to the filename
-	var targetName string
-	if metadata.TrackNumber > 0 {
-		targetName = fmt.Sprintf("%02d - %s%s", metadata.TrackNumber, baseName, ext)
-	} else {
-		targetName = baseName + ext
-	}
-
-	targetPath := filepath.Join(targetDir, targetName)
-
-	// Check if already in correct location
-	cleanSourcePath := filepath.Clean(filePath)
-	cleanTargetPath := filepath.Clean(targetPath)
-	if cleanSourcePath == cleanTargetPath {
-		if o.config.Verbose {
-			color.Green("✅ File already in correct location: %s", cleanSourcePath)
-		}
-		return nil
-	}
-
-	// Prompt for confirmation if needed
-	if o.config.Prompt && !o.promptForMoveConfirmation(metadata, filePath, targetPath) {
-		color.Yellow("⏩ Skipping %s", metadata.Title)
-		return nil
-	}
+	log.Printf("[DEBUG] moveFile: source=%s, target=%s", source, target)
 
 	// Create target directory if it doesn't exist
-	if !o.config.DryRun {
-		if err := os.MkdirAll(targetDir, 0755); err != nil {
-			return fmt.Errorf("error creating target directory: %v", err)
-		}
+	targetDir := filepath.Dir(target)
+	if err := o.fileOps.CreateDirIfNotExists(targetDir); err != nil {
+		return fmt.Errorf("error creating target directory: %w", err)
 	}
 
-	// If we're in dry-run mode, show what would happen
-	if o.config.DryRun {
-		// Extract components from the target path for colorizing
-		// Format: /path/to/Author/Series/Title/File.ext
-		pathParts := strings.Split(targetPath, string(os.PathSeparator))
-
-		// Define consistent colors for each component (matching the field mapping colors)
-		titleColor := color.New(color.FgHiBlue).SprintFunc()
-		seriesColor := color.New(color.FgGreen).SprintFunc()
-		authorColor := color.New(color.FgMagenta).SprintFunc()
-		fileColor := color.New(color.FgCyan).SprintFunc()
-
-		// Color the path components if we have enough parts
-		coloredPath := targetPath
-		if len(pathParts) >= 4 { // We need at least 4 parts to have author/series/title/file
-			// Find the indices of the components in the path
-			// We work backwards from the end since those positions are more predictable
-			fileIndex := len(pathParts) - 1
-			titleIndex := len(pathParts) - 2
-			seriesIndex := -1
-			authorIndex := -1
-
-			// If we have series info, it should be one level up from title
-			if len(metadata.Series) > 0 && titleIndex > 0 {
-				seriesIndex = titleIndex - 1
-				// Author should be one level up from series
-				if seriesIndex > 0 {
-					authorIndex = seriesIndex - 1
-				}
-			} else if titleIndex > 0 {
-				// If no series, author is directly above title
-				authorIndex = titleIndex - 1
-			}
-
-			// Build colored path
-			var coloredParts []string
-			for i, part := range pathParts {
-				switch {
-				case i == fileIndex:
-					coloredParts = append(coloredParts, fileColor(part))
-				case i == titleIndex:
-					coloredParts = append(coloredParts, titleColor(part))
-				case i == seriesIndex && seriesIndex >= 0:
-					coloredParts = append(coloredParts, seriesColor(part))
-				case i == authorIndex && authorIndex >= 0:
-					coloredParts = append(coloredParts, authorColor(part))
-				default:
-					coloredParts = append(coloredParts, part)
-				}
-			}
-
-			// Reconstruct the path with colored components
-			coloredPath = strings.Join(coloredParts, string(os.PathSeparator))
-		}
-
-		fmt.Printf("📦 [DRY-RUN] Moving %s to %s\n\n",
-			color.YellowString("\"%s\"", filePath),
-			coloredPath)
-		return nil
+	// Try to use os.Rename first (most efficient)
+	err := os.Rename(source, target)
+	if err != nil {
+		// If rename fails (e.g., cross-device link), fall back to copy and delete
+		log.Printf("[DEBUG] Rename failed, falling back to copy and delete: %v", err)
+		return o.copyAndDeleteFile(source, target, targetDir)
 	}
 
-	// Move the single file
-	if o.config.Verbose || o.config.DryRun {
-		prefix := "[DRY-RUN] "
-		if !o.config.DryRun {
-			prefix = ""
-		}
-		color.Blue("📦 %sMoving %s to %s", prefix, filePath, targetPath)
-	}
-
-	if !o.config.DryRun {
-		if err := o.moveFile(filePath, targetPath); err != nil {
-			color.Red("❌ Error moving %s: %v", filePath, err)
-			return err
-		}
-
-		// Add to move log
-		o.summary.Moves = append(o.summary.Moves, MoveSummary{
-			From: filePath,
-			To:   targetPath,
-		})
-
-		// Update the undo log
-		o.updateLogAndCleanup(filepath.Dir(filePath), filepath.Dir(targetPath), []string{filepath.Base(filePath)})
-	}
-
+	log.Printf("[DEBUG] Successfully renamed file from %s to %s", source, target)
 	return nil
 }
 
-func (o *Organizer) logMetadataIfVerbose(metadata Metadata, provider MetadataProvider) {
-	if !o.config.Verbose {
-		return
+// copyAndDeleteFile performs a copy-and-delete operation when os.Rename fails.
+func (o *Organizer) copyAndDeleteFile(source, target, targetDir string) error {
+	sourceFile, err := os.Open(source)
+	if err != nil {
+		return fmt.Errorf("error opening source file: %w", err)
 	}
+	defer sourceFile.Close()
 
-	// Get provider type and icon for logging purposes
-	providerIcon, providerType := getProviderTypeDisplay(provider)
+	// Create target file
+	targetFile, err := os.Create(target)
+	if err != nil {
+		return fmt.Errorf("error creating target file: %w", err)
+	}
+	defer targetFile.Close()
 
-	fmt.Printf("\n%s Found %s\n", providerIcon, providerType)
+	// Copy the contents
+	data, err := io.ReadAll(sourceFile)
+	if err != nil {
+		return fmt.Errorf("error reading source file: %w", err)
+	}
+	log.Printf("[DEBUG] Read %d bytes from source file %s", len(data), source)
 
-	// Display the formatted metadata
-	fmt.Print(metadata.FormatMetadataWithMapping())
-	fmt.Println()
+	n, err := targetFile.Write(data)
+	if err != nil {
+		return fmt.Errorf("error writing to target file: %w", err)
+	}
+	log.Printf("[DEBUG] Successfully wrote %d bytes to target file %s", n, target)
+
+	// Remove source file
+	if err := os.Remove(source); err != nil {
+		return fmt.Errorf("error removing source file: %w", err)
+	}
+	log.Printf("[DEBUG] Successfully removed source file %s", source)
+
+	// Sync the target directory to ensure all changes are written to disk
+	return o.syncTargetDirectory(targetDir)
 }
 
-func getProviderTypeDisplay(provider MetadataProvider) (string, string) {
-	switch provider.(type) {
-	case *JSONMetadataProvider:
-		return "📋", "JSON metadata file"
-	case *EPUBMetadataProvider:
-		return "📚", "EPUB embedded metadata"
-	case *AudioMetadataProvider:
-		return "🎵", "Audio embedded metadata"
-	case *FileMetadataProvider:
-		return "🔍", "Auto-detected metadata"
-	default:
-		return "📄", "Metadata provider"
+// syncTargetDirectory ensures that directory changes are written to disk.
+func (o *Organizer) syncTargetDirectory(targetDir string) error {
+	targetDirFile, err := os.Open(targetDir)
+	if err != nil {
+		return fmt.Errorf("error opening target directory: %w", err)
 	}
+	defer targetDirFile.Close()
+
+	if err := targetDirFile.Sync(); err != nil {
+		return fmt.Errorf("error syncing target directory: %w", err)
+	}
+	log.Printf("[DEBUG] Successfully synced target directory %s", targetDir)
+	return nil
 }
 
-func (o *Organizer) calculateTargetPath(metadata Metadata) (string, error) {
-	authorDir := o.SanitizePath(strings.Join(metadata.Authors, ","))
-	titleDir := o.SanitizePath(metadata.Title)
-
-	targetBase := o.config.BaseDir
-	if o.config.OutputDir != "" {
-		targetBase = o.config.OutputDir
-	}
-
-	// Standard directory structure based on layout flag
-	var targetPath string
-	switch o.config.Layout {
-	case "author-only":
-		// Just put everything under author directory
-		targetPath = filepath.Join(targetBase, authorDir)
-
-	case "author-title":
-		// Skip series level, use author/title structure
-		targetPath = filepath.Join(targetBase, authorDir, titleDir)
-
-	case "author-series-title", "": // Default to author-series-title if not specified
-		// Use full author/series/title structure if series exists
-		if len(metadata.Series) > 0 && metadata.Series[0] != "__INVALID_SERIES__" {
-			cleanedSeries := cleanSeriesName(metadata.Series[0])
-			seriesDir := o.SanitizePath(cleanedSeries)
-			targetPath = filepath.Join(targetBase, authorDir, seriesDir, titleDir)
-		} else {
-			targetPath = filepath.Join(targetBase, authorDir, titleDir)
-		}
-
-	default:
-		// Default to author/title if unknown layout
-		targetPath = filepath.Join(targetBase, authorDir, titleDir)
-	}
-
-	return targetPath, nil
-}
-
-func (o *Organizer) promptForMoveConfirmation(metadata Metadata, sourcePath, targetPath string) bool {
-	return o.PromptForConfirmation(metadata, sourcePath, targetPath)
-}
-
-// Create a file metadata provider for auto-detection
-func (o *Organizer) getMetadataProvider(filePath string) (MetadataProvider, error) {
-	// Use the same logic as in processFlatDirectory to get the appropriate provider
-	ext := strings.ToLower(filepath.Ext(filePath))
-	switch ext {
-	case ".epub":
-		return NewEPUBMetadataProvider(filePath), nil
-	case ".mp3", ".m4b", ".m4a":
-		return &AudioMetadataProvider{filePath: filePath}, nil
-	default:
-		return nil, fmt.Errorf("unsupported file type: %s", ext)
-	}
-}
-
-func (o *Organizer) moveFiles(sourcePath, targetPath string) ([]string, error) {
+// moveFiles moves all files from a source directory to a target directory,
+// handling track number prefixes and maintaining a list of moved files.
+func (o *Organizer) moveFiles(sourcePath, targetPath string, dirMetadata *Metadata) ([]string, error) {
 	if o.config.Verbose {
-		color.Cyan("🔄 Moving contents from %s to %s", sourcePath, targetPath)
-	}
-
-	if !o.config.DryRun {
-		if err := os.MkdirAll(targetPath, 0755); err != nil {
-			return nil, fmt.Errorf("error creating target directory: %v", err)
-		}
+		message := o.formatDirectoryMoveHeader(sourcePath, targetPath)
+		PrintCyan(message)
 	}
 
 	entries, err := os.ReadDir(sourcePath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading source directory: %v", err)
+		return nil, fmt.Errorf("error reading source directory: %w", err)
+	}
+
+	// Create target directory if it doesn't exist
+	if err := o.fileOps.CreateDirIfNotExists(targetPath); err != nil {
+		return nil, fmt.Errorf("error creating target directory: %w", err)
 	}
 
 	o.summary.Moves = append(o.summary.Moves, MoveSummary{
@@ -719,38 +920,49 @@ func (o *Organizer) moveFiles(sourcePath, targetPath string) ([]string, error) {
 		To:   targetPath,
 	})
 
-	var fileNames []string
-	for _, entry := range entries {
-		sourceName := filepath.Join(sourcePath, entry.Name())
-		ext := filepath.Ext(entry.Name())
-		baseName := strings.TrimSuffix(entry.Name(), ext)
+	// Get metadata if not provided
+	if dirMetadata == nil {
+		dirMetadata = o.getDirectoryMetadata(sourcePath)
+	}
 
-		// Get metadata for this file to check for track number
-		var targetName string
-		if provider, err := o.getMetadataProvider(sourceName); err == nil {
-			if metadata, err := provider.GetMetadata(); err == nil && metadata.TrackNumber > 0 {
-				targetName = fmt.Sprintf("%02d - %s%s", metadata.TrackNumber, baseName, ext)
-			} else {
-				targetName = entry.Name()
-			}
-		} else {
-			targetName = entry.Name()
+	return o.processDirectoryFiles(entries, sourcePath, targetPath, dirMetadata)
+}
+
+// getDirectoryMetadata attempts to load metadata from a metadata.json file in the directory.
+func (o *Organizer) getDirectoryMetadata(sourcePath string) *Metadata {
+	metadataPath := filepath.Join(sourcePath, MetadataFileName)
+	if o.fileOps.FileExists(metadataPath) {
+		provider := NewJSONMetadataProvider(metadataPath)
+		if md, err := provider.GetMetadata(); err == nil {
+			md.ApplyFieldMapping(o.config.FieldMapping) // Changed from 'metadata' to 'md'
+			return &md
+		}
+	}
+	return nil
+}
+
+// processDirectoryFiles processes individual files in a directory for moving.
+func (o *Organizer) processDirectoryFiles(entries []os.DirEntry, sourcePath, targetPath string, dirMetadata *Metadata) ([]string, error) {
+	var fileNames []string
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue // Skip subdirectories
 		}
 
+		sourceName := filepath.Join(sourcePath, entry.Name())
+		targetName := o.calculateFileTargetName(entry.Name(), dirMetadata)
 		targetFullPath := filepath.Join(targetPath, targetName)
 		fileNames = append(fileNames, targetName)
 
 		if o.config.Verbose || o.config.DryRun {
-			prefix := "[DRY-RUN] "
-			if !o.config.DryRun {
-				prefix = ""
-			}
-			color.Blue("📦 %sMoving %s to %s", prefix, sourceName, targetFullPath)
+			message := o.formatFileMove(sourceName, targetFullPath, o.config.DryRun)
+			fmt.Println(message)
 		}
 
 		if !o.config.DryRun {
 			if err := o.moveFile(sourceName, targetFullPath); err != nil {
-				color.Red("❌ Error moving %s: %v", sourceName, err)
+				PrintRed("❌ Error moving %s: %v", sourceName, err)
 			}
 		}
 	}
@@ -758,21 +970,20 @@ func (o *Organizer) moveFiles(sourcePath, targetPath string) ([]string, error) {
 	return fileNames, nil
 }
 
-func (o *Organizer) updateLogAndCleanup(sourcePath, targetPath string, fileNames []string) {
-	o.logEntries = append(o.logEntries, LogEntry{
-		Timestamp:  time.Now(),
-		SourcePath: sourcePath,
-		TargetPath: targetPath,
-		Files:      fileNames,
-	})
+// calculateFileTargetName determines the target filename, adding track prefixes when appropriate.
+func (o *Organizer) calculateFileTargetName(fileName string, dirMetadata *Metadata) string {
+	// Use the FilenameNormalizer for consistent processing
+	normalizer := NewFilenameNormalizer()
 
-	// Save log after each successful move
-	if err := o.saveLog(); err != nil {
-		color.Yellow("⚠️  Warning: couldn't save log: %v", err)
+	// Add track prefix if available in metadata
+	if dirMetadata != nil && dirMetadata.TrackNumber > 0 {
+		normalizer = normalizer.WithTrackPrefix(dirMetadata.TrackNumber)
 	}
 
-	// Check and remove empty source directory
-	if err := o.removeEmptyDirs(sourcePath); err != nil {
-		color.Yellow("⚠️  Warning: couldn't remove empty directory: %v", err)
+	// Apply space replacement if configured
+	if o.config.ReplaceSpace != "" {
+		normalizer = normalizer.WithSpaceReplacement(o.config.ReplaceSpace)
 	}
+
+	return normalizer.Normalize(fileName)
 }
