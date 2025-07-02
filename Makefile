@@ -24,7 +24,29 @@ build:
 
 # Clean build artifacts
 clean:
-	rm -rf ./dist ./bin
+	rm -rf ./dist ./bin ./coverage.out ./coverage.html
+
+# Check and install gotestsum if needed
+GOTESTSUM := $(shell command -v gotestsum 2> /dev/null)
+
+# Run tests
+test:
+	@if [ -z "$(GOTESTSUM)" ]; then \
+		echo "gotestsum not found, installing..."; \
+		go install gotest.tools/gotestsum@latest; \
+	fi
+	gotestsum --format testname ./...
+
+# Run tests with coverage reporting
+coverage:
+	@if [ -z "$(GOTESTSUM)" ]; then \
+		echo "gotestsum not found, installing..."; \
+		go install gotest.tools/gotestsum@latest; \
+	fi
+	gotestsum --format testname -- -coverprofile=coverage.out -covermode=count ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "\nCoverage report generated at coverage.html"
+	@echo "Open it with: open coverage.html"
 
 # Create a release (requires GITHUB_TOKEN)
 release:

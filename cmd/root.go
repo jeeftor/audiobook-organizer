@@ -22,8 +22,14 @@ var (
 	useEmbeddedMetadata bool
 	flat                bool
 	layout              string // Directory structure layout
-	useSeriesAsTitle    bool   // Use Series field as the main title directory
-	cfgFile             string
+
+	// Field mapping flags
+	titleField   string
+	seriesField  string
+	authorFields string // Comma-separated list
+	trackField   string
+
+	cfgFile string
 )
 
 // envAliases maps config keys to their possible environment variable names
@@ -41,7 +47,12 @@ var envAliases = map[string][]string{
 	"use-embedded-metadata": {"AO_USE_EMBEDDED_METADATA", "AUDIOBOOK_ORGANIZER_USE_EMBEDDED_METADATA"},
 	"flat":                  {"AO_FLAT", "AUDIOBOOK_ORGANIZER_FLAT"},
 	"layout":                {"AO_LAYOUT", "AUDIOBOOK_ORGANIZER_LAYOUT"},
-	"use-series-as-title":   {"AO_USE_SERIES_AS_TITLE", "AUDIOBOOK_ORGANIZER_USE_SERIES_AS_TITLE"},
+
+	// Field mapping environment variables
+	"title-field":   {"AO_TITLE_FIELD", "AUDIOBOOK_ORGANIZER_TITLE_FIELD"},
+	"series-field":  {"AO_SERIES_FIELD", "AUDIOBOOK_ORGANIZER_SERIES_FIELD"},
+	"author-fields": {"AO_AUTHOR_FIELDS", "AUDIOBOOK_ORGANIZER_AUTHOR_FIELDS"},
+	"track-field":   {"AO_TRACK_FIELD", "AUDIOBOOK_ORGANIZER_TRACK_FIELD"},
 }
 
 var rootCmd = &cobra.Command{
@@ -85,6 +96,12 @@ var rootCmd = &cobra.Command{
 			outputDir = viper.GetString("output")
 		}
 
+		// Parse author fields from comma-separated string
+		authorFieldsList := []string{}
+		if af := viper.GetString("author-fields"); af != "" {
+			authorFieldsList = strings.Split(af, ",")
+		}
+
 		org := organizer.NewOrganizer(
 			&organizer.OrganizerConfig{
 				BaseDir:             inputDir,
@@ -98,7 +115,12 @@ var rootCmd = &cobra.Command{
 				UseEmbeddedMetadata: viper.GetBool("use-embedded-metadata"),
 				Flat:                viper.GetBool("flat"),
 				Layout:              viper.GetString("layout"),
-				UseSeriesAsTitle:    viper.GetBool("use-series-as-title"),
+				FieldMapping: organizer.OutputFieldMapping{
+					TitleField:   viper.GetString("title-field"),
+					SeriesField:  viper.GetString("series-field"),
+					AuthorFields: authorFieldsList,
+					TrackField:   viper.GetString("track-field"),
+				},
 			},
 		)
 
@@ -175,8 +197,12 @@ func init() {
 	rootCmd.Flags().BoolVar(&removeEmpty, "remove-empty", false, "Remove empty directories after moving files")
 	rootCmd.Flags().BoolVar(&useEmbeddedMetadata, "use-embedded-metadata", false, "Use metadata embedded in EPUB files if metadata.json is not found")
 	rootCmd.Flags().BoolVar(&flat, "flat", false, "Process files in a flat directory structure (automatically enables --use-embedded-metadata)")
-	rootCmd.Flags().StringVar(&layout, "layout", "author-series-title", "Directory structure layout (options: author-series-title, author-title, author-only)")
-	rootCmd.Flags().BoolVar(&useSeriesAsTitle, "use-series-as-title", false, "Use Series field as the main title directory (useful for MP3 files where Series contains the book title)")
+	rootCmd.Flags().StringVarP(&layout, "layout", "l", "author-series-title", "Directory structure layout:\n  - author-series-title: Author/Series/Title/ (default)\n  - author-title:        Author/Title/ (ignore series)\n  - author-only:         Author/ (flatten all books)")
+	// Field mapping flags
+	rootCmd.Flags().StringVar(&titleField, "title-field", "", "Field to use as title (e.g., 'album', 'title', 'track_title')")
+	rootCmd.Flags().StringVar(&seriesField, "series-field", "", "Field to use as series (e.g., 'series', 'album')")
+	rootCmd.Flags().StringVar(&authorFields, "author-fields", "", "Comma-separated list of fields to try for author (e.g., 'authors,narrators,album_artist,artist')")
+	rootCmd.Flags().StringVar(&trackField, "track-field", "", "Field to use for track number (e.g., 'track', 'track_number')")
 
 	// Bind flags to viper
 	viper.BindPFlag("dir", rootCmd.Flags().Lookup("dir"))
@@ -192,7 +218,11 @@ func init() {
 	viper.BindPFlag("use-embedded-metadata", rootCmd.Flags().Lookup("use-embedded-metadata"))
 	viper.BindPFlag("flat", rootCmd.Flags().Lookup("flat"))
 	viper.BindPFlag("layout", rootCmd.Flags().Lookup("layout"))
-	viper.BindPFlag("use-series-as-title", rootCmd.Flags().Lookup("use-series-as-title"))
+	// Bind field mapping flags to viper
+	viper.BindPFlag("title-field", rootCmd.Flags().Lookup("title-field"))
+	viper.BindPFlag("series-field", rootCmd.Flags().Lookup("series-field"))
+	viper.BindPFlag("author-fields", rootCmd.Flags().Lookup("author-fields"))
+	viper.BindPFlag("track-field", rootCmd.Flags().Lookup("track-field"))
 
 	// Set up environment variable handling
 	viper.SetEnvPrefix("AUDIOBOOK_ORGANIZER") // This will still be used for unmapped variables

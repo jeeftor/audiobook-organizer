@@ -23,8 +23,8 @@ type OrganizerConfig struct {
 	RemoveEmpty         bool
 	UseEmbeddedMetadata bool
 	Flat                bool
-	Layout              string // Directory structure layout (author-series-title, author-title, author-only)
-	UseSeriesAsTitle    bool   // Use Series field as the main title directory
+	Layout              string       // Directory structure layout (author-series-title, author-title, author-only)
+	FieldMapping        FieldMapping // Configuration for mapping metadata fields
 }
 
 // Organizer is the main struct that performs audiobook organization
@@ -38,6 +38,11 @@ type Organizer struct {
 func NewOrganizer(config *OrganizerConfig) *Organizer {
 	// Set the verbose mode flag for the metadata providers
 	SetVerboseMode(config.Verbose)
+
+	// Initialize default field mapping if not provided
+	if config.FieldMapping.IsEmpty() {
+		config.FieldMapping = DefaultFieldMapping()
+	}
 
 	return &Organizer{
 		config: *config,

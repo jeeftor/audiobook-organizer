@@ -1,3 +1,4 @@
+// internal/organizer/organize.go
 package organizer
 
 import (
@@ -129,7 +130,9 @@ func (o *Organizer) processFlatDirectory(path string, info os.FileInfo) error {
 		return nil
 	}
 
-	provider := NewFileMetadataProvider(path)
+	provider := &FileMetadataProvider{
+		filePath: path,
+	}
 	_, err := provider.GetMetadata()
 	if err != nil {
 		if o.config.Verbose {
@@ -146,19 +149,9 @@ func (o *Organizer) processFlatDirectory(path string, info os.FileInfo) error {
 }
 
 func (o *Organizer) tryOrganizeWithMetadata(path string) (bool, error) {
-	// First try JSON metadata if it exists
-	metadataPath := filepath.Join(path, "metadata.json")
-	if _, err := os.Stat(metadataPath); err == nil {
-		o.summary.MetadataFound = append(o.summary.MetadataFound, metadataPath)
-		if err := o.OrganizeAudiobook(path, NewJSONMetadataProvider(metadataPath)); err != nil {
-			return false, fmt.Errorf("error organizing with JSON metadata: %v", err)
-		}
-		return true, nil
-	}
-
-	// If JSON metadata not found and we should use embedded metadata, try EPUB
+	// First try embedded metadata if enabled
 	if o.config.UseEmbeddedMetadata {
-		// Check if there are EPUB files in the directory
+		// Try EPUB files first
 		epubPath, err := FindEPUBInDirectory(path)
 		if err == nil {
 			epubProvider := NewEPUBMetadataProvider(epubPath)
@@ -173,9 +166,38 @@ func (o *Organizer) tryOrganizeWithMetadata(path string) (bool, error) {
 			} else if o.config.Verbose {
 				color.Yellow("⚠️ EPUB found but metadata extraction failed: %s", epubPath)
 			}
-		} else if o.config.Verbose && o.config.UseEmbeddedMetadata {
+		} else if o.config.Verbose {
 			color.Yellow("⚠️ No EPUB files found in %s", path)
 		}
+
+		// Try audio files if no EPUB metadata found
+		audioPath, err := FindAudioFileInDirectory(path)
+		if err == nil {
+			audioProvider := NewAudioMetadataProvider(audioPath)
+			metadata, err := audioProvider.GetMetadata()
+
+			if err == nil && metadata.Title != "" && len(metadata.Authors) > 0 {
+				color.Green("🔊 Found metadata in audio file: %s", audioPath)
+				if err := o.OrganizeAudiobook(path, audioProvider); err != nil {
+					return false, fmt.Errorf("error organizing with audio metadata: %v", err)
+				}
+				return true, nil
+			} else if o.config.Verbose {
+				color.Yellow("⚠️ Audio file found but metadata extraction failed: %s", audioPath)
+			}
+		} else if o.config.Verbose {
+			color.Yellow("⚠️ No supported audio files found in %s", path)
+		}
+	}
+
+	// If no embedded metadata found or UseEmbeddedMetadata is false, try metadata.json
+	metadataPath := filepath.Join(path, "metadata.json")
+	if _, err := os.Stat(metadataPath); err == nil {
+		o.summary.MetadataFound = append(o.summary.MetadataFound, metadataPath)
+		if err := o.OrganizeAudiobook(path, NewJSONMetadataProvider(metadataPath)); err != nil {
+			return false, fmt.Errorf("error organizing with JSON metadata: %v", err)
+		}
+		return true, nil
 	}
 
 	return false, nil
@@ -322,13 +344,20 @@ func (o *Organizer) OrganizeAudiobook(sourcePath string, provider MetadataProvid
 		return fmt.Errorf("error getting metadata: %v", err)
 	}
 
+	// Apply the organizer's field mapping to the metadata before logging
+	metadata.FieldMapping = o.config.FieldMapping
+	metadata.ApplyFieldMapping()
+
+	// Add layout information to the metadata for field mapping display
+	metadata.RawMetadata["layout"] = o.config.Layout
+
+	// Log the metadata with the applied field mapping
+	o.logMetadataIfVerbose(metadata, provider)
+
 	// Validate metadata
 	if err := o.validateMetadata(metadata); err != nil {
 		return err
 	}
-
-	// Log metadata if Verbose
-	o.logMetadataIfVerbose(metadata, provider)
 
 	// Calculate target path
 	targetPath, err := o.calculateTargetPath(metadata)
@@ -387,23 +416,89 @@ func (o *Organizer) OrganizeSingleFile(filePath string, provider MetadataProvide
 		return fmt.Errorf("error getting metadata: %v", err)
 	}
 
+	// Store a copy of the raw metadata for display
+	rawMetadata := metadata.Clone()
+
+	// Add layout information to the raw metadata
+	rawMetadata.RawMetadata["layout"] = o.config.Layout
+
+	// Log the raw metadata first if verbose
+	if o.config.Verbose {
+		color.Cyan("\n🔍 Found Auto-detected metadata")
+		fmt.Println(rawMetadata.FormatMetadata())
+	}
+
+	// Apply the organizer's field mapping to the metadata
+	metadata.FieldMapping = o.config.FieldMapping
+	metadata.ApplyFieldMapping()
+
+	// Add layout information to the metadata for field mapping display
+	metadata.RawMetadata["layout"] = o.config.Layout
+
+	// Log the field mapping information
+	if o.config.Verbose {
+		fmt.Println(metadata.FormatFieldMappingAndValues())
+	}
+
 	// Validate metadata
 	if err := o.validateMetadata(metadata); err != nil {
 		return err
 	}
 
-	// Log metadata if Verbose
-	o.logMetadataIfVerbose(metadata, provider)
+	// Calculate target path - but in flat mode, we'll override this
+	var targetDir string
 
-	// Calculate target path
-	targetDir, err := o.calculateTargetPath(metadata)
-	if err != nil {
-		return err
+	// In flat mode, we need to ensure we're not using the source file path as part of the target path
+	if o.config.Flat {
+		// Use the output directory if specified, otherwise use the directory containing the source file
+		baseDir := filepath.Dir(filePath)
+		if o.config.OutputDir != "" {
+			baseDir = o.config.OutputDir
+		}
+
+		// Recalculate the target directory based on the layout
+		authorDir := o.SanitizePath(strings.Join(metadata.Authors, ","))
+		titleDir := o.SanitizePath(metadata.Title)
+
+		switch o.config.Layout {
+		case "author-only":
+			targetDir = filepath.Join(baseDir, authorDir)
+		case "author-title":
+			targetDir = filepath.Join(baseDir, authorDir, titleDir)
+		case "author-series-title", "":
+			if len(metadata.Series) > 0 && metadata.Series[0] != "__INVALID_SERIES__" {
+				cleanedSeries := cleanSeriesName(metadata.Series[0])
+				seriesDir := o.SanitizePath(cleanedSeries)
+				targetDir = filepath.Join(baseDir, authorDir, seriesDir, titleDir)
+			} else {
+				targetDir = filepath.Join(baseDir, authorDir, titleDir)
+			}
+		default:
+			targetDir = filepath.Join(baseDir, authorDir, titleDir)
+		}
+	} else {
+		// For non-flat mode, use the standard target path calculation
+		var err error
+		targetDir, err = o.calculateTargetPath(metadata)
+		if err != nil {
+			return err
+		}
 	}
 
-	// Get the filename from the path
-	fileName := filepath.Base(filePath)
-	targetPath := filepath.Join(targetDir, fileName)
+	// Generate the target filename
+	ext := filepath.Ext(filePath)
+	baseName := filepath.Base(filePath)
+	baseName = strings.TrimSuffix(baseName, ext)
+
+	// If we have a track number, prepend it to the filename
+	var targetName string
+	if metadata.TrackNumber > 0 {
+		targetName = fmt.Sprintf("%02d - %s%s", metadata.TrackNumber, baseName, ext)
+	} else {
+		targetName = baseName + ext
+	}
+
+	targetPath := filepath.Join(targetDir, targetName)
 
 	// Check if already in correct location
 	cleanSourcePath := filepath.Clean(filePath)
@@ -426,6 +521,67 @@ func (o *Organizer) OrganizeSingleFile(filePath string, provider MetadataProvide
 		if err := os.MkdirAll(targetDir, 0755); err != nil {
 			return fmt.Errorf("error creating target directory: %v", err)
 		}
+	}
+
+	// If we're in dry-run mode, show what would happen
+	if o.config.DryRun {
+		// Extract components from the target path for colorizing
+		// Format: /path/to/Author/Series/Title/File.ext
+		pathParts := strings.Split(targetPath, string(os.PathSeparator))
+
+		// Define consistent colors for each component (matching the field mapping colors)
+		titleColor := color.New(color.FgHiBlue).SprintFunc()
+		seriesColor := color.New(color.FgGreen).SprintFunc()
+		authorColor := color.New(color.FgMagenta).SprintFunc()
+		fileColor := color.New(color.FgCyan).SprintFunc()
+
+		// Color the path components if we have enough parts
+		coloredPath := targetPath
+		if len(pathParts) >= 4 { // We need at least 4 parts to have author/series/title/file
+			// Find the indices of the components in the path
+			// We work backwards from the end since those positions are more predictable
+			fileIndex := len(pathParts) - 1
+			titleIndex := len(pathParts) - 2
+			seriesIndex := -1
+			authorIndex := -1
+
+			// If we have series info, it should be one level up from title
+			if len(metadata.Series) > 0 && titleIndex > 0 {
+				seriesIndex = titleIndex - 1
+				// Author should be one level up from series
+				if seriesIndex > 0 {
+					authorIndex = seriesIndex - 1
+				}
+			} else if titleIndex > 0 {
+				// If no series, author is directly above title
+				authorIndex = titleIndex - 1
+			}
+
+			// Build colored path
+			var coloredParts []string
+			for i, part := range pathParts {
+				switch {
+				case i == fileIndex:
+					coloredParts = append(coloredParts, fileColor(part))
+				case i == titleIndex:
+					coloredParts = append(coloredParts, titleColor(part))
+				case i == seriesIndex && seriesIndex >= 0:
+					coloredParts = append(coloredParts, seriesColor(part))
+				case i == authorIndex && authorIndex >= 0:
+					coloredParts = append(coloredParts, authorColor(part))
+				default:
+					coloredParts = append(coloredParts, part)
+				}
+			}
+
+			// Reconstruct the path with colored components
+			coloredPath = strings.Join(coloredParts, string(os.PathSeparator))
+		}
+
+		fmt.Printf("📦 [DRY-RUN] Moving %s to %s\n\n",
+			color.YellowString("\"%s\"", filePath),
+			coloredPath)
+		return nil
 	}
 
 	// Move the single file
@@ -461,30 +617,28 @@ func (o *Organizer) logMetadataIfVerbose(metadata Metadata, provider MetadataPro
 		return
 	}
 
-	// Get provider type for logging purposes
-	providerType := "provider"
+	// Get provider type and icon for logging purposes
+	providerIcon, providerType := getProviderTypeDisplay(provider)
+
+	fmt.Printf("\n%s Found %s\n", providerIcon, providerType)
+
+	// Display the formatted metadata
+	fmt.Print(metadata.FormatMetadataWithMapping())
+	fmt.Println()
+}
+
+func getProviderTypeDisplay(provider MetadataProvider) (string, string) {
 	switch provider.(type) {
 	case *JSONMetadataProvider:
-		providerType = "JSON metadata"
+		return "📋", "JSON metadata file"
 	case *EPUBMetadataProvider:
-		providerType = "EPUB metadata"
-	}
-
-	color.Green("📚 Metadata detected from %s:", providerType)
-	color.White("  Authors: %v", metadata.Authors)
-	color.White("  Title: %s", metadata.Title)
-
-	// Series logic: blank if none, show series if valid, or 'invalid series data' if invalid was detected
-	seriesMsg := ""
-	if len(metadata.Series) > 0 {
-		if metadata.Series[0] == "__INVALID_SERIES__" {
-			seriesMsg = "invalid series data"
-		} else if cleanSeriesName(metadata.Series[0]) != "" && isValidSeries(metadata.Series[0]) {
-			seriesMsg = metadata.Series[0]
-		}
-	}
-	if seriesMsg != "" {
-		color.White("  Series: %s", seriesMsg)
+		return "📚", "EPUB embedded metadata"
+	case *AudioMetadataProvider:
+		return "🎵", "Audio embedded metadata"
+	case *FileMetadataProvider:
+		return "🔍", "Auto-detected metadata"
+	default:
+		return "📄", "Metadata provider"
 	}
 }
 
@@ -497,29 +651,17 @@ func (o *Organizer) calculateTargetPath(metadata Metadata) (string, error) {
 		targetBase = o.config.OutputDir
 	}
 
-	// Handle the UseSeriesAsTitle flag - use series as the title directory
-	if o.config.UseSeriesAsTitle && len(metadata.Series) > 0 && metadata.Series[0] != "__INVALID_SERIES__" {
-		// Use series as the main title directory
-		cleanedSeries := cleanSeriesName(metadata.Series[0])
-		// Use series as the main title
-		titleDir = o.SanitizePath(cleanedSeries)
-		
-		// For MP3 files where Series contains the book title
-		// Use a simple Author/Title structure
-		return filepath.Join(targetBase, authorDir, titleDir), nil
-	}
-
 	// Standard directory structure based on layout flag
 	var targetPath string
 	switch o.config.Layout {
 	case "author-only":
 		// Just put everything under author directory
 		targetPath = filepath.Join(targetBase, authorDir)
-	
+
 	case "author-title":
 		// Skip series level, use author/title structure
 		targetPath = filepath.Join(targetBase, authorDir, titleDir)
-	
+
 	case "author-series-title", "": // Default to author-series-title if not specified
 		// Use full author/series/title structure if series exists
 		if len(metadata.Series) > 0 && metadata.Series[0] != "__INVALID_SERIES__" {
@@ -529,7 +671,7 @@ func (o *Organizer) calculateTargetPath(metadata Metadata) (string, error) {
 		} else {
 			targetPath = filepath.Join(targetBase, authorDir, titleDir)
 		}
-	
+
 	default:
 		// Default to author/title if unknown layout
 		targetPath = filepath.Join(targetBase, authorDir, titleDir)
@@ -540,6 +682,20 @@ func (o *Organizer) calculateTargetPath(metadata Metadata) (string, error) {
 
 func (o *Organizer) promptForMoveConfirmation(metadata Metadata, sourcePath, targetPath string) bool {
 	return o.PromptForConfirmation(metadata, sourcePath, targetPath)
+}
+
+// Create a file metadata provider for auto-detection
+func (o *Organizer) getMetadataProvider(filePath string) (MetadataProvider, error) {
+	// Use the same logic as in processFlatDirectory to get the appropriate provider
+	ext := strings.ToLower(filepath.Ext(filePath))
+	switch ext {
+	case ".epub":
+		return NewEPUBMetadataProvider(filePath), nil
+	case ".mp3", ".m4b", ".m4a":
+		return &AudioMetadataProvider{filePath: filePath}, nil
+	default:
+		return nil, fmt.Errorf("unsupported file type: %s", ext)
+	}
 }
 
 func (o *Organizer) moveFiles(sourcePath, targetPath string) ([]string, error) {
@@ -565,20 +721,35 @@ func (o *Organizer) moveFiles(sourcePath, targetPath string) ([]string, error) {
 
 	var fileNames []string
 	for _, entry := range entries {
-		fileNames = append(fileNames, entry.Name())
 		sourceName := filepath.Join(sourcePath, entry.Name())
-		targetName := filepath.Join(targetPath, entry.Name())
+		ext := filepath.Ext(entry.Name())
+		baseName := strings.TrimSuffix(entry.Name(), ext)
+
+		// Get metadata for this file to check for track number
+		var targetName string
+		if provider, err := o.getMetadataProvider(sourceName); err == nil {
+			if metadata, err := provider.GetMetadata(); err == nil && metadata.TrackNumber > 0 {
+				targetName = fmt.Sprintf("%02d - %s%s", metadata.TrackNumber, baseName, ext)
+			} else {
+				targetName = entry.Name()
+			}
+		} else {
+			targetName = entry.Name()
+		}
+
+		targetFullPath := filepath.Join(targetPath, targetName)
+		fileNames = append(fileNames, targetName)
 
 		if o.config.Verbose || o.config.DryRun {
 			prefix := "[DRY-RUN] "
 			if !o.config.DryRun {
 				prefix = ""
 			}
-			color.Blue("📦 %sMoving %s to %s", prefix, sourceName, targetName)
+			color.Blue("📦 %sMoving %s to %s", prefix, sourceName, targetFullPath)
 		}
 
 		if !o.config.DryRun {
-			if err := o.moveFile(sourceName, targetName); err != nil {
+			if err := o.moveFile(sourceName, targetFullPath); err != nil {
 				color.Red("❌ Error moving %s: %v", sourceName, err)
 			}
 		}
