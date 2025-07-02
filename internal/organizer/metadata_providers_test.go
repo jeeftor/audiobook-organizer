@@ -146,7 +146,7 @@ func TestExtractCalibreSeriesFromOPF(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.filename, func(t *testing.T) {
 			epubPath := filepath.Join(testDataDir, tt.filename)
-			series, found := extractCalibreSeriesFromOPF(epubPath)
+			series, _, found := extractCalibreSeriesFromOPF(epubPath)
 
 			if found != tt.expectFound {
 				t.Errorf("Expected found=%v, got %v for %s", tt.expectFound, found, tt.filename)
