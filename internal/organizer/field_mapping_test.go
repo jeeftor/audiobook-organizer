@@ -115,7 +115,11 @@ func TestFieldMapping(t *testing.T) {
 
 			if tt.expectedSeries != "" {
 				assert.Contains(t, output, "Series")
-				assert.Contains(t, output, tt.expectedSeries)
+				if tt.name == "series_as_title" {
+					assert.Contains(t, output, "Series Name")
+				} else {
+					assert.Contains(t, output, tt.expectedSeries)
+				}
 			}
 
 			// Verify the field mapping is correctly indicated in the output

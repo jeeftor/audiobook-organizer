@@ -115,7 +115,7 @@ var rootCmd = &cobra.Command{
 				UseEmbeddedMetadata: viper.GetBool("use-embedded-metadata"),
 				Flat:                viper.GetBool("flat"),
 				Layout:              viper.GetString("layout"),
-				FieldMapping: organizer.OutputFieldMapping{
+				FieldMapping: organizer.FieldMapping{
 					TitleField:   viper.GetString("title-field"),
 					SeriesField:  viper.GetString("series-field"),
 					AuthorFields: authorFieldsList,
