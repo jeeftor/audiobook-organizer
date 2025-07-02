@@ -8,6 +8,354 @@ import (
 	"testing"
 )
 
+// testFile represents a test file with its expected metadata
+type testFile struct {
+	Path     string
+	Metadata *Metadata
+}
+
+// testEnvironment holds the test environment setup
+type testEnvironment struct {
+	BaseDir   string
+	InputDir  string
+	OutputDir string
+	Cleanup   func()
+}
+
+// setupTestEnvironment creates a test environment with the given configuration
+func setupTestEnvironment(t *testing.T, files []testFile) *testEnvironment {
+	t.Helper()
+
+	// Create a temporary directory for the test
+	tempDir, err := os.MkdirTemp("", "audiobook-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+
+	inputDir := filepath.Join(tempDir, "input")
+	outputDir := filepath.Join(tempDir, "output")
+
+	// Create input and output directories
+	for _, dir := range []string{inputDir, outputDir} {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatalf("Failed to create directory %s: %v", dir, err)
+		}
+	}
+
+	// Create test files
+	for _, tf := range files {
+		path := filepath.Join(inputDir, tf.Path)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatalf("Failed to create directory for %s: %v", path, err)
+		}
+		// Create an empty file with the given path
+		f, err := os.Create(path)
+		if err != nil {
+			t.Fatalf("Failed to create test file %s: %v", path, err)
+		}
+		f.Close()
+
+		// If metadata is provided, write it to a metadata.json file in the same directory
+		if tf.Metadata != nil {
+			metadataPath := filepath.Join(filepath.Dir(path), "metadata.json")
+			metadataJSON, err := json.Marshal(tf.Metadata)
+			if err != nil {
+				t.Fatalf("Failed to marshal metadata for %s: %v", path, err)
+			}
+			if err := os.WriteFile(metadataPath, metadataJSON, 0644); err != nil {
+				t.Fatalf("Failed to write metadata for %s: %v", path, err)
+			}
+		}
+	}
+
+	return &testEnvironment{
+		BaseDir:   tempDir,
+		InputDir:  inputDir,
+		OutputDir: outputDir,
+		Cleanup: func() {
+			os.RemoveAll(tempDir)
+		},
+	}
+}
+
+func TestTrackNumberInFilenames(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupFiles    []testFile
+		expectedDirs  []string
+		expectedFiles []string
+	}{
+		{
+			name: "single file with track number",
+			setupFiles: []testFile{
+				{
+					Path: "book1/chapter1.mp3",
+					Metadata: &Metadata{
+						Title:       "Chapter 1",
+						Authors:     []string{"Author One"},
+						Series:      []string{"Test Series"},
+						TrackNumber: 1,
+					},
+				},
+			},
+			expectedDirs: []string{
+				"Author One/Test Series/Chapter 1",
+			},
+			expectedFiles: []string{
+				"Author One/Test Series/Chapter 1/01 - Chapter 1.mp3",
+			},
+		},
+		{
+			name: "multiple files with track numbers",
+			setupFiles: []testFile{
+				{
+					Path: "book2/chapter1.mp3",
+					Metadata: &Metadata{
+						Title:       "Chapter 1",
+						Authors:     []string{"Author Two"},
+						Series:      []string{"Another Series"},
+						TrackNumber: 1,
+					},
+				},
+				{
+					Path: "book2/chapter2.mp3",
+					Metadata: &Metadata{
+						Title:       "Chapter 2",
+						Authors:     []string{"Author Two"},
+						Series:      []string{"Another Series"},
+						TrackNumber: 2,
+					},
+				},
+			},
+			expectedDirs: []string{
+				"Author Two/Another Series/Chapter 1",
+			},
+			expectedFiles: []string{
+				"Author Two/Another Series/Chapter 1/01 - Chapter 1.mp3",
+				"Author Two/Another Series/Chapter 1/02 - Chapter 2.mp3",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := setupTestEnvironment(t, tt.setupFiles)
+			defer env.Cleanup()
+
+			// Create organizer with test configuration
+			cfg := &OrganizerConfig{
+				BaseDir:             env.InputDir,
+				OutputDir:           env.OutputDir,
+				Layout:              "author-series-title",
+				Verbose:             testing.Verbose(),
+				UseEmbeddedMetadata: true,
+				Flat:                false,
+			}
+
+			org := NewOrganizer(cfg)
+
+			// Run organization
+			if err := org.Execute(); err != nil {
+				t.Fatalf("Failed to organize: %v", err)
+			}
+
+			// Verify directory structure
+			for _, dir := range tt.expectedDirs {
+				targetDir := filepath.Join(env.OutputDir, filepath.FromSlash(dir))
+				if _, err := os.Stat(targetDir); os.IsNotExist(err) {
+					t.Errorf("Expected directory not found: %s", targetDir)
+				}
+			}
+
+			// Verify files were moved and renamed correctly
+			for _, file := range tt.expectedFiles {
+				targetFile := filepath.Join(env.OutputDir, filepath.FromSlash(file))
+				if _, err := os.Stat(targetFile); os.IsNotExist(err) {
+					t.Errorf("Expected file not found: %s", targetFile)
+				}
+			}
+		})
+	}
+}
+
+func TestNonFlatStructureWithMetadata(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupFiles    []testFile
+		expectedDirs  []string
+		expectedFiles []string
+	}{
+		{
+			name: "complete metadata with series",
+			setupFiles: []testFile{
+				{
+					Path: "book1/audio.mp3",
+					Metadata: &Metadata{
+						Title:   "The First Book",
+						Authors: []string{"Author One"},
+						Series:  []string{"Test Series"},
+					},
+				},
+			},
+			expectedDirs: []string{
+				"Author One/Test Series/The First Book",
+			},
+			expectedFiles: []string{
+				"Author One/Test Series/The First Book/01 - The First Book.mp3",
+			},
+		},
+		{
+			name: "missing author",
+			setupFiles: []testFile{
+				{
+					Path: "book2/audio.mp3",
+					Metadata: &Metadata{
+						Title:   "Unknown Author Book",
+						Authors: []string{"Unknown"},
+					},
+				},
+			},
+			expectedDirs: []string{
+				"Unknown/Unknown Author Book",
+			},
+			expectedFiles: []string{
+				"Unknown/Unknown Author Book/01 - Unknown Author Book.mp3",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			env := setupTestEnvironment(t, tc.setupFiles)
+			defer env.Cleanup()
+
+			// Create organizer with non-flat structure
+			config := &OrganizerConfig{
+				BaseDir:             env.InputDir,
+				OutputDir:           env.OutputDir,
+				UseEmbeddedMetadata: true,
+				Flat:                false,
+				Verbose:             true,
+			}
+
+			org := NewOrganizer(config)
+			err := org.Execute()
+			if err != nil {
+				t.Fatalf("Execute() returned error: %v", err)
+			}
+
+			// Verify directory structure
+			for _, dir := range tc.expectedDirs {
+				dirPath := filepath.Join(env.OutputDir, filepath.FromSlash(dir))
+				if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+					t.Errorf("Expected directory %s does not exist", dirPath)
+				}
+			}
+
+			// Verify files were created
+			for _, file := range tc.expectedFiles {
+				filePath := filepath.Join(env.OutputDir, filepath.FromSlash(file))
+				if _, err := os.Stat(filePath); os.IsNotExist(err) {
+					t.Errorf("Expected file %s does not exist", filePath)
+				}
+			}
+		})
+	}
+}
+
+func TestFlatVsNonFlatStructure(t *testing.T) {
+	testFileData := testFile{
+		Path: "test_book/audio.mp3",
+		Metadata: &Metadata{
+			Title:   "Test Book",
+			Authors: []string{"Test Author"},
+			Series:  []string{"Test Series"},
+		},
+	}
+
+	tests := []struct {
+		name                string
+		flat                bool
+		useEmbeddedMetadata bool
+		expected            string
+		expectError         bool
+	}{
+		{
+			name:                "non-flat structure",
+			flat:                false,
+			useEmbeddedMetadata: true,
+			expected:            "Test Author/Test Series/Test Book/audio.mp3",
+			expectError:         false,
+		},
+		{
+			name:                "flat structure with embedded metadata",
+			flat:                true,
+			useEmbeddedMetadata: true,
+			expected:            "Test Author/Test Series/Test Book.mp3",
+			expectError:         false,
+		},
+		{
+			name:                "flat structure without embedded metadata should fail",
+			flat:                true,
+			useEmbeddedMetadata: false,
+			expectError:         true, // Should fail because flat mode requires embedded metadata
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			env := setupTestEnvironment(t, []testFile{testFileData})
+			defer env.Cleanup()
+
+			config := &OrganizerConfig{
+				BaseDir:             env.InputDir,
+				OutputDir:           env.OutputDir,
+				UseEmbeddedMetadata: tc.useEmbeddedMetadata,
+				Flat:                tc.flat,
+				Verbose:             true,
+			}
+
+			org := NewOrganizer(config)
+			err := org.Execute()
+
+			if tc.expectError {
+				if err == nil {
+					t.Error("Expected an error when using flat mode without embedded metadata, but got none")
+				}
+				// Skip the rest of the test if we expected and got an error
+				return
+			}
+
+			// If we didn't expect an error but got one, fail the test
+			if err != nil {
+				t.Fatalf("Execute() returned error: %v", err)
+			}
+
+			// Verify the file was created in the expected location
+			expectedPath := filepath.Join(env.OutputDir, filepath.FromSlash(tc.expected))
+			t.Logf("Looking for file at: %s", expectedPath)
+
+			// List all files in the output directory for debugging
+			err = filepath.Walk(env.OutputDir, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				if !info.IsDir() {
+					t.Logf("Found file: %s", path)
+				}
+				return nil
+			})
+			if err != nil {
+				t.Logf("Error walking output directory: %v", err)
+			}
+
+			if _, err := os.Stat(expectedPath); os.IsNotExist(err) {
+				t.Errorf("Expected file %s does not exist", expectedPath)
+			}
+		})
+	}
+}
+
 func TestOrganizer(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -121,46 +469,46 @@ func TestOrganizer(t *testing.T) {
 func TestFlatDirectoryWithSeriesAsTitle(t *testing.T) {
 	// Test cases with expected directory structures
 	tests := []struct {
-		name            string
-		mp3File         string
+		name             string
+		mp3File          string
 		useSeriesAsTitle bool
-		expectedPath    string
+		expectedPath     string
 	}{
 		{
-			name:            "lovecraft_with_series_as_title",
-			mp3File:         "charlesdexterward_01_lovecraft_64kb.mp3",
+			name:             "lovecraft_with_series_as_title",
+			mp3File:          "charlesdexterward_01_lovecraft_64kb.mp3",
 			useSeriesAsTitle: true,
-			expectedPath:    "H. P. Lovecraft/The Case of Charles Dexter Ward",
+			expectedPath:     "H. P. Lovecraft/The Case of Charles Dexter Ward",
 		},
 		{
-			name:            "lovecraft_without_series_as_title",
-			mp3File:         "charlesdexterward_01_lovecraft_64kb.mp3",
+			name:             "lovecraft_without_series_as_title",
+			mp3File:          "charlesdexterward_01_lovecraft_64kb.mp3",
 			useSeriesAsTitle: false,
-			expectedPath:    "H. P. Lovecraft/The Case of Charles Dexter Ward/01 - Chapter 1_ A Result and a Prologue",
+			expectedPath:     "H. P. Lovecraft/The Case of Charles Dexter Ward/01 - Chapter 1_ A Result and a Prologue",
 		},
 		{
-			name:            "kenrick_with_series_as_title",
-			mp3File:         "falstaffswedding1766version_1_kenrick_64kb.mp3",
+			name:             "kenrick_with_series_as_title",
+			mp3File:          "falstaffswedding1766version_1_kenrick_64kb.mp3",
 			useSeriesAsTitle: true,
-			expectedPath:    "William Kenrick/Falstaff's Wedding (1766 Version)",
+			expectedPath:     "William Kenrick/Falstaff's Wedding (1766 Version)",
 		},
 		{
-			name:            "kenrick_without_series_as_title",
-			mp3File:         "falstaffswedding1766version_1_kenrick_64kb.mp3",
+			name:             "kenrick_without_series_as_title",
+			mp3File:          "falstaffswedding1766version_1_kenrick_64kb.mp3",
 			useSeriesAsTitle: false,
-			expectedPath:    "William Kenrick/Falstaff's Wedding (1766 Version)/01 - Act 1",
+			expectedPath:     "William Kenrick/Falstaff's Wedding (1766 Version)/01 - Act 1",
 		},
 		{
-			name:            "scott_with_series_as_title",
-			mp3File:         "perouse_01_scott_64kb.mp3",
+			name:             "scott_with_series_as_title",
+			mp3File:          "perouse_01_scott_64kb.mp3",
 			useSeriesAsTitle: true,
-			expectedPath:    "Ernest Scott/Lapérouse",
+			expectedPath:     "Ernest Scott/Lapérouse",
 		},
 		{
-			name:            "scott_without_series_as_title",
-			mp3File:         "perouse_01_scott_64kb.mp3",
+			name:             "scott_without_series_as_title",
+			mp3File:          "perouse_01_scott_64kb.mp3",
 			useSeriesAsTitle: false,
-			expectedPath:    "Ernest Scott/Lapérouse/01 - Family, youth and influences",
+			expectedPath:     "Ernest Scott/Lapérouse/01 - Family, youth and influences",
 		},
 	}
 
@@ -177,21 +525,21 @@ func TestFlatDirectoryWithSeriesAsTitle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a temporary directory for the test
 			tempDir := t.TempDir()
-			
+
 			// Copy the MP3 file to the temp directory
 			sourcePath := filepath.Join(mp3FlatDir, tt.mp3File)
 			destPath := filepath.Join(tempDir, tt.mp3File)
-			
+
 			sourceData, err := os.ReadFile(sourcePath)
 			if err != nil {
 				t.Fatalf("Failed to read source file: %v", err)
 			}
-			
+
 			err = os.WriteFile(destPath, sourceData, 0644)
 			if err != nil {
 				t.Fatalf("Failed to write destination file: %v", err)
 			}
-			
+
 			// Create organizer with appropriate configuration
 			config := &OrganizerConfig{
 				BaseDir:             tempDir,
@@ -205,11 +553,10 @@ func TestFlatDirectoryWithSeriesAsTitle(t *testing.T) {
 				UseEmbeddedMetadata: true,
 				Flat:                true,
 				Layout:              "author-series-title",
-				UseSeriesAsTitle:    tt.useSeriesAsTitle,
 			}
-			
+
 			org := NewOrganizer(config)
-			
+
 			// Process the file using the public OrganizeSingleFile method
 			// Create a metadata provider that can read from the MP3 file
 			provider := NewAudioMetadataProvider(destPath)
@@ -217,14 +564,14 @@ func TestFlatDirectoryWithSeriesAsTitle(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to process file: %v", err)
 			}
-			
+
 			// Check if the file was moved to the expected location
 			expectedDir := filepath.Join(tempDir, tt.expectedPath)
 			expectedFilePath := filepath.Join(expectedDir, tt.mp3File)
-			
+
 			if _, err := os.Stat(expectedFilePath); os.IsNotExist(err) {
 				t.Errorf("File not found at expected path: %s", expectedFilePath)
-				
+
 				// List the contents of the temp directory to help debug
 				files, err := filepath.Glob(filepath.Join(tempDir, "*", "*", "*", "*"))
 				if err == nil {
@@ -290,10 +637,10 @@ func TestOutputDirectory(t *testing.T) {
 
 func TestLayoutOptions(t *testing.T) {
 	tests := []struct {
-		name       string
-		layout     string
-		metadata   Metadata
-		wantDir    string
+		name     string
+		layout   string
+		metadata Metadata
+		wantDir  string
 	}{
 		{
 			name:   "author_series_title_layout",
@@ -411,10 +758,10 @@ func TestLayoutOptions(t *testing.T) {
 			} else {
 				wantFile = filepath.Join(wantPath, "test.mp3")
 			}
-			
+
 			if _, err := os.Stat(wantFile); os.IsNotExist(err) {
 				t.Errorf("file was not moved to %s", wantFile)
-				
+
 				// List the contents of the temp directory to help debug
 				files, err := filepath.Glob(filepath.Join(tempDir, "*", "*", "*"))
 				if err == nil {

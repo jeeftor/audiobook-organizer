@@ -1,3 +1,4 @@
+// internal/organizer/logging.go
 package organizer
 
 import (
@@ -78,7 +79,7 @@ func (o *Organizer) printSummary(startTime time.Time) {
 			}
 			if len(metadata.Authors) > 0 && metadata.Title != "" {
 				color.Green("  📚 %s by %s", metadata.Title, strings.Join(metadata.Authors, ", "))
-				if len(metadata.Series) > 0 {
+				if len(metadata.Series) > 0 && metadata.Series[0] != "" {
 					cleanedSeries := cleanSeriesName(metadata.Series[0])
 					color.Green("     📖 Series: %s", cleanedSeries)
 				}
