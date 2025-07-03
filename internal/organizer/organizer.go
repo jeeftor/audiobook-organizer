@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -280,55 +281,123 @@ func (o *Organizer) removeEmptyDirs(dir string) error {
 
 	return nil
 }
-
-// removeEmptySourceDirs scans the source directory for empty directories
 func (o *Organizer) removeEmptySourceDirs() error {
 	if !o.config.RemoveEmpty {
 		return nil
 	}
 
 	if o.config.Verbose {
-		color.Blue("🔍 Scanning for empty directories...")
+		PrintBlue("🔍 Scanning for empty directories...")
 	}
 
+	// Keep removing empty directories until no more are found
+	for {
+		emptyDirs, err := o.findEmptyDirectories()
+		if err != nil {
+			return err
+		}
+
+		// If no empty directories found, we're done
+		if len(emptyDirs) == 0 {
+			break
+		}
+
+		// Sort by depth (deepest first) for safe removal
+		sort.Slice(emptyDirs, func(i, j int) bool {
+			depthI := strings.Count(emptyDirs[i], string(filepath.Separator))
+			depthJ := strings.Count(emptyDirs[j], string(filepath.Separator))
+			return depthI > depthJ
+		})
+
+		// Remove empty directories in this iteration
+		var removedAny bool
+		for _, dir := range emptyDirs {
+			if err := o.removeEmptyDir(dir); err != nil {
+				PrintRed("❌ Error removing directory %s: %v", dir, err)
+			} else {
+				removedAny = true
+			}
+		}
+
+		// If we couldn't remove any directories, break to avoid infinite loop
+		if !removedAny {
+			break
+		}
+	}
+
+	return nil
+}
+
+// Helper function to find empty directories in a single pass
+func (o *Organizer) findEmptyDirectories() ([]string, error) {
 	var emptyDirs []string
+
 	err := filepath.Walk(o.config.BaseDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
+		// Skip non-directories
 		if !info.IsDir() {
 			return nil
 		}
 
-		// Skip the base directory itself and the output directory
-		if path == o.config.BaseDir || (o.config.OutputDir != "" && path == o.config.OutputDir) {
+		// Skip the base directory itself
+		if path == o.config.BaseDir {
 			return nil
 		}
 
-		if isEmptyDir(path) {
+		// Skip the output directory if it's different from base
+		if o.config.OutputDir != "" && path == o.config.OutputDir {
+			return filepath.SkipDir
+		}
+
+		// Check if directory is empty
+		if o.isEmptyDir(path) {
 			emptyDirs = append(emptyDirs, path)
 		}
 
 		return nil
 	})
 
-	if err != nil {
-		return fmt.Errorf("error scanning for empty directories: %v", err)
+	return emptyDirs, err
+}
+
+func (o *Organizer) removeEmptyDir(dir string) error {
+	// Double-check it's still empty (might have been removed already)
+	if !o.isEmptyDir(dir) {
+		return nil
 	}
 
-	// Remove empty directories in reverse order (deepest first)
-	for i := len(emptyDirs) - 1; i >= 0; i-- {
-		dir := emptyDirs[i]
-		if o.config.Verbose {
-			color.Yellow("🗑️  Removing empty directory: %s", dir)
-		}
-		if !o.config.DryRun {
-			if err := os.Remove(dir); err != nil {
-				color.Red("❌ Error removing directory %s: %v", dir, err)
+	// Prompt if enabled
+	if o.config.Prompt {
+		if !o.PromptForDirectoryRemoval(dir, false) {
+			if o.config.Verbose {
+				PrintYellow("⏩ Skipping removal of directory %s", dir)
 			}
+			return nil
 		}
+	}
+
+	if o.config.Verbose {
+		PrintYellow("🗑️  Removing empty directory: %s", dir)
+	}
+
+	if !o.config.DryRun {
+		if err := os.Remove(dir); err != nil {
+			return fmt.Errorf("failed to remove directory: %v", err)
+		}
+		// Add to summary
+		o.summary.EmptyDirsRemoved = append(o.summary.EmptyDirsRemoved, dir)
 	}
 
 	return nil
+}
+
+func (o *Organizer) isEmptyDir(dir string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	return len(entries) == 0
 }
