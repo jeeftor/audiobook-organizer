@@ -1,4 +1,4 @@
-module audiobook-organizer
+module github.com/jeeftor/audiobook-organizer
 
 go 1.22.4
 

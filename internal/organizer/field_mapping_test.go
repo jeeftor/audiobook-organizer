@@ -1,3 +1,5 @@
+//go:build !integration
+
 package organizer
 
 import (
@@ -24,6 +26,11 @@ func TestFieldMapping(t *testing.T) {
 				Album:       "Album Name",
 				TrackTitle:  "Track Title",
 				TrackNumber: 1,
+				RawData: map[string]interface{}{
+					"title":   "Book Title",
+					"series":  "Series Name",
+					"authors": "Author Name",
+				},
 			},
 			fieldMapping: FieldMapping{
 				TitleField:   "title",
@@ -88,24 +95,19 @@ func TestFieldMapping(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Apply the field mapping
-			tt.metadata.FieldMapping = tt.fieldMapping
-			tt.metadata.ApplyFieldMapping()
+			tt.metadata.ApplyFieldMapping(tt.fieldMapping)
 
 			// Verify the results
 			assert.Equal(t, tt.expectedTitle, tt.metadata.Title, "title should match")
-
-			if tt.expectedSeries != "" {
-				assert.NotEmpty(t, tt.metadata.Series, "series should not be empty")
-				assert.Equal(t, tt.expectedSeries, tt.metadata.Series[0], "series should match")
+			if len(tt.metadata.Series) > 0 {
+				assert.Equal(t, tt.expectedSeries, tt.metadata.Series[0], "first series should match")
 			} else {
-				assert.Empty(t, tt.metadata.Series, "series should be empty")
+				assert.Empty(t, tt.expectedSeries, "expected no series")
 			}
-
-			if tt.expectedAuthor != "" {
-				assert.NotEmpty(t, tt.metadata.Authors, "authors should not be empty")
-				assert.Equal(t, tt.expectedAuthor, tt.metadata.Authors[0], "author should match")
+			if len(tt.metadata.Authors) > 0 {
+				assert.Equal(t, tt.expectedAuthor, tt.metadata.Authors[0], "first author should match")
 			} else {
-				assert.Empty(t, tt.metadata.Authors, "authors should be empty")
+				assert.Empty(t, tt.expectedAuthor, "expected no authors")
 			}
 
 			// Verify the verbose output shows the correct field usage
@@ -135,41 +137,51 @@ func TestFieldMapping(t *testing.T) {
 func TestFieldMappingWithMultipleAuthors(t *testing.T) {
 	metadata := Metadata{
 		Title:   "Book Title",
-		Authors: []string{"First Author", "Second Author"},
+		Series:  []string{"Series Name"},
+		Authors: []string{"Author One", "Author Two"},
+		RawData: map[string]interface{}{
+			"title":   "Book Title",
+			"series":  "Series Name",
+			"authors": "Author One; Author Two",
+		},
 	}
 
 	fieldMapping := FieldMapping{
 		TitleField:   "title",
+		SeriesField:  "series",
 		AuthorFields: []string{"authors"},
 	}
 
-	metadata.FieldMapping = fieldMapping
-	metadata.ApplyFieldMapping()
+	metadata.ApplyFieldMapping(fieldMapping)
 
-	assert.Equal(t, 2, len(metadata.Authors), "should have two authors")
-	assert.Equal(t, "First Author", metadata.Authors[0], "first author should match")
-	assert.Equal(t, "Second Author", metadata.Authors[1], "second author should match")
+	assert.Equal(t, "Book Title", metadata.Title)
+	assert.Equal(t, "Series Name", metadata.GetValidSeries())
+	assert.Len(t, metadata.Authors, 2)
+	assert.Equal(t, "Author One", metadata.Authors[0])
+	assert.Equal(t, "Author Two", metadata.Authors[1])
 }
 
 func TestFieldMappingWithCustomFields(t *testing.T) {
 	metadata := Metadata{
-		RawMetadata: map[string]interface{}{
+		Title:   "Book Title",
+		Series:  []string{"Series Name"},
+		Authors: []string{"Author Name"},
+		RawData: map[string]interface{}{
 			"custom_title":  "Custom Title",
 			"custom_series": "Custom Series",
+			"custom_author": "Custom Author",
 		},
 	}
 
 	fieldMapping := FieldMapping{
 		TitleField:   "custom_title",
 		SeriesField:  "custom_series",
-		AuthorFields: []string{"authors"},
+		AuthorFields: []string{"custom_author"},
 	}
 
-	metadata.FieldMapping = fieldMapping
-	metadata.ApplyFieldMapping()
+	metadata.ApplyFieldMapping(fieldMapping)
 
-	assert.Equal(t, "Custom Title", metadata.Title, "should use custom title field")
-	if assert.NotEmpty(t, metadata.Series, "series should not be empty") {
-		assert.Equal(t, "Custom Series", metadata.Series[0], "should use custom series field")
-	}
+	assert.Equal(t, "Custom Title", metadata.Title)
+	assert.Equal(t, "Custom Series", metadata.GetValidSeries())
+	assert.Equal(t, "Custom Author", metadata.GetFirstAuthor(""))
 }
