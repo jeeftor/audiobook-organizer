@@ -13,7 +13,8 @@ var (
 	windowsInvalidChars = []string{"<", ">", ":", "\"", "/", "\\", "|", "?", "*"}
 	unixInvalidChars    = []string{"/"}
 	// Additional problematic characters to sanitize for all platforms
-	commonProblematicChars = []string{"<", ">", ":", "|", "?", "*", "'", "`", "\""}
+	// Note: Removed apostrophe (') from this list to ensure consistent behavior across platforms
+	commonProblematicChars = []string{"<", ">", ":", "|", "?", "*", "`", "\""}
 )
 
 // SupportedAudioExtensions as a map for O(1) lookup instead of slice iteration
@@ -42,8 +43,13 @@ func (o *Organizer) SanitizePath(s string) string {
 	} else if runtime.GOOS == "darwin" {
 		invalidChars = []string{":"}
 	} else {
-		// Linux/Unix: strict, replace both / and common problematic chars
-		invalidChars = append(unixInvalidChars, commonProblematicChars...)
+		// Linux/Unix: only replace truly problematic characters
+		// We're keeping apostrophes intact for consistent behavior with tests
+		invalidChars = unixInvalidChars
+		// Only add common problematic chars that aren't apostrophes
+		for _, char := range commonProblematicChars {
+			invalidChars = append(invalidChars, char)
+		}
 	}
 
 	// Replace invalid characters with underscore
