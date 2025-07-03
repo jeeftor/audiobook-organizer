@@ -324,3 +324,60 @@ func (pb *PathBuilder) GetComponents() []string {
 	copy(components, pb.parts)
 	return components
 }
+
+// GetSupportedFileTypes returns a list of all supported file extensions
+func GetSupportedFileTypes() []string {
+	types := make([]string, 0, len(SupportedAudioExtensions)+1)
+
+	// Add audio extensions
+	for ext := range SupportedAudioExtensions {
+		types = append(types, ext)
+	}
+
+	// Add EPUB
+	types = append(types, ".epub")
+
+	return types
+}
+
+// Add these functions to path.go to centralize file type checking
+
+// IsSupportedFileForFlatMode checks if a file extension is supported in flat mode
+// This includes both audio files and EPUB files
+func IsSupportedFileForFlatMode(ext string) bool {
+	ext = strings.ToLower(ext)
+	return SupportedAudioExtensions[ext] || ext == ".epub"
+}
+
+// IsSupportedFile checks if a file extension is supported by the organizer
+// This is an alias for IsSupportedFileForFlatMode for clarity
+func IsSupportedFile(ext string) bool {
+	return IsSupportedFileForFlatMode(ext)
+}
+
+// GetSupportedExtensions returns a map of all supported extensions for O(1) lookup
+func GetSupportedExtensions() map[string]bool {
+	supported := make(map[string]bool)
+
+	// Add audio extensions
+	for ext := range SupportedAudioExtensions {
+		supported[ext] = true
+	}
+
+	// Add EPUB
+	supported[".epub"] = true
+
+	return supported
+}
+
+// Alternative: Update your existing SupportedAudioExtensions to be more general
+// You could rename it to SupportedExtensions and include EPUB:
+
+var SupportedExtensions = map[string]bool{
+	".mp3":  true,
+	".m4b":  true,
+	".m4a":  true,
+	".ogg":  true,
+	".flac": true,
+	".epub": true,
+}
