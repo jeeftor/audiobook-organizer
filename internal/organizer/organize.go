@@ -701,9 +701,6 @@ func (o *Organizer) updateLogAndCleanup(sourcePath, targetPath string, fileNames
 		PrintYellow("⚠️  Warning: couldn't save log: %v", err)
 	}
 
-	if err := o.cleanEmptyParents(filepath.Dir(sourcePath), o.config.BaseDir); err != nil {
-		PrintYellow("⚠️  Warning: couldn't remove empty directory: %v", err)
-	}
 }
 
 // readMetadataFromJSON reads and processes metadata from a JSON file,
