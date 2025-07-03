@@ -107,7 +107,7 @@ func (o *Organizer) processFlatDirectory(path string, info os.FileInfo) error {
 	}
 
 	// Process audio files in the directory
-	return o.processAudioFilesInDirectory(path)
+	return o.processSupportedFilesInDirectory(path)
 }
 
 // handleTestBookDirectory checks for and processes special test_book directories
@@ -180,9 +180,9 @@ func (o *Organizer) calculateTestBookTargetDir(metadata Metadata) string {
 	return filepath.Join(o.config.OutputDir, author)
 }
 
-// processAudioFilesInDirectory scans a directory for audio files and processes each one individually.
-// This is used in flat mode where each file is organized based on its embedded metadata.
-func (o *Organizer) processAudioFilesInDirectory(path string) error {
+// processAudioFilesInDirectory should be renamed to processSupportedFilesInDirectory
+// and updated to handle all supported file types in flat mode
+func (o *Organizer) processSupportedFilesInDirectory(path string) error {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return fmt.Errorf("error reading directory: %w", err)
@@ -197,10 +197,15 @@ func (o *Organizer) processAudioFilesInDirectory(path string) error {
 		}
 
 		filePath := filepath.Join(path, entry.Name())
-		if IsSupportedAudioFile(strings.ToLower(filepath.Ext(filePath))) {
+		ext := strings.ToLower(filepath.Ext(filePath))
+
+		// Clean, centralized check for supported file types
+		if IsSupportedFile(ext) {
 			if err := o.OrganizeSingleFile(filePath, nil); err != nil {
 				PrintRed("❌ Error organizing file %s: %v", filePath, err)
 			}
+		} else if o.config.Verbose {
+			PrintYellow("⏩ Skipping unsupported file type: %s", filePath)
 		}
 	}
 
