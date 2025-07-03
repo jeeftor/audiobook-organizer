@@ -52,7 +52,7 @@ func (o *Organizer) PromptForConfirmation(metadata Metadata, sourcePath, targetP
 
 	// Series (if present)
 	if len(metadata.Series) > 0 {
-		cleanedSeries := cleanSeriesName(metadata.Series[0])
+		cleanedSeries := CleanSeriesName(metadata.Series[0])
 		fmt.Printf("  ")
 		color.White("Series: ")
 		color.Cyan(cleanedSeries)

@@ -24,6 +24,83 @@ CLI tool to organize audiobooks based on **EITHER** `metadata.json` files **OR**
 - **NEW**: Flexible directory layout options (author/series/title, author/title, author-only)
 - **NEW**: Special handling for MP3 files with non-standard metadata structure
 
+## Flat Mode vs. Non-Flat Mode
+
+The organizer supports two modes of operation, which affect how input files are processed:
+
+### Flat Mode (`--flat` flag)
+- **Use Case**: When all your audiobook files are in a single directory, each potentially with different metadata.
+- **Behavior**:
+  - Each file is processed independently based on its embedded metadata.
+  - Files are organized into `{author}/{title}/` structure based on their individual metadata.
+  - **Important**: Files in the same directory will be grouped ONLY if they share identical metadata (author, title, series).
+  - Ideal for:
+    - Collections of single-file audiobooks (e.g., `.epub`, `.m4b` files)
+    - Mixed collections where multiple books might be in the same directory
+
+### Non-Flat Mode (Default)
+- **Use Case**: When your files are already organized in a directory structure where each directory represents a single book.
+- **Behavior**:
+  - Assumes all files in the same directory belong to the same book.
+  - Processes all files in a directory as a single unit with shared metadata.
+  - Ideal for:
+    - Multi-file audiobooks (e.g., split `.mp3` files)
+    - Pre-organized collections where files are already grouped by book
+
+#### Examples
+
+**Flat Mode with Mixed Content:**
+```
+Input:
+  /books/
+    book1_chapter1.mp3   # Metadata: Author A, Book 1
+    book1_chapter2.mp3   # Metadata: Author A, Book 1
+    book2_chapter1.mp3   # Metadata: Author B, Book 2
+    book3.epub           # Metadata: Author C, Book 3
+
+Output (with --layout=author-title):
+  /books/
+    Author A/
+      Book 1/
+        book1_chapter1.mp3
+        book1_chapter2.mp3
+    Author B/
+      Book 2/
+        book2_chapter1.mp3
+    Author C/
+      Book 3/
+        book3.epub
+```
+
+**Non-Flat Mode:**
+```
+Input:
+  /books/
+    Author A - Book 1/
+      chapter1.mp3
+      chapter2.mp3
+    Author B - Book 2/
+      part1.m4b
+      part2.m4b
+
+Output (with --layout=author-title):
+  /books/
+    Author A/
+      Book 1/
+        chapter1.mp3
+        chapter2.mp3
+    Author B/
+      Book 2/
+        part1.m4b
+        part2.m4b
+```
+
+#### Important Notes:
+- In flat mode, files are ONLY grouped if they have identical metadata. Two MP3s from different books in the same directory will be treated as separate books.
+- For multi-file books in flat mode, ensure all files have consistent metadata to be grouped correctly.
+- Non-flat mode is recommended when you have pre-organized collections or multi-file books.
+- The `--flat` flag only affects how files are discovered, not the output structure. The output structure is always determined by the `--layout` flag.
+
 ## Pre-requirements
 
 In order for this tool to operate you need to configure audiobookshelf to store `metadata.json` files in the same directories as your books. When this setting is toggled whenver metadata is generated a copy will be stored inside the directory - this is what will be used to rename the books.
@@ -150,7 +227,42 @@ Options:
 - `--use-embedded-metadata`: Use metadata embedded in EPUB, MP3, and M4B files if metadata.json is not found
 - `--flat`: Process files in a flat directory structure (automatically enables --use-embedded-metadata)
 - `--layout`: Directory structure layout (options: author-series-title, author-title, author-only)
-- `--use-series-as-title`: Use Series field as the main title directory (useful for MP3 files where Series contains the book title)
+### Directory Layout Options
+
+#### `--layout` Flag
+
+Controls the directory structure of the organized audiobooks. Available options:
+
+- `author-series-title` (default): Organizes as `Author/Series/Book Title/`
+- `author-title`: Organizes as `Author/Book Title/`
+- `author-only`: Organizes as `Author/` with all files directly in the author directory
+
+#### `--use-series-as-title` Flag
+
+When enabled, this flag modifies the directory structure to use the Series field as the main title directory. This is particularly useful for MP3 files where the Series field contains the actual book title.
+
+**Behavior:**
+- When `--use-series-as-title` is set to `true` and a Series is present in the metadata, the Series field will be used as the title in the directory structure.
+- If no Series is present, the flag is ignored and the Title field is used.
+- This flag works in conjunction with the `--layout` flag, modifying its behavior.
+
+#### Flag Interaction Examples
+
+1. **Default Behavior** (`--layout=author-series-title --use-series-as-title=false`):
+   - With series: `Author/Series/Book Title/`
+   - Without series: `Author/Book Title/`
+
+2. **Using Series as Title** (`--layout=author-series-title --use-series-as-title=true`):
+   - With series: `Author/Book Title/` (uses Series as the title)
+   - Without series: `Author/Book Title/` (falls back to Title field)
+
+3. **Author-Title Layout** (`--layout=author-title --use-series-as-title=true`):
+   - With series: `Author/Book Title/` (uses Series as the title)
+   - Without series: `Author/Book Title/` (uses Title field)
+
+4. **Flat Mode** (`--flat --use-series-as-title=true`):
+   - With series: `Author - Book Title.mp3` (uses Series as the title)
+   - Without series: `Author - Book Title.mp3` (uses Title field)
 
 ### Docker Usage Examples
 
