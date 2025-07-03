@@ -3,6 +3,7 @@ package organizer
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -118,17 +119,46 @@ func (m *Metadata) Validate() error {
 func (m *Metadata) ApplyFieldMapping(mapping FieldMapping) {
 	m.fieldMapping = mapping
 
+	// Store original title for potential use in series mapping
+	originalTitle := m.Title
+
 	// Apply title field mapping
-	if mapping.TitleField != "" && mapping.TitleField != "title" {
-		if val := m.getRawValue(mapping.TitleField); val != "" {
-			m.Title = val
+	if mapping.TitleField != "" {
+		switch mapping.TitleField {
+		case "title":
+			// Keep original title
+		case "series":
+			if len(m.Series) > 0 {
+				m.Title = m.Series[0]
+			}
+		case "album":
+			if m.Album != "" {
+				m.Title = m.Album
+			}
+		case "track_title":
+			if m.TrackTitle != "" {
+				m.Title = m.TrackTitle
+			}
+		default:
+			if val := m.getRawValue(mapping.TitleField); val != "" {
+				m.Title = val
+			}
 		}
 	}
 
 	// Apply series field mapping
-	if mapping.SeriesField != "" && mapping.SeriesField != "series" {
-		if val := m.getRawValue(mapping.SeriesField); val != "" {
-			m.Series = []string{val}
+	if mapping.SeriesField != "" {
+		switch mapping.SeriesField {
+		case "series":
+			// Keep original series
+		case "title":
+			if originalTitle != "" {
+				m.Series = []string{originalTitle}
+			}
+		default:
+			if val := m.getRawValue(mapping.SeriesField); val != "" {
+				m.Series = []string{val}
+			}
 		}
 	}
 
@@ -136,8 +166,14 @@ func (m *Metadata) ApplyFieldMapping(mapping FieldMapping) {
 	if len(mapping.AuthorFields) > 0 {
 		var allAuthors []string
 		for _, field := range mapping.AuthorFields {
-			if val := m.getRawValue(field); val != "" && !contains(allAuthors, val) {
-				allAuthors = append(allAuthors, val)
+			if val := m.getRawValue(field); val != "" {
+				// Split authors by common delimiters if needed
+				authors := splitAuthors(val)
+				for _, author := range authors {
+					if !contains(allAuthors, author) {
+						allAuthors = append(allAuthors, author)
+					}
+				}
 			}
 		}
 		if len(allAuthors) > 0 {
@@ -146,15 +182,51 @@ func (m *Metadata) ApplyFieldMapping(mapping FieldMapping) {
 	}
 
 	// Apply track field mapping
-	if mapping.TrackField != "" && mapping.TrackField != "track" {
-		if val, ok := m.RawData[mapping.TrackField]; ok {
-			if intVal, ok := val.(int); ok {
-				m.TrackNumber = intVal
-			} else if floatVal, ok := val.(float64); ok {
-				m.TrackNumber = int(floatVal)
+	if mapping.TrackField != "" {
+		switch mapping.TrackField {
+		case "track":
+			// Keep original track number
+		default:
+			if val, ok := m.RawData[mapping.TrackField]; ok {
+				switch v := val.(type) {
+				case int:
+					m.TrackNumber = v
+				case float64:
+					m.TrackNumber = int(v)
+				case string:
+					// Try to parse string as int
+					if num, err := strconv.Atoi(v); err == nil {
+						m.TrackNumber = num
+					}
+				}
 			}
 		}
 	}
+}
+
+// FormatFieldMappingAndValues returns a formatted string showing the current field mapping and values
+func (m *Metadata) FormatFieldMappingAndValues() string {
+	var sb strings.Builder
+
+	sb.WriteString("Field Mappings:\n")
+	sb.WriteString(fmt.Sprintf("  Title Field: %s\n", m.fieldMapping.TitleField))
+	sb.WriteString(fmt.Sprintf("  Series Field: %s\n", m.fieldMapping.SeriesField))
+	sb.WriteString(fmt.Sprintf("  Author Fields: %v\n", m.fieldMapping.AuthorFields))
+	sb.WriteString(fmt.Sprintf("  Track Field: %s\n", m.fieldMapping.TrackField))
+
+	sb.WriteString("\nCurrent Values:\n")
+	sb.WriteString(fmt.Sprintf("  Title: %s\n", m.Title))
+	if len(m.Series) > 0 {
+		sb.WriteString(fmt.Sprintf("  Series: %v\n", m.Series))
+	}
+	if len(m.Authors) > 0 {
+		sb.WriteString(fmt.Sprintf("  Authors: %v\n", m.Authors))
+	}
+	if m.TrackNumber > 0 {
+		sb.WriteString(fmt.Sprintf("  Track Number: %d\n", m.TrackNumber))
+	}
+
+	return sb.String()
 }
 
 // getRawValue safely extracts string values from raw data
@@ -184,6 +256,37 @@ func (m *Metadata) getRawValue(field string) string {
 	}
 
 	return ""
+}
+
+// splitAuthors splits a string containing multiple authors into a slice of individual authors
+// It handles common delimiters like semicolons, commas, and slashes
+func splitAuthors(authorsStr string) []string {
+	// Common delimiters: semicolon, comma, slash, newline, or multiple spaces
+	delimiters := []string{";", ",", "/", "\n", "  "}
+
+	// Replace all delimiters with a consistent delimiter
+	replaced := authorsStr
+	for _, delim := range delimiters[1:] {
+		replaced = strings.ReplaceAll(replaced, delim, delimiters[0])
+	}
+
+	// Split by the first delimiter
+	authors := strings.Split(replaced, delimiters[0])
+
+	// Clean up each author name
+	for i, author := range authors {
+		authors[i] = strings.TrimSpace(author)
+	}
+
+	// Remove any empty strings
+	var result []string
+	for _, author := range authors {
+		if author != "" {
+			result = append(result, author)
+		}
+	}
+
+	return result
 }
 
 // Helper function to check if a string is in a slice

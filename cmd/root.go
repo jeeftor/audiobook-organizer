@@ -1,13 +1,14 @@
 package cmd
 
 import (
-	"audiobook-organizer/internal/organizer"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"os"
 	"strings"
+
+	"github.com/fatih/color"
+	"github.com/jeeftor/audiobook-organizer/internal/organizer"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
