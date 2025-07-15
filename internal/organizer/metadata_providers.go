@@ -176,13 +176,15 @@ func (p *UnifiedMetadataProvider) extractEPUBMetadata() (Metadata, error) {
 
 	// If series is empty, try to extract from the OPF file directly
 	if series == "" {
+		// Try to extract Calibre series metadata if available
 		var found bool
-		series, seriesIndex, found = extractCalibreSeriesFromOPF(epubPath)
+		series, seriesIndex, found = ExtractCalibreSeriesFromOPF(epubPath)
 		if !found {
 			series = ""
 		}
 	}
 
+	// Add series to metadata if found
 	if series != "" {
 		metadata.Series = []string{series}
 		metadata.RawData["series"] = series
@@ -315,8 +317,8 @@ func (p *UnifiedMetadataProvider) extractAudioMetadata() (Metadata, error) {
 	return metadata, nil
 }
 
-// extractCalibreSeriesFromOPF extracts series information from Calibre metadata in EPUB
-func extractCalibreSeriesFromOPF(epubPath string) (string, float64, bool) {
+// ExtractCalibreSeriesFromOPF extracts series information from Calibre metadata in EPUB
+func ExtractCalibreSeriesFromOPF(epubPath string) (string, float64, bool) {
 	r, err := zip.OpenReader(epubPath)
 	if err != nil {
 		return "", 0, false
@@ -359,6 +361,7 @@ func extractCalibreSeriesFromOPF(epubPath string) (string, float64, bool) {
 	var seriesIndex float64 = 1.0
 	var foundSeries bool
 
+	// Method 1: Check for belongs-to-collection property (EPUB3 standard)
 	for _, meta := range doc.Metadata.Meta {
 		if meta.Property == "belongs-to-collection" {
 			seriesName = meta.Value
@@ -380,6 +383,27 @@ func extractCalibreSeriesFromOPF(epubPath string) (string, float64, bool) {
 		}
 	}
 
+	// If not found yet, try Method 2: Check for calibre:series metadata (Calibre format)
+	if !foundSeries {
+		for _, meta := range doc.Metadata.Meta {
+			if meta.Name == "calibre:series" && meta.Content != "" {
+				seriesName = meta.Content
+				foundSeries = true
+
+				// Look for series index
+				for _, indexMeta := range doc.Metadata.Meta {
+					if indexMeta.Name == "calibre:series_index" && indexMeta.Content != "" {
+						if idx, err := strconv.ParseFloat(indexMeta.Content, 64); err == nil {
+							seriesIndex = idx
+						}
+						break
+					}
+				}
+				break
+			}
+		}
+	}
+
 	return seriesName, seriesIndex, foundSeries
 }
 
@@ -388,10 +412,14 @@ type opfDocument struct {
 	XMLName  xml.Name `xml:"package"`
 	Metadata struct {
 		Meta []struct {
+			// EPUB3 standard attributes
 			Property string `xml:"property,attr"`
 			Refines  string `xml:"refines,attr"`
 			ID       string `xml:"id,attr"`
 			Value    string `xml:",chardata"`
+			// Calibre specific attributes
+			Name     string `xml:"name,attr"`
+			Content  string `xml:"content,attr"`
 		} `xml:"meta"`
 	} `xml:"metadata"`
 }
