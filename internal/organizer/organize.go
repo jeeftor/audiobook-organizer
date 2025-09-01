@@ -503,7 +503,7 @@ func (o *Organizer) calculateTargetPath(metadata Metadata) (string, error) {
 		cleanedSeries := cleanSeriesName(metadata.Series[0])
 		// Use series as the main title
 		titleDir = o.SanitizePath(cleanedSeries)
-		
+
 		// For MP3 files where Series contains the book title
 		// Use a simple Author/Title structure
 		return filepath.Join(targetBase, authorDir, titleDir), nil
@@ -515,11 +515,11 @@ func (o *Organizer) calculateTargetPath(metadata Metadata) (string, error) {
 	case "author-only":
 		// Just put everything under author directory
 		targetPath = filepath.Join(targetBase, authorDir)
-	
+
 	case "author-title":
 		// Skip series level, use author/title structure
 		targetPath = filepath.Join(targetBase, authorDir, titleDir)
-	
+
 	case "author-series-title", "": // Default to author-series-title if not specified
 		// Use full author/series/title structure if series exists
 		if len(metadata.Series) > 0 && metadata.Series[0] != "__INVALID_SERIES__" {
@@ -529,7 +529,7 @@ func (o *Organizer) calculateTargetPath(metadata Metadata) (string, error) {
 		} else {
 			targetPath = filepath.Join(targetBase, authorDir, titleDir)
 		}
-	
+
 	default:
 		// Default to author/title if unknown layout
 		targetPath = filepath.Join(targetBase, authorDir, titleDir)
