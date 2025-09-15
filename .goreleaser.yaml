@@ -2,6 +2,10 @@
 version: 2.2
 project_name: audiobook-organizer
 
+# Global settings for speed
+parallelism: 4
+builds_dir: dist
+
 before:
   hooks:
     - go mod tidy
@@ -9,6 +13,9 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    mod_timestamp: "{{ .CommitTimestamp }}"
     goos:
       - linux
       - windows
@@ -20,6 +27,13 @@ builds:
     goarm:
       - 6
       - 7
+    ignore:
+      - goos: windows
+        goarch: arm
+        goarm: 6
+      - goos: windows
+        goarch: arm
+        goarm: 7
     ldflags:
       - >
         -s -w
