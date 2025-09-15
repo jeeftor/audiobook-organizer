@@ -1,0 +1,157 @@
+name: SLSA Build and Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  id-token: write  # For OIDC token
+  contents: write   # For creating releases and uplodading artifacts
+  packages: write  # For publishing packages
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
+      go-version: ${{ steps.setup-go.outputs.go-version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        id: setup-go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 'stable'
+          check-latest: true
+
+      - name: Build with GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: latest
+          args: build --snapshot --clean
+
+      - name: Generate hashes for all artifacts
+        id: hash
+        shell: bash
+        run: |
+          cd dist
+          find . -name "audiobook-organizer*" -type f | while read file; do
+            sha256sum "$file" >> hashes.txt
+          done
+          # Output first hash for SLSA (they expect single hash)
+          echo "hashes=$(head -n1 hashes.txt | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-outputs
+          path: |
+            dist/
+          retention-days: 5
+
+  provenance:
+    needs: [build]
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.10.0
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    with:
+      base64-subjects: "$(echo -n "true" | base64 -w0)"
+      upload-assets: "true"
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  sign:
+    name: Sign artifacts with cosign
+    needs: [build, provenance]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-outputs
+          path: artifacts
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.2.0'
+
+      - name: Sign the artifacts
+        run: |
+          cd artifacts
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+
+          # Sign all binary artifacts
+          find . -name "audiobook-organizer*" -type f | while read file; do
+            cosign sign-blob \
+              --key cosign.key \
+              --output-signature="${file}.sig" \
+              --output-certificate="${file}.pem" \
+              "$file"
+          done
+
+      - name: Upload signatures
+        uses: actions/upload-artifact@v4
+        with:
+          name: signatures
+          path: |
+            artifacts/*.sig
+            artifacts/*.pem
+          retention-days: 5
+
+  verify:
+    name: Verify SLSA provenance
+    needs: [provenance]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install slsa-verifier
+        uses: slsa-framework/slsa-verifier-action@v4
+        with:
+          version: 'v2.6.0'
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: slsa-provenance
+          path: provenance/
+
+
+      - name: Verify the provenance
+        run: |
+          slsa-verifier verify-artifact \
+            --source-uri github.com/${{ github.repository }} \
+            --source-tag ${{ github.ref_name }} \
+            --provenance-path provenance/provenance.json \
+            --source-versioned-tag
+
+  publish-release:
+    name: Publish Release
+    needs: [build, sign, verify, provenance]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-outputs
+          path: dist
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
