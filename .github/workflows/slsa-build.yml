@@ -59,7 +59,7 @@ jobs:
 
   provenance:
     needs: [build]
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.10.0
     permissions:
       actions: read
       id-token: write
@@ -113,9 +113,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install slsa-verifier
-        uses: slsa-framework/slsa-verifier/actions/installer@v2.6.0
-        with:
-          version: 'v2.6.0'
+        uses: slsa-framework/slsa-verifier-action@v2.6.0
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
