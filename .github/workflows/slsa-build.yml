@@ -26,7 +26,7 @@ jobs:
 
       - name: Set up Go
         id: setup-go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: 'stable'
           check-latest: true
@@ -59,16 +59,14 @@ jobs:
 
   provenance:
     needs: [build]
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.10.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
     permissions:
       actions: read
       id-token: write
       contents: write
     with:
-      base64-subjects: "$(echo -n "true" | base64 -w0)"
-      upload-assets: "true"
-    secrets:
-      github-token: ${{ secrets.GITHUB_TOKEN }}
+      base64-subjects: "${{ needs.build.outputs.hashes }}"
+      upload-assets: true
 
   sign:
     name: Sign artifacts with cosign
@@ -115,7 +113,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install slsa-verifier
-        uses: slsa-framework/slsa-verifier-action@v4
+        uses: slsa-framework/slsa-verifier/actions/installer@v2.6.0
         with:
           version: 'v2.6.0'
 

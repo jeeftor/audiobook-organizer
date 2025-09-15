@@ -38,7 +38,7 @@ jobs:
       - name: Install Go dependencies
         run: go mod tidy
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
       - name: Install pre-commit
         run: pip install pre-commit
       - name: Run pre-commit
@@ -69,7 +69,7 @@ jobs:
 
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: 'stable'
 
