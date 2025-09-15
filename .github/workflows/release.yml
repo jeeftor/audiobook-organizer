@@ -107,7 +107,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --clean --parallelism 4
+          args: release --clean
         env:
           # Use the GitHub App token for both operations
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}

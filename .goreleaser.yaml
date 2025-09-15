@@ -2,10 +2,6 @@
 version: 2.2
 project_name: audiobook-organizer
 
-# Global settings for speed
-parallelism: 4
-builds_dir: dist
-
 before:
   hooks:
     - go mod tidy
@@ -90,7 +86,7 @@ nfpms:
         dst: /usr/share/doc/audiobook-organizer/LICENSE
       - src: ./README.md
         dst: /usr/share/doc/audiobook-organizer/README.md
-    file_name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    file_name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ if eq .Arch "arm" }}armv{{ .Arm }}{{ else }}{{ .Arch }}{{ end }}'
 
 brews:
   - name: audiobook-organizer
