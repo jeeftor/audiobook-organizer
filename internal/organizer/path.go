@@ -9,8 +9,8 @@ import (
 var (
 	windowsInvalidChars = []string{"<", ">", ":", "\"", "/", "\\", "|", "?", "*"}
 	unixInvalidChars    = []string{"/"}
-	// Additional problematic characters to sanitize for all platforms
-	commonProblematicChars = []string{"<", ">", ":", "|", "?", "*", "'", "`", "\""}
+	// Additional problematic characters to sanitize for Windows/cross-platform compatibility
+	windowsProblematicChars = []string{"<", ">", ":", "|", "?", "*", "'", "`", "\""}
 )
 
 // SanitizePath sanitizes a file path string by replacing invalid characters based on the current OS.
@@ -26,12 +26,12 @@ func (o *Organizer) SanitizePath(s string) string {
 	// Then handle OS-specific invalid characters
 	var invalidChars []string
 	if runtime.GOOS == "windows" {
-		invalidChars = windowsInvalidChars
+		invalidChars = append(windowsInvalidChars, windowsProblematicChars...)
 	} else if runtime.GOOS == "darwin" {
 		invalidChars = []string{":"}
 	} else {
-		// Linux/Unix: strict, replace both / and common problematic chars
-		invalidChars = append(unixInvalidChars, commonProblematicChars...)
+		// Linux/Unix: only replace the truly invalid characters (/)
+		invalidChars = unixInvalidChars
 	}
 
 	// Replace invalid characters with underscore

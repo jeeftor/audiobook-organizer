@@ -9,7 +9,7 @@ LDFLAGS := -ldflags "-s -w \
 	-X audiobook-organizer/cmd.buildCommit=$(GIT_COMMIT) \
 	-X audiobook-organizer/cmd.buildTime=$(BUILD_TIME)"
 
-.PHONY: build clean dev release
+.PHONY: build clean dev release test test-verbose
 
 # Default target
 all: build
@@ -29,3 +29,12 @@ clean:
 # Create a release (requires GITHUB_TOKEN)
 release:
 	goreleaser release --clean
+
+# Run tests
+test:
+	go test ./...
+
+# Run tests with verbose output and coverage
+test-verbose:
+	go test -v -coverprofile=coverage.out ./...
+	go tool cover -func=coverage.out
