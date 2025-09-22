@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/color"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // Configuration for forcing dark mode
@@ -17,47 +17,12 @@ var (
 	ForceDarkMode = false // Set this to true to force dark background everywhere
 )
 
-// Dark mode color functions - black background with appropriate foreground colors
-var (
-	darkModeBase    = color.New(color.BgBlack, color.FgWhite)
-	darkModeSuccess = color.New(color.BgBlack, color.FgGreen)
-	darkModeWarning = color.New(color.BgBlack, color.FgYellow)
-	darkModeError   = color.New(color.BgBlack, color.FgRed)
-	darkModeInfo    = color.New(color.BgBlack, color.FgCyan)
-	darkModeBlue    = color.New(color.BgBlack, color.FgBlue)
-)
-
 // SetForceDarkMode enables/disables forced dark mode
 func SetForceDarkMode(enabled bool) {
 	ForceDarkMode = enabled
 
-	if enabled {
-		// Override all the print functions to use black background
-		updateColorFunctionsForDarkMode()
-	}
-}
-
-// updateColorFunctionsForDarkMode overrides color functions to use black background
-func updateColorFunctionsForDarkMode() {
-	// Update path component colors for dark mode
-	AuthorColor = color.New(color.BgBlack, color.FgHiRed, color.Bold).SprintFunc()
-	SeriesColor = color.New(color.BgBlack, color.FgHiBlue, color.Bold).SprintFunc()
-	TitleColor = color.New(color.BgBlack, color.FgHiGreen, color.Bold).SprintFunc()
-	TrackNumberColor = color.New(color.BgBlack, color.FgHiMagenta, color.Bold).SprintFunc()
-	FilenameColor = color.New(color.BgBlack, color.FgHiYellow, color.Bold).SprintFunc()
-
-	// Update display colors
-	IconColor = color.New(color.BgBlack, color.FgCyan).SprintFunc()
-	FieldNameColor = color.New(color.BgBlack, color.FgWhite, color.Bold).SprintFunc()
-	NormalTextColor = color.New(color.BgBlack, color.FgWhite).SprintFunc()
-	TargetPathColor = color.New(color.BgBlack, color.FgHiCyan, color.Bold).SprintFunc()
-
-	// Update file type colors
-	AudioFileColor = color.New(color.BgBlack, color.FgGreen).SprintFunc()
-	EpubFileColor = color.New(color.BgBlack, color.FgBlue).SprintFunc()
-	M4bFileColor = color.New(color.BgBlack, color.FgCyan).SprintFunc()
-	M4aFileColor = color.New(color.BgBlack, color.FgYellow).SprintFunc()
-	GenericFileColor = color.New(color.BgBlack, color.FgMagenta).SprintFunc()
+	// When dark mode is enabled, we need to create dark mode styles
+	// This is handled by the styles.go file
 }
 
 func (o *Organizer) saveLog() error {
@@ -167,82 +132,60 @@ func (o *Organizer) printSummary(startTime time.Time) {
 	}
 }
 
-// Color scheme that works both normally and in forced dark mode
+// Style definitions that work both normally and in forced dark mode
 var (
-	// Path component colors - these will be updated by updateColorFunctionsForDarkMode if needed
-	AuthorColor      = color.New(color.BgRed, color.FgWhite, color.Bold).SprintFunc()
-	SeriesColor      = color.New(color.BgBlue, color.FgWhite, color.Bold).SprintFunc()
-	TitleColor       = color.New(color.BgGreen, color.FgBlack, color.Bold).SprintFunc()
-	TrackNumberColor = color.New(color.BgMagenta, color.FgWhite, color.Bold).SprintFunc()
-	FilenameColor    = color.New(color.BgYellow, color.FgBlack, color.Bold).SprintFunc()
+	// Path component styles - these will be updated by updateStylesForDarkMode if needed
+	AuthorStyle      = lipgloss.NewStyle().Background(lipgloss.Color("#FF0000")).Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
+	SeriesStyle      = lipgloss.NewStyle().Background(lipgloss.Color("#0000FF")).Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
+	TitleStyle       = lipgloss.NewStyle().Background(lipgloss.Color("#00FF00")).Foreground(lipgloss.Color("#000000")).Bold(true)
+	TrackNumberStyle = lipgloss.NewStyle().Background(lipgloss.Color("#FF00FF")).Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
+	FilenameStyle    = lipgloss.NewStyle().Background(lipgloss.Color("#FFFF00")).Foreground(lipgloss.Color("#000000")).Bold(true)
 
-	// Metadata display colors
-	IconColor       = color.New(color.FgCyan).SprintFunc()
-	FieldNameColor  = color.New(color.FgWhite, color.Bold).SprintFunc()
-	NormalTextColor = color.New().SprintFunc() // Default terminal color
-	TargetPathColor = color.New(color.BgCyan, color.FgBlack, color.Bold).SprintFunc()
+	// Metadata display styles
+	IconStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFFF"))
+	FieldNameStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
+	NormalTextStyle = lipgloss.NewStyle() // Default terminal color
+	TargetPathStyle = lipgloss.NewStyle().Background(lipgloss.Color("#00FFFF")).Foreground(lipgloss.Color("#000000")).Bold(true)
 
-	// File type colors
-	AudioFileColor   = color.New(color.FgGreen).SprintFunc()
-	EpubFileColor    = color.New(color.FgBlue).SprintFunc()
-	M4bFileColor     = color.New(color.FgCyan).SprintFunc()
-	M4aFileColor     = color.New(color.FgYellow).SprintFunc()
-	GenericFileColor = color.New(color.FgMagenta).SprintFunc()
+	// File type styles
+	AudioFileStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))
+	EpubFileStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#0000FF"))
+	M4bFileStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFFF"))
+	M4aFileStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00"))
+	GenericFileStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF00FF"))
 )
 
 // Print functions that respect the ForceDarkMode setting
 func PrintBase(format string, a ...interface{}) {
-	if ForceDarkMode {
-		darkModeBase.Printf(format+"\n", a...)
+	if len(a) == 0 {
+		fmt.Println(format)
 	} else {
-		fmt.Printf(format+"\n", a...)
+		fmt.Println(fmt.Sprintf(format, a...))
 	}
 }
 
 func PrintRed(format string, a ...interface{}) {
-	if ForceDarkMode {
-		darkModeError.Printf(format+"\n", a...)
-	} else {
-		color.New(color.FgRed).Printf(format+"\n", a...)
-	}
+	printStyled(Styles.Error, format, a...)
 }
 
 func PrintGreen(format string, a ...interface{}) {
-	if ForceDarkMode {
-		darkModeSuccess.Printf(format+"\n", a...)
-	} else {
-		color.New(color.FgGreen).Printf(format+"\n", a...)
-	}
+	printStyled(Styles.Success, format, a...)
 }
 
 func PrintYellow(format string, a ...interface{}) {
-	if ForceDarkMode {
-		darkModeWarning.Printf(format+"\n", a...)
-	} else {
-		color.New(color.FgYellow).Printf(format+"\n", a...)
-	}
+	printStyled(Styles.Warning, format, a...)
 }
 
 func PrintBlue(format string, a ...interface{}) {
-	if ForceDarkMode {
-		darkModeBlue.Printf(format+"\n", a...)
-	} else {
-		color.New(color.FgBlue).Printf(format+"\n", a...)
-	}
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#0000FF"))
+	printStyled(style, format, a...)
 }
 
 func PrintCyan(format string, a ...interface{}) {
-	if ForceDarkMode {
-		darkModeInfo.Printf(format+"\n", a...)
-	} else {
-		color.New(color.FgCyan).Printf(format+"\n", a...)
-	}
+	printStyled(Styles.Info, format, a...)
 }
 
 func PrintMagenta(format string, a ...interface{}) {
-	if ForceDarkMode {
-		color.New(color.BgBlack, color.FgMagenta).Printf(format+"\n", a...)
-	} else {
-		color.New(color.FgMagenta).Printf(format+"\n", a...)
-	}
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF00FF"))
+	printStyled(style, format, a...)
 }
