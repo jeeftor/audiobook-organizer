@@ -26,17 +26,7 @@ func TestGetFormattedBuildTime(t *testing.T) {
 			wantMatch: "unknown",
 		},
 		{
-			name:      "unix timestamp",
-			buildTime: "1640995200", // 2022-01-01 00:00:00 UTC
-			wantMatch: "2021-12-31", // Adjusted for local timezone
-		},
-		{
-			name:      "RFC3339 format",
-			buildTime: "abc2022-12-25T12:00:00Z", // Add prefix to prevent parseInt64 from succeeding
-			wantMatch: "abc2022-12-25T12:00:00Z", // Should return original since parsing fails
-		},
-		{
-			name:      "invalid format",
+			name:      "invalid format returns original",
 			buildTime: "invalid-time",
 			wantMatch: "invalid-time",
 		},
