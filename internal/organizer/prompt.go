@@ -5,27 +5,25 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/fatih/color"
 )
 
 // PromptForDirectoryRemoval asks the user for confirmation before removing an empty directory
 func (o *Organizer) PromptForDirectoryRemoval(dir string, isParent bool) bool {
 	if isParent {
-		color.Yellow("\n📁 Parent directory is now empty:")
+		fmt.Println(RenderWarning("\n📁 Parent directory is now empty:"))
 	} else {
-		color.Yellow("\n📁 Empty directory found:")
+		fmt.Println(RenderWarning("\n📁 Empty directory found:"))
 	}
 
-	color.White("  Path: ")
-	color.Yellow(dir)
+	fmt.Print(RenderPrompt("  Path: "))
+	fmt.Println(RenderPath(dir))
 
-	fmt.Print("\n❓ Remove empty directory? [y/N] ")
+	fmt.Print(RenderPromptIcon("\n❓ Remove empty directory? [y/N] "))
 
 	reader := bufio.NewReader(os.Stdin)
 	response, err := reader.ReadString('\n')
 	if err != nil {
-		color.Red("Error reading response: %v", err)
+		fmt.Printf(RenderError("Error reading response: %v\n"), err)
 		return false
 	}
 
@@ -38,40 +36,40 @@ func (o *Organizer) PromptForDirectoryRemoval(dir string, isParent bool) bool {
 // Returns true if the user confirms with 'y' or 'yes' (case insensitive),
 // returns false for any other input including empty input or errors.
 func (o *Organizer) PromptForConfirmation(metadata Metadata, sourcePath, targetPath string) bool {
-	color.Yellow("\n📖 Book found:")
+	fmt.Println(RenderWarning("\n📖 Book found:"))
 
 	// Title
-	fmt.Printf("  ")
-	color.White("Title: ")
-	color.Cyan(metadata.Title)
+	fmt.Print("  ")
+	fmt.Print(RenderPrompt("Title: "))
+	fmt.Println(RenderHighlight(metadata.Title))
 
 	// Authors
-	fmt.Printf("  ")
-	color.White("Authors: ")
-	color.Cyan(strings.Join(metadata.Authors, ", "))
+	fmt.Print("  ")
+	fmt.Print(RenderPrompt("Authors: "))
+	fmt.Println(RenderHighlight(strings.Join(metadata.Authors, ", ")))
 
 	// Series (if present)
 	if len(metadata.Series) > 0 {
 		cleanedSeries := CleanSeriesName(metadata.Series[0])
-		fmt.Printf("  ")
-		color.White("Series: ")
-		color.Cyan(cleanedSeries)
+		fmt.Print("  ")
+		fmt.Print(RenderPrompt("Series: "))
+		fmt.Println(RenderHighlight(cleanedSeries))
 	}
 
-	color.Cyan("\n📝 Proposed move:")
-	fmt.Printf("  ")
-	color.White("From: ")
-	color.Yellow(sourcePath)
-	fmt.Printf("  ")
-	color.White("To: ")
-	color.Yellow(targetPath)
+	fmt.Println(RenderHighlight("\n📝 Proposed move:"))
+	fmt.Print("  ")
+	fmt.Print(RenderPrompt("From: "))
+	fmt.Println(RenderPath(sourcePath))
+	fmt.Print("  ")
+	fmt.Print(RenderPrompt("To: "))
+	fmt.Println(RenderPath(targetPath))
 
-	fmt.Print("\n❓ Proceed with move? [y/N] ")
+	fmt.Print(RenderPromptIcon("\n❓ Proceed with move? [y/N] "))
 
 	reader := bufio.NewReader(os.Stdin)
 	response, err := reader.ReadString('\n')
 	if err != nil {
-		color.Red("Error reading response: %v", err)
+		fmt.Printf(RenderError("Error reading response: %v\n"), err)
 		return false
 	}
 

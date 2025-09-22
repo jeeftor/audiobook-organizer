@@ -20,7 +20,7 @@ func (o *Organizer) processDirectory(path string, info os.FileInfo, err error) e
 	}
 
 	if o.config.Flat {
-		return o.handleFlatMode(path, info)
+		return o.handleFlatMode(path, info, nil)
 	}
 
 	return o.handleHierarchicalMode(path, info)
@@ -38,17 +38,21 @@ func (o *Organizer) handleDirectoryError(err error, path string) error {
 	return err
 }
 
-// handleFlatMode processes directories in flat mode where files are organized directly
-// without maintaining subdirectory structures. Requires embedded metadata to be enabled.
-func (o *Organizer) handleFlatMode(path string, info os.FileInfo) error {
-	if !o.config.UseEmbeddedMetadata {
-		return fmt.Errorf("flat mode requires embedded metadata to be enabled")
+// handleFlatMode processes files in flat mode (each file independently)
+func (o *Organizer) handleFlatMode(path string, info os.FileInfo, err error) error {
+	if err != nil {
+		return err
 	}
 
-	if path != o.config.BaseDir {
-		if o.config.Verbose {
-			PrintYellow("⏩ Skipping subdirectory in flat mode: %s", path)
-		}
+	// Skip output directory to avoid processing files we just organized
+	if o.config.OutputDir != "" && (path == o.config.OutputDir || isSubPathOf(o.config.OutputDir, path)) {
+		return nil
+	}
+
+	// Skip directories in flat mode, but don't skip traversal
+	if info.IsDir() {
+		// We still want to traverse subdirectories to find files
+		// but we don't need to process the directory itself
 		return nil
 	}
 
@@ -95,8 +99,24 @@ func (o *Organizer) handleMissingMetadata(path string) {
 }
 
 // processFlatDirectory processes a directory in flat mode, scanning for audio files
-// and organizing them individually. Also handles special test environments.
+// and organizing them individually or as multi-file albums. Also handles special test environments.
 func (o *Organizer) processFlatDirectory(path string, info os.FileInfo) error {
+	// Skip non-directory files when trying to process them as directories
+	if !info.IsDir() {
+		// Check if this is a supported file type before processing
+		ext := strings.ToLower(filepath.Ext(path))
+		if IsSupportedFile(ext) {
+			// Process individual file
+			return o.OrganizeSingleFile(path, nil)
+		} else {
+			// Skip unsupported files silently
+			if o.config.Verbose {
+				PrintYellow("⏩ Skipping unsupported file: %s", path)
+			}
+			return nil
+		}
+	}
+
 	if o.config.Verbose {
 		PrintBlue("🔍 Processing directory in flat mode: %s", path)
 	}
@@ -106,7 +126,12 @@ func (o *Organizer) processFlatDirectory(path string, info os.FileInfo) error {
 		return nil
 	}
 
-	// Process audio files in the directory
+	// Check if this directory contains multiple audio files that should be treated as an album
+	if o.shouldProcessAsAlbum(path) {
+		return o.ProcessMultiFileAlbum(path)
+	}
+
+	// Process audio files in the directory individually
 	return o.processSupportedFilesInDirectory(path)
 }
 
@@ -453,8 +478,15 @@ func (o *Organizer) calculateSingleFileTargetDir(filePath string, metadata Metad
 		pathBuilder.AddAuthor(strings.Join(metadata.Authors, ","))
 		if validSeries := metadata.GetValidSeries(); validSeries != "" {
 			pathBuilder.AddSeries(validSeries)
+			// Only add title if it's different from the series
+			if validSeries != metadata.Title {
+				pathBuilder.AddTitle(metadata.Title)
+			}
+		} else {
+			// No series, just add the title
+			pathBuilder.AddTitle(metadata.Title)
 		}
-		return pathBuilder.AddTitle(metadata.Title).Build(baseDir)
+		return pathBuilder.Build(baseDir)
 	default:
 		return pathBuilder.
 			AddAuthor(strings.Join(metadata.Authors, ",")).
@@ -484,6 +516,8 @@ func (o *Organizer) executeSingleFileMove(filePath, targetPath string, metadata 
 	if o.config.DryRun {
 		message := o.formatDryRunMove(filePath, targetPath)
 		fmt.Println(message)
+		// Add to summary even in dry-run mode
+		o.addSingleFileMoveToSummary(filePath, targetPath)
 		return nil
 	}
 
@@ -680,8 +714,12 @@ func (o *Organizer) getMetadataProvider(filePath string) (MetadataProvider, erro
 	ext := strings.ToLower(filepath.Ext(filePath))
 	switch ext {
 	case ".epub":
+		// Track metadata file in summary
+		o.summary.MetadataFound = append(o.summary.MetadataFound, filePath)
 		return NewEPUBMetadataProvider(filePath), nil
 	case ".mp3", ".m4b", ".m4a":
+		// Track metadata file in summary
+		o.summary.MetadataFound = append(o.summary.MetadataFound, filePath)
 		return NewAudioMetadataProvider(filePath), nil
 	default:
 		return nil, fmt.Errorf("unsupported file type: %s", ext)
