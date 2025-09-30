@@ -45,7 +45,11 @@ func NewPreviewModel(books []AudioBook, config map[string]string, fieldMapping o
 
 // Init initializes the model
 func (m *PreviewModel) Init() tea.Cmd {
-	return nil
+	// Return a command that generates previews
+	return func() tea.Msg {
+		// Previews are already generated in NewPreviewModel
+		return nil
+	}
 }
 
 // generatePreviews generates previews of file move operations

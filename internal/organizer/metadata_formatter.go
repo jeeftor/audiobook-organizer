@@ -68,8 +68,12 @@ func (mf *MetadataFormatter) getFileTypeDisplay() (string, string) {
 			return IconColor("🎧"), IconColor("M4B Audiobook")
 		case ".m4a":
 			return IconColor("🔊"), IconColor("M4A Audio")
+		case ".flac":
+			return IconColor("🎶"), IconColor("FLAC Audio")
+		case "":
+			return IconColor("❓"), IconColor("UNKNOWN")
 		default:
-			return IconColor("🎶"), IconColor("Audio")
+			return IconColor("❓"), IconColor("UNKNOWN")
 		}
 	case "epub":
 		return IconColor("📚"), IconColor("EPUB Book")
