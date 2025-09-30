@@ -72,13 +72,12 @@ func NewProcessModel(books []AudioBook, config map[string]string, moves []MovePr
 		items:        items,
 		processing:   false,
 		complete:     false,
-		startTime:    time.Now(),
 	}
 }
 
 // Init initializes the model
 func (m *ProcessModel) Init() tea.Cmd {
-	return nil
+	return m.startProcessing()
 }
 
 // startProcessing begins the processing of files
