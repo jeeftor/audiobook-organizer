@@ -1,9 +1,10 @@
 package main
 
 import (
-	"audiobook-organizer/cmd"
 	"os"
 	"testing"
+
+	"github.com/jeeftor/audiobook-organizer/cmd"
 )
 
 func TestMainFlags(t *testing.T) {
