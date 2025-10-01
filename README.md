@@ -214,19 +214,22 @@ audiobook-organizer --dir=/path/to/source/audiobooks --out=/path/to/organized/au
 
 Options:
 
-- `--dir`: Base directory to scan (required)
-- `--input`: same as `--dir`
-- `--out`: Output directory for organized files (optional, defaults to --dir if not specified)
-- `--output`: same as `--out`
-- `--replace_space`: Character to replace spaces (optional)
+- `--dir` / `--input`: Base directory to scan (required)
+- `--out` / `--output`: Output directory for organized files (optional, defaults to --dir if not specified)
+- `--config`: Config file (default is $HOME/.audiobook-organizer.yaml)
 - `--dry-run`: Preview changes without moving files
 - `--verbose`: Show detailed progress
 - `--undo`: Restore files to original locations
 - `--prompt`: Review and confirm each book move interactively
 - `--remove-empty`: Remove empty directories after moving files and during initial scan
+- `--replace_space`: Character to replace spaces (optional)
 - `--use-embedded-metadata`: Use metadata embedded in EPUB, MP3, and M4B files if metadata.json is not found
 - `--flat`: Process files in a flat directory structure (automatically enables --use-embedded-metadata)
-- `--layout`: Directory structure layout (options: author-series-title, author-title, author-only)
+- `--layout`: Directory structure layout (options: author-series-title, author-series-title-number, author-title, author-only)
+- `--author-fields`: Comma-separated list of fields to try for author (e.g., 'authors,narrators,album_artist,artist')
+- `--series-field`: Field to use as series (e.g., 'series', 'album')
+- `--title-field`: Field to use as title (e.g., 'album', 'title', 'track_title')
+- `--track-field`: Field to use for track number (e.g., 'track', 'track_number')
 ### Directory Layout Options
 
 #### `--layout` Flag
@@ -234,6 +237,7 @@ Options:
 Controls the directory structure of the organized audiobooks. Available options:
 
 - `author-series-title` (default): Organizes as `Author/Series/Book Title/`
+- `author-series-title-number`: Organizes as `Author/Series/#1 - Book Title/` (includes series number in title directory)
 - `author-title`: Organizes as `Author/Book Title/`
 - `author-only`: Organizes as `Author/` with all files directly in the author directory
 
@@ -529,8 +533,14 @@ prompt: true
 remove-empty: true  # Remove empty directories
 use-embedded-metadata: true # Use metadata embedded in EPUB, MP3, and M4B files
 flat: false  # Process files in a flat directory structure
-layout: "author-series-title"  # Directory structure layout options: author-series-title, author-title, author-only
+layout: "author-series-title"  # Directory structure layout options: author-series-title, author-series-title-number, author-title, author-only
 use-series-as-title: false  # Use Series field as the main title directory for MP3 files
+
+# Metadata field mapping
+author-fields: "authors,narrators,album_artist,artist"
+series-field: "series"
+title-field: "album,title,track_title"
+track-field: "track,track_number"
 ```
 
 ### Environment Variables
@@ -556,8 +566,12 @@ export AO_REPLACE_SPACE="_"
 export AO_VERBOSE=true
 export AO_REMOVE_EMPTY=true
 export AO_USE_EMBEDDED_METADATA=true
-export AO_LAYOUT="author-series-title"  # Options: author-series-title, author-title, author-only
+export AO_LAYOUT="author-series-title"  # Options: author-series-title, author-series-title-number, author-title, author-only
 export AO_USE_SERIES_AS_TITLE=false
+export AO_AUTHOR_FIELDS="authors,narrators,album_artist,artist"
+export AO_SERIES_FIELD="series"
+export AO_TITLE_FIELD="album,title,track_title"
+export AO_TRACK_FIELD="track,track_number"
 
 # or
 export AUDIOBOOK_ORGANIZER_REPLACE_SPACE="_"
@@ -566,6 +580,10 @@ export AUDIOBOOK_ORGANIZER_REMOVE_EMPTY=true
 export AUDIOBOOK_ORGANIZER_USE_EMBEDDED_METADATA=true
 export AUDIOBOOK_ORGANIZER_LAYOUT="author-series-title"
 export AUDIOBOOK_ORGANIZER_USE_SERIES_AS_TITLE=false
+export AUDIOBOOK_ORGANIZER_AUTHOR_FIELDS="authors,narrators,album_artist,artist"
+export AUDIOBOOK_ORGANIZER_SERIES_FIELD="series"
+export AUDIOBOOK_ORGANIZER_TITLE_FIELD="album,title,track_title"
+export AUDIOBOOK_ORGANIZER_TRACK_FIELD="track,track_number"
 ```
 
 ### Command Line Flags

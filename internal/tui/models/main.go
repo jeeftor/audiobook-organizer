@@ -202,6 +202,9 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					selectedBooks := m.bookListModel.GetSelectedBooks()
 					config := m.settingsModel.GetConfig()
 					fieldMapping := m.settingsModel.GetFieldMapping()
+					// Add input and output directories to config
+					config["Input Directory"] = m.inputDir
+					config["Output Directory"] = m.outputDir
 					m.processModel = NewProcessModel(selectedBooks, config, m.previewModel.moves, fieldMapping)
 					cmds = append(cmds, m.processModel.Init())
 				}

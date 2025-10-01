@@ -49,7 +49,7 @@ func NewSettingsModel(selectedBooks []AudioBook) *SettingsModel {
 		{
 			Name:        "Layout",
 			Description: "How to organize the output directory structure",
-			Options:     []string{"author-only", "author-title", "author-series-title"},
+			Options:     []string{"author-only", "author-title", "author-series-title", "author-series-title-number"},
 			Value:       2, // Default to author-series-title
 			Focused:     false,
 		},
@@ -107,10 +107,10 @@ func NewSettingsModel(selectedBooks []AudioBook) *SettingsModel {
 			Focused:     false,
 		},
 		{
-			Name:        "Author Field",
-			Description: "Field to use as author",
-			Options:     []string{"authors", "artist", "album_artist", "composer"},
-			Value:       0, // Default to authors
+			Name:        "Author Fields Priority",
+			Description: "Order of fields to try for author (cycles through multiple options)",
+			Options:     []string{"authors→artist→album_artist", "authors→narrators→artist", "artist→album_artist→composer", "authors only"},
+			Value:       0, // Default to authors→artist→album_artist
 			Focused:     false,
 		},
 		{
@@ -643,10 +643,26 @@ func (m *SettingsModel) GetFieldMapping() organizer.FieldMapping {
 
 	// If advanced mode is enabled, use the custom field mappings
 	if m.showAdvanced {
+		// Parse author fields based on selected priority option
+		var authorFields []string
+		authorFieldsOption := m.fieldMappings[2].Options[m.fieldMappings[2].Value]
+		switch authorFieldsOption {
+		case "authors→artist→album_artist":
+			authorFields = []string{"authors", "artist", "album_artist"}
+		case "authors→narrators→artist":
+			authorFields = []string{"authors", "narrators", "artist"}
+		case "artist→album_artist→composer":
+			authorFields = []string{"artist", "album_artist", "composer"}
+		case "authors only":
+			authorFields = []string{"authors"}
+		default:
+			authorFields = []string{"authors", "artist", "album_artist"}
+		}
+
 		return organizer.FieldMapping{
 			TitleField:   m.fieldMappings[0].Options[m.fieldMappings[0].Value],
 			SeriesField:  m.fieldMappings[1].Options[m.fieldMappings[1].Value],
-			AuthorFields: []string{m.fieldMappings[2].Options[m.fieldMappings[2].Value]},
+			AuthorFields: authorFields,
 			TrackField:   m.fieldMappings[3].Options[m.fieldMappings[3].Value],
 		}
 	}
@@ -668,7 +684,7 @@ func (m *SettingsModel) GetConfig() map[string]string {
 		// Add field mappings to config
 		config["Title Field"] = m.fieldMappings[0].Options[m.fieldMappings[0].Value]
 		config["Series Field"] = m.fieldMappings[1].Options[m.fieldMappings[1].Value]
-		config["Author Field"] = m.fieldMappings[2].Options[m.fieldMappings[2].Value]
+		config["Author Fields Priority"] = m.fieldMappings[2].Options[m.fieldMappings[2].Value]
 		config["Track Field"] = m.fieldMappings[3].Options[m.fieldMappings[3].Value]
 	}
 
@@ -698,6 +714,9 @@ func GenerateOutputPathWithLayout(book AudioBook, layout string, useEmbeddedMeta
 		series = validSeries
 	}
 
+	// Get series number if available
+	seriesNumber := organizer.GetSeriesNumberFromMetadata(book.Metadata)
+
 	// Generate path based on layout
 	switch layout {
 	case "author-only":
@@ -706,6 +725,15 @@ func GenerateOutputPathWithLayout(book AudioBook, layout string, useEmbeddedMeta
 		return filepath.Join(author, title)
 	case "author-series-title":
 		if series != "" {
+			return filepath.Join(author, series, title)
+		}
+		return filepath.Join(author, title)
+	case "author-series-title-number":
+		if series != "" {
+			if seriesNumber != "" {
+				numberedTitle := fmt.Sprintf("#%s - %s", seriesNumber, title)
+				return filepath.Join(author, series, numberedTitle)
+			}
 			return filepath.Join(author, series, title)
 		}
 		return filepath.Join(author, title)
