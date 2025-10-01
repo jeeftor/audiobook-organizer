@@ -86,19 +86,29 @@ func (m *ProcessModel) startProcessing() tea.Cmd {
 	m.startTime = time.Now()
 
 	return func() tea.Msg {
-		// In a real implementation, we would create and configure an organizer instance
-		// For now, we'll just simulate the processing
-
-		// Get output directory from settings or use default
+		// Get directories from config
+		baseDir := m.config["Input Directory"]
 		outputDir := m.config["Output Directory"]
+
+		// Fallback: if not in config, try to get from the first book
+		if baseDir == "" && len(m.books) > 0 {
+			baseDir = filepath.Dir(m.books[0].Path)
+		}
 		if outputDir == "" {
-			outputDir = "output"
+			outputDir = baseDir // Use same directory if not specified
+		}
+
+		// Get layout from settings
+		layout := m.config["Layout"]
+		if layout == "" {
+			layout = "author-series-title"
 		}
 
 		// Create configuration from settings
 		config := &organizer.OrganizerConfig{
+			BaseDir:             baseDir,
 			OutputDir:           outputDir,
-			Layout:              m.config["Layout"],
+			Layout:              layout,
 			UseEmbeddedMetadata: m.config["Use Embedded Metadata"] == "Yes",
 			Flat:                m.config["Flat Mode"] == "Yes",
 			DryRun:              m.config["Dry Run"] == "Yes",
@@ -108,57 +118,37 @@ func (m *ProcessModel) startProcessing() tea.Cmd {
 			Prompt:              false, // Don't prompt in TUI mode
 		}
 
-		// In a real implementation, we would create an organizer with this config
-		// and process the files using the organizer
-		_ = config // Use the config to avoid unused variable warning
+		// Process each item individually using OrganizeSingleFile
+		org := organizer.NewOrganizer(config)
 
-		// Process each item
 		for i := range m.items {
 			// Update status to processing
 			m.items[i].Status = StatusProcessing
 
-			// Send update message
-			tea.NewProgram(m).Send(nil)
+			// Get the source path for this file
+			sourcePath := m.items[i].SourcePath
 
-			// Create a metadata object for the current file
-			metadata := organizer.NewMetadata()
-			metadata.SourcePath = m.items[i].SourcePath
-			metadata.SourceType = "audio" // Assume audio for now, in real implementation would detect file type
+			// Process the file using the organizer
+			// Pass nil as the provider to let the organizer create and configure it
+			err := org.OrganizeSingleFile(sourcePath, nil)
 
-			// Simulate extracting metadata from the file
-			// In a real implementation, we would extract actual metadata from the file
-			metadata.RawData = map[string]interface{}{
-				"title":       fmt.Sprintf("Book %d", i),
-				"authors":     []string{"Author Name"},
-				"series":      "Test Series",
-				"album":       "Test Album",
-				"artist":      "Test Artist",
-				"album_artist": "Test Album Artist",
-				"track":       i + 1,
-			}
-
-			// Apply field mapping to the metadata
-			metadata.ApplyFieldMapping(m.fieldMapping)
-
-			// Simulate processing time
-			time.Sleep(300 * time.Millisecond)
-
-			// In a real implementation, we would use the organizer to move the file
-			// For now, we'll simulate success or failure
-			if i%10 == 9 { // Simulate occasional failures
+			if err != nil {
+				// Processing failed
 				m.items[i].Status = StatusError
-				m.items[i].Error = fmt.Errorf("failed to process with field mapping: %v", m.fieldMapping)
+				m.items[i].Error = fmt.Errorf("failed to process: %v", err)
 				m.failed++
 			} else {
-				// Log the field mapping used for successful processing
+				// Processing succeeded
 				m.items[i].Status = StatusSuccess
-				m.items[i].Message = fmt.Sprintf("Processed with field mapping: title=%s, series=%s, authors=%v",
-					m.fieldMapping.TitleField, m.fieldMapping.SeriesField, m.fieldMapping.AuthorFields)
+
+				// Build a descriptive message about what was done
+				if config.DryRun {
+					m.items[i].Message = "Would move (dry-run mode)"
+				} else {
+					m.items[i].Message = fmt.Sprintf("Moved to %s", filepath.Dir(m.items[i].TargetPath))
+				}
 				m.success++
 			}
-
-			// Send update message
-			tea.NewProgram(m).Send(nil)
 		}
 
 		m.complete = true
