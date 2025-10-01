@@ -116,9 +116,9 @@ func TestCleanSeriesName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := cleanSeriesName(tt.input)
+			got := CleanSeriesName(tt.input)
 			if got != tt.want {
-				t.Errorf("cleanSeriesName(%q) = %q, want %q", tt.input, got, tt.want)
+				t.Errorf("CleanSeriesName(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}

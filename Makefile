@@ -5,11 +5,15 @@ BUILD_TIME ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 # LDFLAGS for embedding version information
 LDFLAGS := -ldflags "-s -w \
-	-X audiobook-organizer/cmd.buildVersion=$(GIT_TAG) \
-	-X audiobook-organizer/cmd.buildCommit=$(GIT_COMMIT) \
-	-X audiobook-organizer/cmd.buildTime=$(BUILD_TIME)"
+	-X github.com/jeeftor/audiobook-organizer/cmd.buildVersion=$(GIT_TAG) \
+	-X github.com/jeeftor/audiobook-organizer/cmd.buildCommit=$(GIT_COMMIT) \
+	-X github.com/jeeftor/audiobook-organizer/cmd.buildTime=$(BUILD_TIME)"
 
-.PHONY: build clean dev release test test-verbose
+# Test packages
+UNIT_TEST_PKGS = ./...
+INTEGRATION_TEST_PKGS = $(shell go list ./... | grep -v '/integration$$')
+
+.PHONY: all build clean dev release test test-unit test-integration coverage coverage-html
 
 # Default target
 all: build
@@ -24,17 +28,48 @@ build:
 
 # Clean build artifacts
 clean:
-	rm -rf ./dist ./bin
+	rm -rf ./dist ./bin ./coverage.out ./coverage.html
+
+# Check and install gotestsum if needed
+GOTESTSUM := $(shell command -v gotestsum 2> /dev/null)
+
+# Run all tests (unit tests only by default)
+test: test-unit
+
+# Run unit tests (fast, no external dependencies)
+test-unit: ensure-gotestsum
+	@echo "Running unit tests..."
+	gotestsum --format testname -- -short $(UNIT_TEST_PKGS)
+
+# Run integration tests (slower, may require external dependencies)
+test-integration: ensure-gotestsum
+	@echo "Running integration tests..."
+	gotestsum --format testname -- -tags=integration -v $(INTEGRATION_TEST_PKGS)
+
+# Run all tests (both unit and integration)
+test-all: ensure-gotestsum
+	@echo "Running all tests..."
+	gotestsum --format testname -- -v $(UNIT_TEST_PKGS)
+
+# Run tests with coverage reporting
+coverage: ensure-gotestsum
+	@echo "Running tests with coverage..."
+	gotestsum --format testname -- -coverprofile=coverage.out -covermode=count $(UNIT_TEST_PKGS)
+	go tool cover -func=coverage.out
+
+# Generate HTML coverage report
+coverage-html: coverage
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "\nCoverage report generated at coverage.html"
+	@echo "Open it with: open coverage.html"
+
+# Ensure gotestsum is installed
+ensure-gotestsum:
+	@if [ -z "$(GOTESTSUM)" ]; then \
+		echo "gotestsum not found, installing..."; \
+		go install gotest.tools/gotestsum@latest; \
+	fi
 
 # Create a release (requires GITHUB_TOKEN)
 release:
 	goreleaser release --clean
-
-# Run tests
-test:
-	go test ./...
-
-# Run tests with verbose output and coverage
-test-verbose:
-	go test -v -coverprofile=coverage.out ./...
-	go tool cover -func=coverage.out
