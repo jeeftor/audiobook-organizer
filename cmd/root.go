@@ -209,7 +209,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&removeEmpty, removeEmptyKey, false, "Remove empty directories after moving files")
 	rootCmd.Flags().BoolVar(&useEmbeddedMetadata, useEmbeddedMetaKey, false, "Use metadata embedded in EPUB files if metadata.json is not found")
 	rootCmd.Flags().BoolVar(&flat, "flat", false, "Process files in a flat directory structure (automatically enables --use-embedded-metadata)")
-	rootCmd.Flags().StringVarP(&layout, "layout", "l", "author-series-title", "Directory structure layout:\n  - author-series-title: Author/Series/Title/ (default)\n  - author-title:        Author/Title/ (ignore series)\n  - author-only:         Author/ (flatten all books)")
+	rootCmd.Flags().StringVarP(&layout, "layout", "l", "author-series-title", "Directory structure layout:\n  - author-series-title:        Author/Series/Title/ (default)\n  - author-series-title-number: Author/Series/#1 - Title/ (include series number in title)\n  - author-title:               Author/Title/ (ignore series)\n  - author-only:                Author/ (flatten all books)")
 	// Field mapping flags
 	rootCmd.Flags().StringVar(&titleField, titleFieldKey, "", "Field to use as title (e.g., 'album', 'title', 'track_title')")
 	rootCmd.Flags().StringVar(&seriesField, seriesFieldKey, "", "Field to use as series (e.g., 'series', 'album')")
@@ -230,6 +230,7 @@ func init() {
 	viper.BindPFlag(useEmbeddedMetaKey, rootCmd.Flags().Lookup(useEmbeddedMetaKey))
 	viper.BindPFlag("flat", rootCmd.Flags().Lookup("flat"))
 	viper.BindPFlag("layout", rootCmd.Flags().Lookup("layout"))
+
 	// Bind field mapping flags to viper
 	viper.BindPFlag(titleFieldKey, rootCmd.Flags().Lookup(titleFieldKey))
 	viper.BindPFlag(seriesFieldKey, rootCmd.Flags().Lookup(seriesFieldKey))

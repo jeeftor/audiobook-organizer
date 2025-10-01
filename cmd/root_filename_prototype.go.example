@@ -1,0 +1,106 @@
+// This is a PROTOTYPE showing how the CLI flags would be added to cmd/root.go
+// DO NOT compile this file - it's for reference only
+
+package cmd
+
+// Add these new variables to the existing var block (around line 25)
+var (
+	// ... existing variables ...
+
+	// Filename customization flags
+	filenamePattern      string
+	filenameTemplate     string
+	seriesNumberFormat   string
+)
+
+// Add these new constants to the existing const block (around line 15)
+const (
+	// ... existing constants ...
+
+	filenamePatternKey      = "filename-pattern"
+	filenameTemplateKey     = "filename-template"
+	seriesNumberFormatKey   = "series-number-format"
+)
+
+// Add these to envAliases map (around line 48)
+var envAliases = map[string][]string{
+	// ... existing aliases ...
+
+	// Filename customization environment variables
+	filenamePatternKey:    {"AO_FILENAME_PATTERN", "AUDIOBOOK_ORGANIZER_FILENAME_PATTERN"},
+	filenameTemplateKey:   {"AO_FILENAME_TEMPLATE", "AUDIOBOOK_ORGANIZER_FILENAME_TEMPLATE"},
+	seriesNumberFormatKey: {"AO_SERIES_NUMBER_FORMAT", "AUDIOBOOK_ORGANIZER_SERIES_NUMBER_FORMAT"},
+}
+
+// Update the Run function to pass new config fields (around line 117)
+func runOrganizer() {
+	// ... existing code ...
+
+	org := organizer.NewOrganizer(
+		&organizer.OrganizerConfig{
+			// ... existing fields ...
+
+			// Add new filename customization fields
+			FilenamePattern:    viper.GetString(filenamePatternKey),
+			FilenameTemplate:   viper.GetString(filenameTemplateKey),
+			SeriesNumberFormat: viper.GetString(seriesNumberFormatKey),
+		},
+	)
+
+	// ... rest of function ...
+}
+
+// Add these flag definitions to init() function (around line 218)
+func init() {
+	// ... existing flags ...
+
+	// Filename customization flags
+	rootCmd.Flags().StringVar(&filenamePattern, filenamePatternKey, "",
+		"Filename pattern (predefined templates):\n"+
+		"  default              - {title}\n"+
+		"  series-number-title  - {series} #{series_num} - {title}\n"+
+		"  author-title         - {author} - {title}\n"+
+		"  author-series-title  - {author} - {series} #{series_num} - {title}\n"+
+		"  title-series         - {title} ({series} Book {series_num})\n"+
+		"  series-title         - {series} - {title}\n"+
+		"  year-author-title    - {year} - {author} - {title}")
+
+	rootCmd.Flags().StringVar(&filenameTemplate, filenameTemplateKey, "",
+		"Custom filename template (overrides --filename-pattern)\n"+
+		"  Variables: {title}, {author}, {authors}, {series}, {series_num}, {track}, {year}\n"+
+		"  Example: '{author} - {series} #{series_num} - {title}'")
+
+	rootCmd.Flags().StringVar(&seriesNumberFormat, seriesNumberFormatKey, "#{num}",
+		"Format for series numbers in filenames:\n"+
+		"  #{num}      - Output: #1, #2, #3\n"+
+		"  Book {num}  - Output: Book 1, Book 2, Book 3\n"+
+		"  {num}       - Output: 1, 2, 3")
+
+	// Bind to viper
+	viper.BindPFlag(filenamePatternKey, rootCmd.Flags().Lookup(filenamePatternKey))
+	viper.BindPFlag(filenameTemplateKey, rootCmd.Flags().Lookup(filenameTemplateKey))
+	viper.BindPFlag(seriesNumberFormatKey, rootCmd.Flags().Lookup(seriesNumberFormatKey))
+
+	// ... rest of init ...
+}
+
+// USAGE EXAMPLES:
+//
+// 1. Use predefined pattern:
+//    audiobook-organizer --input=/books --filename-pattern=series-number-title
+//
+// 2. Use custom template:
+//    audiobook-organizer --input=/books --filename-template="{author} - {title}"
+//
+// 3. Customize series number format:
+//    audiobook-organizer --input=/books \
+//      --filename-pattern=series-number-title \
+//      --series-number-format="Book {num}"
+//
+// 4. Environment variables:
+//    export AO_FILENAME_PATTERN="series-number-title"
+//    audiobook-organizer --input=/books
+//
+// 5. Config file (~/.audiobook-organizer.yaml):
+//    filename-pattern: "series-number-title"
+//    series-number-format: "#{num}"
