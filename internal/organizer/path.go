@@ -72,6 +72,35 @@ func CleanSeriesName(series string) string {
 	return series
 }
 
+// ExtractSeriesNumber extracts the series number from a series string (e.g., "Mistborn #1" -> "1").
+// Returns an empty string if no series number is found.
+func ExtractSeriesNumber(series string) string {
+	if idx := strings.LastIndex(series, " #"); idx != -1 {
+		return strings.TrimSpace(series[idx+2:])
+	}
+	return ""
+}
+
+// GetSeriesNumberFromMetadata extracts the series number from metadata.
+// It first checks RawData for series_index, then falls back to parsing the series string.
+func GetSeriesNumberFromMetadata(metadata Metadata) string {
+	// First try to get series_index from RawData
+	if seriesIndex, ok := metadata.RawData["series_index"].(float64); ok && seriesIndex > 0 {
+		// Format as integer if it's a whole number, otherwise with decimal
+		if seriesIndex == float64(int(seriesIndex)) {
+			return fmt.Sprintf("%d", int(seriesIndex))
+		}
+		return fmt.Sprintf("%.1f", seriesIndex)
+	}
+
+	// Fall back to extracting from series string
+	if len(metadata.Series) > 0 && metadata.Series[0] != "" {
+		return ExtractSeriesNumber(metadata.Series[0])
+	}
+
+	return ""
+}
+
 // IsSupportedAudioFile checks if a file extension represents a supported audio format.
 // Uses a map for O(1) lookup performance instead of slice iteration.
 func IsSupportedAudioFile(ext string) bool {

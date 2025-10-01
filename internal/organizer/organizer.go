@@ -105,6 +105,8 @@ func (lc *LayoutCalculator) CalculateTargetPath(metadata Metadata) string {
 		return filepath.Join(targetBase, authorDir, titleDir)
 	case "author-series-title", "":
 		return lc.calculateSeriesPath(targetBase, authorDir, titleDir, metadata)
+	case "author-series-title-number":
+		return lc.calculateSeriesPathWithNumber(targetBase, authorDir, titleDir, metadata)
 	default:
 		return filepath.Join(targetBase, authorDir, titleDir)
 	}
@@ -122,6 +124,24 @@ func (lc *LayoutCalculator) getTargetBase() string {
 func (lc *LayoutCalculator) calculateSeriesPath(targetBase, authorDir, titleDir string, metadata Metadata) string {
 	if validSeries := metadata.GetValidSeries(); validSeries != "" {
 		seriesDir := lc.sanitizer(validSeries)
+		return filepath.Join(targetBase, authorDir, seriesDir, titleDir)
+	}
+	return filepath.Join(targetBase, authorDir, titleDir)
+}
+
+// calculateSeriesPathWithNumber handles series-based path calculation with series number in title
+func (lc *LayoutCalculator) calculateSeriesPathWithNumber(targetBase, authorDir, titleDir string, metadata Metadata) string {
+	if validSeries := metadata.GetValidSeries(); validSeries != "" {
+		seriesDir := lc.sanitizer(validSeries)
+
+		// Get series number and prefix the title with it
+		seriesNumber := GetSeriesNumberFromMetadata(metadata)
+		if seriesNumber != "" {
+			numberedTitle := fmt.Sprintf("#%s - %s", seriesNumber, titleDir)
+			return filepath.Join(targetBase, authorDir, seriesDir, numberedTitle)
+		}
+
+		// If no series number, fall back to regular series path
 		return filepath.Join(targetBase, authorDir, seriesDir, titleDir)
 	}
 	return filepath.Join(targetBase, authorDir, titleDir)
