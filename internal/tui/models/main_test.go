@@ -46,8 +46,13 @@ func TestNewMainModel(t *testing.T) {
 				t.Errorf("Expected outputDir %q, got %q", tt.outputDir, model.outputDir)
 			}
 
-			if model.screen != ScanScreen {
-				t.Errorf("Expected initial screen to be ScanScreen, got %d", model.screen)
+			// Check expected screen based on whether directories were provided
+			expectedScreen := ScanScreen
+			if tt.inputDir == "" || tt.outputDir == "" {
+				expectedScreen = DirPickerScreen
+			}
+			if model.screen != expectedScreen {
+				t.Errorf("Expected initial screen to be %d, got %d", expectedScreen, model.screen)
 			}
 
 			if model.quitting {
