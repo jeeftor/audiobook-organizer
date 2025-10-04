@@ -94,12 +94,6 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 	// Define supported file extensions
 	extensions := []string{".m4b", ".mp3", ".m4a", ".epub"}
 
-	// Add debug logging to a file
-	logFile, _ := os.OpenFile("scan_debug.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	defer logFile.Close()
-
-	logFile.WriteString(fmt.Sprintf("Scanning directory: %s\n", dir))
-
 	// First pass: collect all audio files and their metadata
 	type fileInfo struct {
 		path     string

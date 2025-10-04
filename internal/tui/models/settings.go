@@ -81,17 +81,24 @@ func NewSettingsModel(selectedBooks []AudioBook) *SettingsModel {
 			Value:       1, // Default to Yes
 			Focused:     false,
 		},
-		{
-			Name:        "Advanced Settings",
-			Description: "Show advanced metadata field mapping options",
-			Options:     []string{"No", "Yes"},
-			Value:       0, // Default to No
-			Focused:     false,
-		},
 	}
 
 	// Initialize field mappings for advanced settings
 	fieldMappings := []FieldMappingSetting{
+		{
+			Name:        "Layout",
+			Description: "How to organize the output directory structure",
+			Options:     []string{"author-only", "author-title", "author-series-title", "author-series-title-number"},
+			Value:       2, // Default to author-series-title
+			Focused:     false,
+		},
+		{
+			Name:        "Flat Mode",
+			Description: "Process each file individually (vs. directory-based)",
+			Options:     []string{"No", "Yes"},
+			Value:       0, // Default to No
+			Focused:     false,
+		},
 		{
 			Name:        "Title Field",
 			Description: "Field to use as title",
@@ -351,22 +358,12 @@ func (m *SettingsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Decrease the value of the current setting
 				if m.settings[m.cursor].Value > 0 {
 					m.settings[m.cursor].Value--
-
-					// If this is the Advanced Settings toggle, update showAdvanced
-					if m.settings[m.cursor].Name == "Advanced Settings" {
-						m.showAdvanced = m.settings[m.cursor].Value == 1
-					}
 				}
 
 			case "right", "l":
 				// Increase the value of the current setting
 				if m.settings[m.cursor].Value < len(m.settings[m.cursor].Options)-1 {
 					m.settings[m.cursor].Value++
-
-					// If this is the Advanced Settings toggle, update showAdvanced
-					if m.settings[m.cursor].Name == "Advanced Settings" {
-						m.showAdvanced = m.settings[m.cursor].Value == 1
-					}
 				}
 
 			case "tab":
@@ -375,11 +372,7 @@ func (m *SettingsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// Handle ESC key to exit advanced mode
-		if msg.String() == "esc" && m.showAdvanced {
-			m.showAdvanced = false
-			m.settings[5].Value = 0 // Reset Advanced Settings toggle
-		}
+		// No longer need ESC handling since advanced is a separate screen
 	}
 
 	return m, nil
@@ -414,7 +407,7 @@ func (m *SettingsModel) View() string {
 
 	// If showing advanced settings, display field mappings
 	if m.showAdvanced {
-		content.WriteString("\n\nAdvanced Metadata Field Mappings:\n")
+		content.WriteString("Advanced Settings:\n")
 
 		for i, field := range m.fieldMappings {
 			// Cursor indicator
@@ -522,21 +515,29 @@ func (m *SettingsModel) View() string {
 				// Get filename for display
 				filename := filepath.Base(book.Path)
 
+				// Apply field mapping to get updated metadata
+				updatedMetadata := book.Metadata
+				updatedMetadata.ApplyFieldMapping(fieldMapping)
+
+				// Create updated book with new metadata for path generation
+				updatedBook := book
+				updatedBook.Metadata = updatedMetadata
+
 				// Generate output path based on current settings and field mapping
-				outputPath := GenerateOutputPathWithLayout(book, layoutSetting, embeddedMetadataEnabled)
+				outputPath := GenerateOutputPathWithLayout(updatedBook, layoutSetting, embeddedMetadataEnabled)
 
 				// Display book info and output path
 				content.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#AAFFAA")).Render(filename) + "\n")
 				content.WriteString("  → " + lipgloss.NewStyle().Foreground(lipgloss.Color("#FFAAAA")).Render(outputPath) + "\n")
 
-				// Add metadata info
+				// Add metadata info using updated metadata
 				authors := "Unknown"
-				if len(book.Metadata.Authors) > 0 {
-					authors = strings.Join(book.Metadata.Authors, ", ")
+				if len(updatedMetadata.Authors) > 0 {
+					authors = strings.Join(updatedMetadata.Authors, ", ")
 				}
 
 				series := "None"
-				if validSeries := book.Metadata.GetValidSeries(); validSeries != "" {
+				if validSeries := updatedMetadata.GetValidSeries(); validSeries != "" {
 					series = validSeries
 				}
 
@@ -556,11 +557,16 @@ func (m *SettingsModel) View() string {
 				filename := filepath.Base(book.Path)
 				content.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#AAFFAA")).Render(filename) + "\n\n")
 
-				// Display all available metadata fields
-				content.WriteString(formatFullMetadata(&book.Metadata) + "\n")
+				// Apply field mapping to show updated metadata
+				updatedMetadata := book.Metadata
+				updatedMetadata.ApplyFieldMapping(fieldMapping)
+
+				// Display all available metadata fields (after field mapping)
+				content.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF00")).Render("After Field Mapping Applied:") + "\n")
+				content.WriteString(formatFullMetadata(&updatedMetadata) + "\n")
 
 				// Show field mapping preview
-				content.WriteString("\n" + lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFF00")).Render("Field Mapping Preview:") + "\n")
+				content.WriteString("\n" + lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFF00")).Render("Current Field Mapping Configuration:") + "\n")
 
 				// Display field mapping preview
 				content.WriteString(formatFieldMapping(fieldMapping) + "\n")
@@ -619,7 +625,7 @@ func (m *SettingsModel) View() string {
 	// Footer with help text
 	footerText := "\n↑/↓: Navigate • ←/→: Change value • Enter: Continue • q: Back"
 	if m.showAdvanced {
-		footerText = "\n↑/↓: Navigate • ←/→: Change value • Esc: Back to settings • Enter: Continue"
+		footerText = "\n↑/↓: Navigate • ←/→: Change value • Enter: Continue • q: Back"
 	}
 
 	footer := lipgloss.NewStyle().
@@ -644,8 +650,9 @@ func (m *SettingsModel) GetFieldMapping() organizer.FieldMapping {
 	// If advanced mode is enabled, use the custom field mappings
 	if m.showAdvanced {
 		// Parse author fields based on selected priority option
+		// Note: indices shifted because Layout and Flat Mode are at 0 and 1
 		var authorFields []string
-		authorFieldsOption := m.fieldMappings[2].Options[m.fieldMappings[2].Value]
+		authorFieldsOption := m.fieldMappings[4].Options[m.fieldMappings[4].Value]
 		switch authorFieldsOption {
 		case "authors→artist→album_artist":
 			authorFields = []string{"authors", "artist", "album_artist"}
@@ -660,10 +667,10 @@ func (m *SettingsModel) GetFieldMapping() organizer.FieldMapping {
 		}
 
 		return organizer.FieldMapping{
-			TitleField:   m.fieldMappings[0].Options[m.fieldMappings[0].Value],
-			SeriesField:  m.fieldMappings[1].Options[m.fieldMappings[1].Value],
+			TitleField:   m.fieldMappings[2].Options[m.fieldMappings[2].Value],
+			SeriesField:  m.fieldMappings[3].Options[m.fieldMappings[3].Value],
 			AuthorFields: authorFields,
-			TrackField:   m.fieldMappings[3].Options[m.fieldMappings[3].Value],
+			TrackField:   m.fieldMappings[5].Options[m.fieldMappings[5].Value],
 		}
 	}
 
@@ -681,11 +688,15 @@ func (m *SettingsModel) GetConfig() map[string]string {
 
 	// Add field mappings if advanced mode is enabled
 	if m.showAdvanced {
-		// Add field mappings to config
-		config["Title Field"] = m.fieldMappings[0].Options[m.fieldMappings[0].Value]
-		config["Series Field"] = m.fieldMappings[1].Options[m.fieldMappings[1].Value]
-		config["Author Fields Priority"] = m.fieldMappings[2].Options[m.fieldMappings[2].Value]
-		config["Track Field"] = m.fieldMappings[3].Options[m.fieldMappings[3].Value]
+		// Override Layout and Flat Mode from advanced settings
+		config["Layout"] = m.fieldMappings[0].Options[m.fieldMappings[0].Value]
+		config["Flat Mode"] = m.fieldMappings[1].Options[m.fieldMappings[1].Value]
+
+		// Add field mapping details to config
+		config["Title Field"] = m.fieldMappings[2].Options[m.fieldMappings[2].Value]
+		config["Series Field"] = m.fieldMappings[3].Options[m.fieldMappings[3].Value]
+		config["Author Fields Priority"] = m.fieldMappings[4].Options[m.fieldMappings[4].Value]
+		config["Track Field"] = m.fieldMappings[5].Options[m.fieldMappings[5].Value]
 	}
 
 	return config
@@ -700,7 +711,8 @@ func GenerateOutputPathWithLayout(book AudioBook, layout string, useEmbeddedMeta
 	// Get metadata values with fallbacks
 	author := "Unknown"
 	if len(book.Metadata.Authors) > 0 {
-		author = book.Metadata.Authors[0]
+		// Join all authors with ", " (they're already split by ApplyFieldMapping)
+		author = strings.Join(book.Metadata.Authors, ", ")
 	}
 
 	// Prefer filename over generic series title
