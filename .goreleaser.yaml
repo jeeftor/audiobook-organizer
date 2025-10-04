@@ -18,6 +18,7 @@ builds:
       - darwin
     goarch:
       - amd64
+      - "386"
       - arm64
       - arm
     goarm:

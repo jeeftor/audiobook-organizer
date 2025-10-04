@@ -112,7 +112,7 @@ func (m *ProcessModel) startProcessing() tea.Cmd {
 			UseEmbeddedMetadata: m.config["Use Embedded Metadata"] == "Yes",
 			Flat:                m.config["Flat Mode"] == "Yes",
 			DryRun:              m.config["Dry Run"] == "Yes",
-			Verbose:             m.config["Verbose"] == "Yes",
+			Verbose:             false, // Always false in TUI mode - we have our own display
 			FieldMapping:        m.fieldMapping,
 			RemoveEmpty:         false, // Don't remove empty directories in TUI mode
 			Prompt:              false, // Don't prompt in TUI mode
@@ -204,17 +204,9 @@ func (m *ProcessModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "r":
 			// Only allow returning to main menu if processing is complete
-			if m.complete {
-				// Get input and output directories from config or use defaults
-				inputDir := ""
-				outputDir := ""
-				if len(m.books) > 0 {
-					// Use the directory of the first book as input dir
-					inputDir = filepath.Dir(m.books[0].Path)
-				}
-				// Return to the main menu
-				return NewMainModel(inputDir, outputDir), nil
-			}
+			// Don't handle here - let main.go handle it
+			// Just consume the key
+			return m, nil
 
 		case "q", "ctrl+c":
 			// Quit the application

@@ -45,11 +45,8 @@ func NewPreviewModel(books []AudioBook, config map[string]string, fieldMapping o
 
 // Init initializes the model
 func (m *PreviewModel) Init() tea.Cmd {
-	// Return a command that generates previews
-	return func() tea.Msg {
-		// Previews are already generated in NewPreviewModel
-		return nil
-	}
+	// Request window size on init
+	return tea.WindowSize()
 }
 
 // generatePreviews generates previews of file move operations
@@ -61,8 +58,13 @@ func (m *PreviewModel) generatePreviews() {
 
 	// Generate previews for each book
 	for _, book := range m.books {
-		// Calculate target path using our helper method
-		targetPath := m.CalculateTargetPath(book.Path, book.Metadata)
+		// Calculate target path using universal function
+		layout := m.config["Layout"]
+		outputDir := m.config["Output Directory"]
+		if outputDir == "" {
+			outputDir = "output"
+		}
+		targetPath := GenerateOutputPath(book, layout, m.fieldMapping, outputDir)
 
 		// Add to moves
 		m.moves = append(m.moves, MovePreview{
@@ -112,16 +114,22 @@ func (m *PreviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "b", "backspace":
-			// Return to the previous screen (settings)
-			return NewSettingsModel(m.books), nil
+			// Don't handle here - let main.go handle going back to settings
+			// Just consume the key
+			return m, nil
 
 		case "q", "ctrl+c":
-			// Quit the application
-			return m, tea.Quit
+			// Don't handle here - let main.go handle going back to settings
+			// Just consume the key
+			return m, nil
 
 		case "enter":
 			// Process files - transition to the processing screen
 			return NewProcessModel(m.books, m.config, m.moves, m.fieldMapping), nil
+
+		case "c":
+			// Show CLI command instead of processing
+			return NewCommandOutputModel(m.books, m.config, m.fieldMapping), nil
 		}
 	}
 
@@ -180,17 +188,13 @@ func (m *PreviewModel) View() string {
 		// Format paths
 		sourceName := filepath.Base(move.SourcePath)
 		sourceDir := filepath.Dir(move.SourcePath)
-		targetName := filepath.Base(move.TargetPath)
-		targetDir := filepath.Dir(move.TargetPath)
 
-		// Style based on cursor position
-		var sourceStyle, targetStyle lipgloss.Style
+		// Style for source path based on cursor position
+		var sourceStyle lipgloss.Style
 		if i == m.cursor {
 			sourceStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF"))
-			targetStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF00"))
 		} else {
 			sourceStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#AAAAAA"))
-			targetStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#AAFFAA"))
 		}
 
 		// Add the move preview
@@ -199,9 +203,9 @@ func (m *PreviewModel) View() string {
 			sourceStyle.Render(sourceDir),
 			sourceStyle.Render(sourceName)))
 
-		content.WriteString(fmt.Sprintf("  To:   %s/%s\n\n",
-			targetStyle.Render(targetDir),
-			targetStyle.Render(targetName)))
+		// Colorize the output path
+		coloredTarget := m.colorizeOutputPath(move.TargetPath, m.config["Layout"])
+		content.WriteString(fmt.Sprintf("  To:   %s\n\n", coloredTarget))
 	}
 
 	// Show scroll indicator if needed
@@ -212,82 +216,82 @@ func (m *PreviewModel) View() string {
 	// Footer with help text
 	footer := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#888")).
-		Render("\n↑/↓: Navigate • Enter: Process Files • b: Back • q: Quit")
+		Render("\n↑/↓: Navigate • Enter: Process Files • c: Show CLI Command • b: Back • q: Quit")
 
 	content.WriteString(footer)
 
 	return content.String()
 }
 
-// CalculateTargetPath calculates the target path based on metadata and field mapping
-func (m *PreviewModel) CalculateTargetPath(sourcePath string, metadata organizer.Metadata) string {
-	// Use the field mapping to extract the correct metadata fields
-	layout := m.config["Layout"]
-	outputDir := m.config["Output Directory"]
-	if outputDir == "" {
-		outputDir = "output"
-	}
-
-	// Get author using field mapping
-	author := "Unknown"
-	for _, field := range m.fieldMapping.AuthorFields {
-		if val, ok := metadata.RawData[field]; ok && val != nil {
-			if strVal, ok := val.(string); ok && strVal != "" {
-				author = strVal
-				break
-			}
-		}
-	}
-	// Fallback to Authors field if not found in raw data
-	if author == "Unknown" && len(metadata.Authors) > 0 {
-		author = metadata.Authors[0]
-	}
-
-	// Get title using field mapping
-	title := ""
-	if val, ok := metadata.RawData[m.fieldMapping.TitleField]; ok && val != nil {
-		if strVal, ok := val.(string); ok && strVal != "" {
-			title = strVal
-		}
-	}
-	// Fallback to metadata.Title if not found in raw data
-	if title == "" {
-		title = metadata.Title
-	}
-	// Fallback to filename if title is empty
-	if title == "" {
-		title = filepath.Base(sourcePath)
-	}
-
-	// Get series using field mapping
-	series := ""
-	if val, ok := metadata.RawData[m.fieldMapping.SeriesField]; ok && val != nil {
-		if strVal, ok := val.(string); ok && strVal != "" {
-			series = strVal
-		}
-	}
-	// Fallback to GetValidSeries if not found in raw data
-	if series == "" {
-		series = metadata.GetValidSeries()
-	}
-
-	// Calculate path based on layout
-	switch layout {
-	case "author-only":
-		return filepath.Join(outputDir, author, filepath.Base(sourcePath))
-	case "author-title":
-		return filepath.Join(outputDir, author, title, filepath.Base(sourcePath))
-	case "author-series-title":
-		if series != "" {
-			return filepath.Join(outputDir, author, series, title, filepath.Base(sourcePath))
-		}
-		return filepath.Join(outputDir, author, title, filepath.Base(sourcePath))
-	default:
-		return filepath.Join(outputDir, filepath.Base(sourcePath))
-	}
-}
-
 // GetMoves returns the current move previews
 func (m *PreviewModel) GetMoves() []MovePreview {
 	return m.moves
+}
+
+// colorizeOutputPath colorizes the output path components based on the layout
+func (m *PreviewModel) colorizeOutputPath(path string, layout string) string {
+	// Define color styles
+	authorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF9500"))   // Orange
+	seriesStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00D9FF"))   // Cyan
+	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))    // Green
+	separatorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")) // Gray
+
+	// Split the path into components
+	parts := strings.Split(path, string(filepath.Separator))
+
+	// Skip the output directory (first component) and process the rest
+	var coloredParts []string
+	if len(parts) > 1 {
+		parts = parts[1:] // Skip output directory
+	}
+
+	// Apply colors based on layout
+	switch layout {
+	case "author-only":
+		if len(parts) >= 1 {
+			coloredParts = []string{
+				authorStyle.Render(parts[0]),
+			}
+			if len(parts) > 1 {
+				coloredParts = append(coloredParts, parts[1:]...)
+			}
+		}
+	case "author-title":
+		if len(parts) >= 2 {
+			coloredParts = []string{
+				authorStyle.Render(parts[0]),
+				titleStyle.Render(parts[1]),
+			}
+			if len(parts) > 2 {
+				coloredParts = append(coloredParts, parts[2:]...)
+			}
+		}
+	case "author-series-title":
+		if len(parts) >= 3 {
+			coloredParts = []string{
+				authorStyle.Render(parts[0]),
+				seriesStyle.Render(parts[1]),
+				titleStyle.Render(parts[2]),
+			}
+			if len(parts) > 3 {
+				coloredParts = append(coloredParts, parts[3:]...)
+			}
+		} else if len(parts) == 2 {
+			// Fallback when no series
+			coloredParts = []string{
+				authorStyle.Render(parts[0]),
+				titleStyle.Render(parts[1]),
+			}
+		}
+	default:
+		// No colorization for unknown layouts
+		coloredParts = parts
+	}
+
+	if len(coloredParts) == 0 {
+		return path
+	}
+
+	// Join with colorized separators
+	return strings.Join(coloredParts, separatorStyle.Render("/"))
 }

@@ -14,15 +14,22 @@ var guiCmd = &cobra.Command{
 	Short: "Start the TUI interface for audiobook organization",
 	Long: `Launch a Text User Interface (TUI) for organizing audiobooks.
 This mode provides an interactive way to scan, select, and organize your audiobooks.`,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		// For GUI mode, directories are optional - we'll use the file picker if not provided
+		// No validation needed
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		inputDir, _ := cmd.Flags().GetString("input")
-		outputDir, _ := cmd.Flags().GetString("output")
+		// Get input directory from either flag
+		inputDir := cmd.Flags().Lookup("input").Value.String()
+		if inputDir == "" {
+			inputDir = cmd.Flags().Lookup("dir").Value.String()
+		}
 
-		// Validate required flags
-		if inputDir == "" || outputDir == "" {
-			fmt.Println("Error: input and output directories are required")
-			cmd.Help()
-			os.Exit(1)
+		// Get output directory from either flag
+		outputDir := cmd.Flags().Lookup("output").Value.String()
+		if outputDir == "" {
+			outputDir = cmd.Flags().Lookup("out").Value.String()
 		}
 
 		// Initialize and run the TUI
@@ -36,11 +43,9 @@ This mode provides an interactive way to scan, select, and organize your audiobo
 func init() {
 	rootCmd.AddCommand(guiCmd)
 
-	// Define flags
-	guiCmd.Flags().StringP("input", "i", "", "Input directory containing audiobooks (required)")
-	guiCmd.Flags().StringP("output", "o", "", "Output directory for organized audiobooks (required)")
-
-	// Mark flags as required
-	guiCmd.MarkFlagRequired("input")
-	guiCmd.MarkFlagRequired("output")
+	// Define flags with aliases matching the root command
+	guiCmd.Flags().String("dir", "", "Base directory to scan (alias for --input)")
+	guiCmd.Flags().StringP("input", "i", "", "Base directory to scan (alias for --dir)")
+	guiCmd.Flags().String("out", "", "Output directory (alias for --output)")
+	guiCmd.Flags().StringP("output", "o", "", "Output directory (alias for --out)")
 }

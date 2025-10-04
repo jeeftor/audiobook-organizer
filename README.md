@@ -6,6 +6,23 @@
 
 CLI tool to organize audiobooks based on **EITHER** `metadata.json` files **OR** embedded metadata in `.epub`, `.mp3`, and `.m4b` files.
 
+## 🎉 NEW: Beta TUI (Text User Interface) Mode
+
+The audiobook organizer now includes a **BETA** interactive TUI mode! Launch it with:
+
+```bash
+audiobook-organizer gui
+```
+
+Features:
+- **Interactive Directory Picker**: Browse and select input/output directories with keyboard navigation
+- **Real-time Filtering**: Type to filter directories as you browse
+- **Live Scan Preview**: See discovered audiobooks before organizing
+- **Visual Settings Editor**: Configure all options through an interactive interface
+- **Progress Tracking**: Watch files being processed in real-time
+
+The GUI mode is in active development. Feedback and bug reports are welcome!
+
 
 ## Features
 
@@ -201,10 +218,35 @@ docker pull jeffsui/audiobook-organizer:latest
 
 ## Usage
 
+### GUI Mode (Recommended for Beginners)
+
+Launch the interactive TUI for a visual, guided experience:
+
+```bash
+# Launch GUI without arguments - use directory picker
+audiobook-organizer gui
+
+# Launch GUI with pre-selected directories
+audiobook-organizer gui --input=/path/to/audiobooks --output=/path/to/organized
+```
+
+**GUI Keyboard Shortcuts:**
+- **Directory Picker:**
+  - `↑/↓` or `j/k`: Navigate directories
+  - `Enter`: Open/navigate into directory
+  - `Ctrl+S`: Select current directory
+  - Type to filter directories in real-time
+  - `ESC`: Clear filter
+  - `Ctrl+B`: Go up one level
+  - `Ctrl+H`: Jump to home directory
+  - `Ctrl+R`: Jump to root directory
+  - `Ctrl+Q`: Quit
+
+### CLI Mode
+
 Basic organization:
 
 ```bash
-
 # Organize in place
 audiobook-organizer --dir=/path/to/audiobooks
 
