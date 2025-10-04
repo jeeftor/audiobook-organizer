@@ -109,40 +109,30 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 	// Walk through the directory to collect all files
 	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			logFile.WriteString(fmt.Sprintf("Error accessing path %s: %v\n", path, err))
 			return nil
 		}
 
 		if info.IsDir() {
 			m.scannedDirs++
-			logFile.WriteString(fmt.Sprintf("Found directory: %s\n", path))
 			return nil
 		}
 
 		m.scannedFiles++
 		ext := strings.ToLower(filepath.Ext(path))
-		logFile.WriteString(fmt.Sprintf("Checking file: %s (ext: %s)\n", path, ext))
 
 		for _, validExt := range extensions {
 			if ext == validExt {
-				logFile.WriteString(fmt.Sprintf("Found supported file: %s\n", path))
 
 				// Extract metadata using the organizer package's UnifiedMetadataProvider
 				provider := organizer.NewMetadataProvider(path)
 				metadata, err := provider.GetMetadata()
 				if err != nil {
-					logFile.WriteString(fmt.Sprintf("Error extracting metadata: %v\n", err))
-
 					// If metadata extraction fails, create basic metadata from filename
 					baseName := filepath.Base(path)
 					metadata = organizer.Metadata{
 						Title:   baseName,
 						Authors: []string{"Unknown Author"},
 					}
-					logFile.WriteString(fmt.Sprintf("Using fallback metadata: Title=%q\n", baseName))
-				} else {
-					logFile.WriteString(fmt.Sprintf("Successfully extracted metadata: Title=%q, Authors=%v\n",
-						metadata.Title, metadata.Authors))
 				}
 
 				// Store file info for later processing
@@ -216,8 +206,6 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 
 			// Process as album if metadata is consistent
 			if consistentMetadata {
-				logFile.WriteString(fmt.Sprintf("Processing directory as album: %s\n", dir))
-
 				// Create album name from common metadata
 				albumName := albumTitle
 				if albumArtist != "" {
@@ -269,7 +257,6 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 		}
 	}
 
-	logFile.WriteString(fmt.Sprintf("Scan complete. Total books found: %d\n\n", len(books)))
 	return books
 }
 
