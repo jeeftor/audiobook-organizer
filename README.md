@@ -138,6 +138,31 @@ next use the **Remove All x Books** button to clean up the errors.
 
 
 
+## Updates
+
+The audiobook organizer includes a built-in update command to easily check for and install new versions:
+
+```bash
+# Check for updates without installing
+audiobook-organizer update --check
+
+# Update to the latest version
+audiobook-organizer update
+```
+
+The update command will:
+- Automatically detect how you installed the tool (Homebrew, APT, binary, etc.)
+- Check the latest version available on GitHub
+- Download and install the update using the appropriate method
+
+### Update Methods by Installation Type
+
+- **Homebrew**: Runs `brew update && brew upgrade audiobook-organizer`
+- **APT (Debian/Ubuntu)**: Provides instructions for `sudo apt-get update && sudo apt-get install --only-upgrade audiobook-organizer`
+- **YUM/DNF (RedHat/Fedora)**: Provides instructions for `sudo yum update audiobook-organizer` or `sudo dnf update audiobook-organizer`
+- **APK (Alpine)**: Provides instructions for `sudo apk update && sudo apk upgrade audiobook-organizer`
+- **Binary/Go Install**: Automatically downloads and installs the latest binary
+
 ## Installation
 
 *There are various ways to install this - I actually haven't tested the Docker install - but it should work :)*
