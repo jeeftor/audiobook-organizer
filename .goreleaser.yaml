@@ -34,9 +34,9 @@ builds:
     ldflags:
       - >
         -s -w
-        -X audiobook-organizer/cmd.buildVersion={{.Version}}
-        -X audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
-        -X audiobook-organizer/cmd.buildTime={{.Date}}
+        -X github.com/jeeftor/audiobook-organizer/cmd.buildVersion={{.Version}}
+        -X github.com/jeeftor/audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
+        -X github.com/jeeftor/audiobook-organizer/cmd.buildTime={{.Date}}
     binary: audiobook-organizer
 
 archives:
