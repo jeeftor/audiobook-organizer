@@ -856,6 +856,13 @@ func isSubPathOf(parent, child string) bool {
 
 // isEmptyDir is defined in organizer.go - removing duplicate
 
+// debugLog logs debug messages only if verbose mode is enabled
+func (o *Organizer) debugLog(format string, args ...interface{}) {
+	if o.config.Verbose {
+		log.Printf("[DEBUG] "+format, args...)
+	}
+}
+
 // moveFile moves a file from source to target, handling cross-device moves
 // by falling back to copy-and-delete when necessary.
 func (o *Organizer) moveFile(source, target string) error {
@@ -864,7 +871,7 @@ func (o *Organizer) moveFile(source, target string) error {
 		return nil
 	}
 
-	log.Printf("[DEBUG] moveFile: source=%s, target=%s", source, target)
+	o.debugLog("moveFile: source=%s, target=%s", source, target)
 
 	// Create target directory if it doesn't exist
 	targetDir := filepath.Dir(target)
@@ -876,11 +883,11 @@ func (o *Organizer) moveFile(source, target string) error {
 	err := os.Rename(source, target)
 	if err != nil {
 		// If rename fails (e.g., cross-device link), fall back to copy and delete
-		log.Printf("[DEBUG] Rename failed, falling back to copy and delete: %v", err)
+		o.debugLog("Rename failed, falling back to copy and delete: %v", err)
 		return o.copyAndDeleteFile(source, target, targetDir)
 	}
 
-	log.Printf("[DEBUG] Successfully renamed file from %s to %s", source, target)
+	o.debugLog("Successfully renamed file from %s to %s", source, target)
 	return nil
 }
 
@@ -904,19 +911,19 @@ func (o *Organizer) copyAndDeleteFile(source, target, targetDir string) error {
 	if err != nil {
 		return fmt.Errorf("error reading source file: %w", err)
 	}
-	log.Printf("[DEBUG] Read %d bytes from source file %s", len(data), source)
+	o.debugLog("Read %d bytes from source file %s", len(data), source)
 
 	n, err := targetFile.Write(data)
 	if err != nil {
 		return fmt.Errorf("error writing to target file: %w", err)
 	}
-	log.Printf("[DEBUG] Successfully wrote %d bytes to target file %s", n, target)
+	o.debugLog("Successfully wrote %d bytes to target file %s", n, target)
 
 	// Remove source file
 	if err := os.Remove(source); err != nil {
 		return fmt.Errorf("error removing source file: %w", err)
 	}
-	log.Printf("[DEBUG] Successfully removed source file %s", source)
+	o.debugLog("Successfully removed source file %s", source)
 
 	// Sync the target directory to ensure all changes are written to disk
 	return o.syncTargetDirectory(targetDir)
@@ -933,7 +940,7 @@ func (o *Organizer) syncTargetDirectory(targetDir string) error {
 	if err := targetDirFile.Sync(); err != nil {
 		return fmt.Errorf("error syncing target directory: %w", err)
 	}
-	log.Printf("[DEBUG] Successfully synced target directory %s", targetDir)
+	o.debugLog("Successfully synced target directory %s", targetDir)
 	return nil
 }
 
