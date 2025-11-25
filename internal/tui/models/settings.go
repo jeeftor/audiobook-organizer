@@ -49,7 +49,7 @@ func NewSettingsModel(selectedBooks []AudioBook) *SettingsModel {
 		{
 			Name:        "Layout",
 			Description: "How to organize the output directory structure",
-			Options:     []string{"author-only", "author-title", "author-series-title", "author-series-title-number"},
+			Options:     []string{"author-only", "author-title", "author-series-title", "author-series-title-number", "series-title", "series-title-number"},
 			Value:       2, // Default to author-series-title
 			Focused:     false,
 		},
@@ -88,7 +88,7 @@ func NewSettingsModel(selectedBooks []AudioBook) *SettingsModel {
 		{
 			Name:        "Layout",
 			Description: "How to organize the output directory structure",
-			Options:     []string{"author-only", "author-title", "author-series-title", "author-series-title-number"},
+			Options:     []string{"author-only", "author-title", "author-series-title", "author-series-title-number", "series-title", "series-title-number"},
 			Value:       2, // Default to author-series-title
 			Focused:     false,
 		},
@@ -749,6 +749,20 @@ func GenerateOutputPathWithLayout(book AudioBook, layout string, useEmbeddedMeta
 			return filepath.Join(author, series, title)
 		}
 		return filepath.Join(author, title)
+	case "series-title":
+		if series != "" {
+			return filepath.Join(series, title)
+		}
+		return filepath.Join(title)
+	case "series-title-number":
+		if series != "" {
+			if seriesNumber != "" {
+				numberedTitle := fmt.Sprintf("#%s - %s", seriesNumber, title)
+				return filepath.Join(series, numberedTitle)
+			}
+			return filepath.Join(series, title)
+		}
+		return filepath.Join(title)
 	default:
 		return filepath.Join(author, title)
 	}

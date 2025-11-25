@@ -27,6 +27,19 @@ func TestCalculateTargetPathWithSeriesNumber(t *testing.T) {
 			expected: filepath.Join("testbase", "Brandon Sanderson", "Mistborn", "#1 - The Final Empire"),
 		},
 		{
+			name:   "series-title-number with series_index",
+			layout: "series-title-number",
+			metadata: Metadata{
+				Title:   "The Final Empire",
+				Authors: []string{"Brandon Sanderson"},
+				Series:  []string{"Mistborn"},
+				RawData: map[string]interface{}{
+					"series_index": 1.0,
+				},
+			},
+			expected: filepath.Join("testbase", "Mistborn", "#1 - The Final Empire"),
+		},
+		{
 			name:   "author-series-title-number with series string",
 			layout: "author-series-title-number",
 			metadata: Metadata{
@@ -62,6 +75,17 @@ func TestCalculateTargetPathWithSeriesNumber(t *testing.T) {
 			expected: filepath.Join("testbase", "Brandon Sanderson", "Mistborn", "The Hero of Ages"),
 		},
 		{
+			name:   "series-title-number without series number",
+			layout: "series-title-number",
+			metadata: Metadata{
+				Title:   "The Hero of Ages",
+				Authors: []string{"Brandon Sanderson"},
+				Series:  []string{"Mistborn"},
+				RawData: map[string]interface{}{},
+			},
+			expected: filepath.Join("testbase", "Mistborn", "The Hero of Ages"),
+		},
+		{
 			name:   "author-series-title-number without series",
 			layout: "author-series-title-number",
 			metadata: Metadata{
@@ -71,6 +95,17 @@ func TestCalculateTargetPathWithSeriesNumber(t *testing.T) {
 				RawData: map[string]interface{}{},
 			},
 			expected: filepath.Join("testbase", "Brandon Sanderson", "Elantris"),
+		},
+		{
+			name:   "series-title-number without series",
+			layout: "series-title-number",
+			metadata: Metadata{
+				Title:   "Elantris",
+				Authors: []string{"Brandon Sanderson"},
+				Series:  []string{},
+				RawData: map[string]interface{}{},
+			},
+			expected: filepath.Join("testbase", "Elantris"),
 		},
 		{
 			name:   "regular author-series-title layout",
@@ -84,6 +119,19 @@ func TestCalculateTargetPathWithSeriesNumber(t *testing.T) {
 				},
 			},
 			expected: filepath.Join("testbase", "Brandon Sanderson", "Mistborn", "The Final Empire"),
+		},
+		{
+			name:   "regular series-title layout",
+			layout: "series-title",
+			metadata: Metadata{
+				Title:   "The Final Empire",
+				Authors: []string{"Brandon Sanderson"},
+				Series:  []string{"Mistborn #1"},
+				RawData: map[string]interface{}{
+					"series_index": 1.0,
+				},
+			},
+			expected: filepath.Join("testbase", "Mistborn", "The Final Empire"),
 		},
 		{
 			name:   "author-series-title-number with large series number",

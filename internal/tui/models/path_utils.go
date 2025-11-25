@@ -66,6 +66,20 @@ func GenerateOutputPath(book AudioBook, layout string, fieldMapping organizer.Fi
 			return filepath.Join(outputDir, author, series, title, base)
 		}
 		return filepath.Join(outputDir, author, title, base)
+	case "series-title":
+		if series != "" {
+			return filepath.Join(outputDir, series, title, base)
+		}
+		return filepath.Join(outputDir, title, base)
+	case "series-title-number":
+		if series != "" {
+			if seriesNumber != "" {
+				numberedTitle := fmt.Sprintf("#%s - %s", seriesNumber, title)
+				return filepath.Join(outputDir, series, numberedTitle, base)
+			}
+			return filepath.Join(outputDir, series, title, base)
+		}
+		return filepath.Join(outputDir, title, base)
 	default:
 		return filepath.Join(outputDir, base)
 	}

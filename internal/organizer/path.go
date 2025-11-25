@@ -4,6 +4,7 @@ package organizer
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 )
@@ -16,6 +17,7 @@ var (
 	// Note: Removed apostrophe (') from this list to ensure consistent behavior across platforms
 	commonProblematicChars = []string{"<", ">", ":", "|", "?", "*", "`", "\""}
 )
+var reTrim = regexp.MustCompile(`(^[_ .]+)|([_ .]+$)`)
 
 // SupportedAudioExtensions as a map for O(1) lookup instead of slice iteration
 var SupportedAudioExtensions = map[string]bool{
@@ -58,7 +60,7 @@ func (o *Organizer) SanitizePath(s string) string {
 	}
 
 	// Trim leading and trailing spaces and dots
-	s = strings.Trim(s, " .")
+	s = reTrim.ReplaceAllString(s, "")
 
 	return s
 }
@@ -92,10 +94,9 @@ func GetSeriesNumberFromMetadata(metadata Metadata) string {
 		}
 		return fmt.Sprintf("%.1f", seriesIndex)
 	}
-
 	// Fall back to extracting from series string
-	if len(metadata.Series) > 0 && metadata.Series[0] != "" {
-		return ExtractSeriesNumber(metadata.Series[0])
+	if series := metadata.GetFullValidSeries(); series != "" {
+		return ExtractSeriesNumber(series)
 	}
 
 	return ""
