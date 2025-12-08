@@ -29,6 +29,8 @@ type OrganizerConfig struct {
 	ReplaceSpace        string
 	Verbose             bool
 	DryRun              bool
+	PlanScript          string // Path to shell script file for dry-run plan output
+	PlanFile            string // Path to text file for dry-run plan output
 	Undo                bool
 	Prompt              bool
 	RemoveEmpty         bool
@@ -171,16 +173,33 @@ type Organizer struct {
 	logEntries       []LogEntry
 	fileOps          *FileOps
 	layoutCalculator *LayoutCalculator
+	planWriter       *PlanScriptWriter // For generating plan scripts in dry-run mode
+	planFileWriter   *PlanFileWriter   // For generating text plan files in dry-run mode
 }
 
 // NewOrganizer creates a new Organizer with the provided configuration
 func NewOrganizer(config *OrganizerConfig) *Organizer {
+	// If plan script or plan file is specified, automatically enable dry-run mode BEFORE copying config
+	if (config.PlanScript != "" || config.PlanFile != "") && !config.DryRun {
+		config.DryRun = true
+	}
+
 	org := &Organizer{
 		config:  *config,
 		fileOps: NewFileOps(config.DryRun),
 	}
 
 	org.layoutCalculator = NewLayoutCalculator(config, org.SanitizePath)
+
+	// Initialize plan script writer if a script path is provided
+	if config.PlanScript != "" {
+		org.planWriter = NewPlanScriptWriter(config.PlanScript, config.BaseDir, config.OutputDir)
+	}
+
+	// Initialize plan file writer if a file path is provided
+	if config.PlanFile != "" {
+		org.planFileWriter = NewPlanFileWriter(config.PlanFile, config.BaseDir, config.OutputDir)
+	}
 
 	// Set the verbose mode flag for the metadata providers
 	SetVerboseMode(config.Verbose)
@@ -267,6 +286,20 @@ func (o *Organizer) Execute() error {
 	// Remove empty directories after all moves are complete
 	if err := o.removeEmptySourceDirs(); err != nil {
 		color.Red("❌ Error removing empty directories: %v", err)
+	}
+
+	// Write plan script if configured
+	if o.planWriter != nil {
+		if err := o.planWriter.WriteScript(); err != nil {
+			return fmt.Errorf("error writing plan script: %v", err)
+		}
+	}
+
+	// Write plan file if configured
+	if o.planFileWriter != nil {
+		if err := o.planFileWriter.WriteFile(); err != nil {
+			return fmt.Errorf("error writing plan file: %v", err)
+		}
 	}
 
 	o.printSummary(startTime)

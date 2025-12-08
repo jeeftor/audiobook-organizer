@@ -19,33 +19,39 @@ type ScanMsg struct {
 
 // ScanCompleteMsg is sent when scanning is complete
 type ScanCompleteMsg struct {
-	Books []AudioBook
+	Books           []AudioBook
+	FellBackToEmbed bool   // True if Normal mode fell back to Embedded
+	FallbackMsg     string // Message explaining the fallback
 }
 
 // AudioBook represents an audiobook with its metadata
 type AudioBook struct {
-	Path        string
-	Metadata    organizer.Metadata
-	Selected    bool
-	IsPartOfAlbum bool  // Indicates if this file is part of a multi-file album
-	AlbumName   string   // Name of the album this file belongs to
-	TrackNumber int      // Track number within the album
-	TotalTracks int      // Total number of tracks in the album
+	Path          string
+	Metadata      organizer.Metadata
+	Selected      bool
+	IsPartOfAlbum bool   // Indicates if this file is part of a multi-file album
+	AlbumName     string // Name of the album this file belongs to
+	TrackNumber   int    // Track number within the album
+	TotalTracks   int    // Total number of tracks in the album
 }
 
 // ScanModel represents the scanning screen
 type ScanModel struct {
-	inputDir    string
-	scanning    bool
-	complete    bool
-	books       []AudioBook
-	scannedDirs int
-	scannedFiles int
-	startTime   time.Time
-	elapsedTime time.Duration
+	inputDir        string
+	scanning        bool
+	complete        bool
+	books           []AudioBook
+	scannedDirs     int
+	scannedFiles    int
+	startTime       time.Time
+	elapsedTime     time.Duration
+	flatMode        bool   // Process each file individually
+	useEmbedded     bool   // Use embedded metadata only
+	fellBackToEmbed bool   // True if we fell back from Normal to Embedded
+	fallbackMsg     string // Message explaining the fallback
 }
 
-// NewScanModel creates a new scan model
+// NewScanModel creates a new scan model with default options
 func NewScanModel(inputDir string) *ScanModel {
 	return &ScanModel{
 		inputDir:  inputDir,
@@ -53,6 +59,19 @@ func NewScanModel(inputDir string) *ScanModel {
 		complete:  false,
 		books:     []AudioBook{},
 		startTime: time.Now(),
+	}
+}
+
+// NewScanModelWithOptions creates a new scan model with specified options
+func NewScanModelWithOptions(inputDir string, flatMode, useEmbedded bool) *ScanModel {
+	return &ScanModel{
+		inputDir:    inputDir,
+		scanning:    false,
+		complete:    false,
+		books:       []AudioBook{},
+		startTime:   time.Now(),
+		flatMode:    flatMode,
+		useEmbedded: useEmbedded,
 	}
 }
 
@@ -78,8 +97,20 @@ func (m *ScanModel) startScan() tea.Cmd {
 			// Perform the scan
 			books := m.scanDirectory(m.inputDir)
 
-			// Return completion message
-			return ScanCompleteMsg{Books: books}
+			// If Normal mode found nothing, fall back to Embedded mode
+			if len(books) == 0 && !m.useEmbedded && !m.flatMode {
+				m.useEmbedded = true
+				m.fellBackToEmbed = true
+				m.fallbackMsg = "No metadata.json files found - using embedded audio metadata"
+				books = m.scanDirectory(m.inputDir)
+			}
+
+			// Return completion message with fallback info
+			return ScanCompleteMsg{
+				Books:           books,
+				FellBackToEmbed: m.fellBackToEmbed,
+				FallbackMsg:     m.fallbackMsg,
+			}
 		},
 	)
 }
@@ -122,21 +153,58 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 
 		for _, validExt := range extensions {
 			if ext == validExt {
+				var metadata organizer.Metadata
+				var err error
+				var skipFile bool
 
-				// Extract metadata using the organizer package's UnifiedMetadataProvider
-				provider := organizer.NewMetadataProvider(path)
-				metadata, err := provider.GetMetadata()
-				if err != nil {
-					// If metadata extraction fails, create basic metadata from filename
-					baseName := filepath.Base(path)
-					metadata = organizer.Metadata{
-						Title:   baseName,
-						Authors: []string{"Unknown Author"},
+				dirPath := filepath.Dir(path)
+
+				// Extract metadata based on scan mode
+				if m.useEmbedded {
+					// Embedded mode: only use audio file's embedded tags
+					provider := organizer.NewAudioMetadataProvider(path)
+					metadata, err = provider.GetMetadata()
+					if err != nil {
+						// If metadata extraction fails, create basic metadata from filename
+						baseName := filepath.Base(path)
+						metadata = organizer.Metadata{
+							Title:   baseName,
+							Authors: []string{"Unknown Author"},
+						}
+					}
+				} else if m.flatMode {
+					// Flat mode: process each file individually with embedded metadata
+					provider := organizer.NewAudioMetadataProvider(path)
+					metadata, err = provider.GetMetadata()
+					if err != nil {
+						baseName := filepath.Base(path)
+						metadata = organizer.Metadata{
+							Title:   baseName,
+							Authors: []string{"Unknown Author"},
+						}
+					}
+				} else {
+					// Normal mode: ONLY use metadata.json files (like CLI does)
+					// Check if this directory has a metadata.json
+					metadataJSONPath := filepath.Join(dirPath, "metadata.json")
+					if _, statErr := os.Stat(metadataJSONPath); statErr == nil {
+						// metadata.json exists, use JSON provider
+						provider := organizer.NewJSONMetadataProvider(metadataJSONPath)
+						metadata, err = provider.GetMetadata()
+						if err != nil {
+							skipFile = true
+						}
+					} else {
+						// No metadata.json - skip this file in Normal mode
+						skipFile = true
 					}
 				}
 
+				if skipFile {
+					break
+				}
+
 				// Store file info for later processing
-				dirPath := filepath.Dir(path)
 				fileInfos = append(fileInfos, fileInfo{
 					path:     path,
 					metadata: metadata,
@@ -226,13 +294,13 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 					}
 
 					book := AudioBook{
-						Path:         file.path,
-						Metadata:     file.metadata,
-						Selected:     true,
+						Path:          file.path,
+						Metadata:      file.metadata,
+						Selected:      true,
 						IsPartOfAlbum: true,
-						AlbumName:    albumName,
-						TrackNumber:  trackNumber,
-						TotalTracks:  totalTracks,
+						AlbumName:     albumName,
+						TrackNumber:   trackNumber,
+						TotalTracks:   totalTracks,
 					}
 					books = append(books, book)
 				}
@@ -247,9 +315,9 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 		for _, file := range files {
 			if !processedDirs[dir] {
 				book := AudioBook{
-					Path:         file.path,
-					Metadata:     file.metadata,
-					Selected:     true,
+					Path:          file.path,
+					Metadata:      file.metadata,
+					Selected:      true,
 					IsPartOfAlbum: false,
 				}
 				books = append(books, book)
@@ -326,6 +394,17 @@ func (m *ScanModel) View() string {
 		// Scanning state
 		content.WriteString("🔍 Scanning for audiobooks...\n\n")
 		content.WriteString(fmt.Sprintf("Directory: %s\n", m.inputDir))
+
+		// Show scan mode
+		modeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00AAFF"))
+		if m.flatMode {
+			content.WriteString(modeStyle.Render("Mode: Flat (individual files)") + "\n")
+		} else if m.useEmbedded {
+			content.WriteString(modeStyle.Render("Mode: Embedded metadata only") + "\n")
+		} else {
+			content.WriteString(modeStyle.Render("Mode: Normal (directory-based)") + "\n")
+		}
+
 		content.WriteString(fmt.Sprintf("Directories scanned: %d\n", m.scannedDirs))
 		content.WriteString(fmt.Sprintf("Files checked: %d\n", m.scannedFiles))
 		content.WriteString(fmt.Sprintf("Books found: %d\n", len(m.books)))

@@ -11,7 +11,9 @@ type Screen int
 
 const (
 	DirPickerScreen Screen = iota
+	ModeSelectScreen
 	ScanScreen
+	BookGroupScreen
 	BookListScreen
 	SettingsScreen
 	AdvancedSettingsScreen
@@ -28,15 +30,22 @@ type MainModel struct {
 	width     int
 	height    int
 
+	// Scan options (set by mode selection)
+	flatMode    bool
+	useEmbedded bool
+	scanMode    string // "Flat", "Embedded", or "Normal"
+
 	// Sub-models for different screens
-	dirPickerModel         *DirPickerModel
-	scanModel              *ScanModel
-	bookListModel          *BookListModel
-	settingsModel          *SettingsTableModel
-	advancedSettingsModel  *SettingsTableModel
-	previewModel           *PreviewModel
-	processModel           *ProcessModel
-	commandOutputModel     *CommandOutputModel
+	dirPickerModel        *DirPickerModel
+	modeSelectModel       *ModeSelectModel
+	scanModel             *ScanModel
+	bookGroupModel        *BookGroupModel
+	bookListModel         *BookListModel
+	settingsModel         *SettingsTableModel
+	advancedSettingsModel *SettingsTableModel
+	previewModel          *PreviewModel
+	processModel          *ProcessModel
+	commandOutputModel    *CommandOutputModel
 
 	// Application state
 	quitting bool
@@ -91,13 +100,19 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 
 			case BookListScreen:
+				// Go back to book group screen
+				m.screen = BookGroupScreen
+				return m, nil
+
+			case BookGroupScreen:
 				// Go back to scan screen
 				m.screen = ScanScreen
 				return m, nil
 
 			case SettingsScreen:
-				// Go back to book list
-				m.screen = BookListScreen
+				// Go back to book group screen
+				m.screen = BookGroupScreen
+				m.settingsModel = nil // Reset settings so it gets recreated with fresh state
 				return m, nil
 
 			case AdvancedSettingsScreen:
@@ -106,8 +121,8 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 
 			case PreviewScreen:
-				// Go back to advanced settings
-				m.screen = AdvancedSettingsScreen
+				// Go back to settings
+				m.screen = SettingsScreen
 				return m, nil
 
 			case ProcessScreen:
@@ -141,13 +156,31 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				// Check if both directories are selected
 				if m.dirPickerModel.mode == PickingOutput && m.dirPickerModel.outputDir != "" {
-					// Both directories selected, update main model and start scan
+					// Both directories selected, update main model and go to mode selection
 					m.inputDir = m.dirPickerModel.inputDir
 					m.outputDir = m.dirPickerModel.outputDir
-					m.screen = ScanScreen
-					m.scanModel = NewScanModel(m.inputDir)
-					return m, m.scanModel.Init()
+					m.screen = ModeSelectScreen
+					m.modeSelectModel = NewModeSelectModel()
+					return m, m.modeSelectModel.Init()
 				}
+			}
+		}
+
+	case ModeSelectScreen:
+		if m.modeSelectModel != nil {
+			var modeModel tea.Model
+			modeModel, cmd = m.modeSelectModel.Update(msg)
+			m.modeSelectModel = modeModel.(*ModeSelectModel)
+			cmds = append(cmds, cmd)
+
+			// Check for mode selection message
+			if modeMsg, ok := msg.(ModeSelectedMsg); ok {
+				m.flatMode = modeMsg.Flat
+				m.useEmbedded = modeMsg.UseEmbedded
+				// Proceed to scan screen
+				m.screen = ScanScreen
+				m.scanModel = NewScanModelWithOptions(m.inputDir, m.flatMode, m.useEmbedded)
+				return m, m.scanModel.Init()
 			}
 		}
 
@@ -161,15 +194,57 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Also check for scan complete message directly
 			if scanMsg, ok := msg.(ScanCompleteMsg); ok {
 				if len(scanMsg.Books) > 0 {
-					// Create book list model with found books
-					m.bookListModel = NewBookListModel(scanMsg.Books)
+					// Determine scan mode name for display
+					m.scanMode = "Normal"
+					if m.flatMode {
+						m.scanMode = "Flat"
+					} else if m.useEmbedded || scanMsg.FellBackToEmbed {
+						m.scanMode = "Embedded"
+						// Update our state if fallback occurred
+						if scanMsg.FellBackToEmbed {
+							m.useEmbedded = true
+						}
+					}
 
-					// Automatically switch to book list screen
-					m.screen = BookListScreen
-					return m, m.bookListModel.Init()
+					// Create book group model with found books, mode, directories, and fallback message
+					m.bookGroupModel = NewBookGroupModelWithMode(scanMsg.Books, m.scanMode, m.inputDir, m.outputDir, scanMsg.FallbackMsg)
+
+					// Automatically switch to book group screen
+					m.screen = BookGroupScreen
+					return m, m.bookGroupModel.Init()
 				} else {
 					// No books found, stay on scan screen
 					return m, nil
+				}
+			}
+		}
+
+	case BookGroupScreen:
+		if m.bookGroupModel != nil {
+			var groupModel tea.Model
+			groupModel, cmd = m.bookGroupModel.Update(msg)
+			m.bookGroupModel = groupModel.(*BookGroupModel)
+			cmds = append(cmds, cmd)
+
+			// Check for rescan request
+			if rescanMsg, ok := msg.(RescanRequestMsg); ok {
+				// Reset and rescan with new mode
+				m.flatMode = rescanMsg.FlatMode
+				m.useEmbedded = rescanMsg.UseEmbedded
+				m.bookGroupModel = nil
+				m.screen = ScanScreen
+				m.scanModel = NewScanModelWithOptions(m.inputDir, m.flatMode, m.useEmbedded)
+				return m, m.scanModel.Init()
+			}
+
+			// Check for Enter key to proceed to settings
+			if msg, ok := msg.(tea.KeyMsg); ok && msg.String() == "enter" {
+				m.screen = SettingsScreen
+				if m.settingsModel == nil {
+					// Pass selected books and scan mode to settings model
+					selectedBooks := m.bookGroupModel.GetSelectedBooks()
+					m.settingsModel = NewSettingsTableModelWithMode(selectedBooks, false, m.scanMode)
+					cmds = append(cmds, m.settingsModel.Init())
 				}
 			}
 		}
@@ -185,9 +260,9 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg, ok := msg.(tea.KeyMsg); ok && msg.String() == "enter" {
 				m.screen = SettingsScreen
 				if m.settingsModel == nil {
-					// Pass selected books to settings model for preview
+					// Pass selected books and scan mode to settings model for preview
 					selectedBooks := m.bookListModel.GetSelectedBooks()
-					m.settingsModel = NewSettingsTableModel(selectedBooks, false)
+					m.settingsModel = NewSettingsTableModelWithMode(selectedBooks, false, m.scanMode)
 					cmds = append(cmds, m.settingsModel.Init())
 				}
 			}
@@ -205,26 +280,32 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg, ok := msg.(tea.KeyMsg); ok {
 				key := msg.String()
 
-				// c/n advances directly to preview screen
-				if key == "c" || key == "n" {
+				// c advances directly to preview screen
+				if key == "c" {
 					m.screen = PreviewScreen
 					if m.previewModel == nil {
-						selectedBooks := m.bookListModel.GetSelectedBooks()
+						// Get selected books from settings model (it already has them)
+						selectedBooks := m.settingsModel.GetSelectedBooks()
 						// Get config and field mapping from unified settings model
 						config := m.settingsModel.GetConfig()
 						fieldMapping := m.settingsModel.GetFieldMapping()
 						// Add input and output directories to config
 						config["Input Directory"] = m.inputDir
 						config["Output Directory"] = m.outputDir
-						m.previewModel = NewPreviewModel(selectedBooks, config, fieldMapping)
+						// Get total available for partial selection detection
+						totalAvailable := len(selectedBooks)
+						if m.bookGroupModel != nil {
+							totalAvailable = m.bookGroupModel.GetTotalBookCount()
+						}
+						m.previewModel = NewPreviewModelWithTotal(selectedBooks, config, fieldMapping, totalAvailable)
 						cmds = append(cmds, m.previewModel.Init())
 					}
 				} else if key == "enter" && m.settingsModel.ShouldAdvance() {
 					// Enter goes to advanced settings (old flow - probably not needed anymore)
 					m.screen = AdvancedSettingsScreen
 					if m.advancedSettingsModel == nil {
-						selectedBooks := m.bookListModel.GetSelectedBooks()
-						m.advancedSettingsModel = NewSettingsTableModel(selectedBooks, true)
+						selectedBooks := m.settingsModel.GetSelectedBooks()
+						m.advancedSettingsModel = NewSettingsTableModelWithMode(selectedBooks, true, m.scanMode)
 						cmds = append(cmds, m.advancedSettingsModel.Init())
 					}
 				}
@@ -244,8 +325,8 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				key := msg.String()
 				shouldAdvance := false
 
-				// c/n always advances, regardless of popup state
-				if key == "c" || key == "n" {
+				// c always advances, regardless of popup state
+				if key == "c" {
 					shouldAdvance = true
 				} else if key == "enter" && m.advancedSettingsModel.ShouldAdvance() {
 					// Enter only advances if popup not showing
@@ -255,14 +336,20 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if shouldAdvance {
 					m.screen = PreviewScreen
 					if m.previewModel == nil {
-						selectedBooks := m.bookListModel.GetSelectedBooks()
+						// Get selected books from settings model (it already has them)
+						selectedBooks := m.settingsModel.GetSelectedBooks()
 						// Get config from basic settings, field mapping from advanced settings
 						config := m.settingsModel.GetConfig()
 						fieldMapping := m.advancedSettingsModel.GetFieldMapping()
 						// Add input and output directories to config
 						config["Input Directory"] = m.inputDir
 						config["Output Directory"] = m.outputDir
-						m.previewModel = NewPreviewModel(selectedBooks, config, fieldMapping)
+						// Get total available for partial selection detection
+						totalAvailable := len(selectedBooks)
+						if m.bookGroupModel != nil {
+							totalAvailable = m.bookGroupModel.GetTotalBookCount()
+						}
+						m.previewModel = NewPreviewModelWithTotal(selectedBooks, config, fieldMapping, totalAvailable)
 						cmds = append(cmds, m.previewModel.Init())
 					}
 				}
@@ -379,11 +466,25 @@ func (m *MainModel) View() string {
 			content = "Initializing directory picker..."
 		}
 
+	case ModeSelectScreen:
+		if m.modeSelectModel != nil {
+			content = m.modeSelectModel.View()
+		} else {
+			content = "Loading mode selection..."
+		}
+
 	case ScanScreen:
 		if m.scanModel != nil {
 			content = m.scanModel.View()
 		} else {
 			content = "Initializing scanner..."
+		}
+
+	case BookGroupScreen:
+		if m.bookGroupModel != nil {
+			content = m.bookGroupModel.View()
+		} else {
+			content = "Loading book groups..."
 		}
 
 	case BookListScreen:

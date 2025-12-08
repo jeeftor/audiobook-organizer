@@ -174,6 +174,14 @@ func (o *Organizer) processTestBook(metadataFile, audioFile, testBookDir string)
 	}
 
 	if o.config.DryRun {
+		// Add to plan script if configured
+		if o.planWriter != nil {
+			o.planWriter.AddMove(audioFile, targetAudioPath, &metadata)
+		}
+		// Add to plan file if configured
+		if o.planFileWriter != nil {
+			o.planFileWriter.AddMove(audioFile, targetAudioPath, &metadata)
+		}
 		return nil
 	}
 
@@ -215,10 +223,10 @@ func isSuspiciousTitle(title string) bool {
 	// Check for patterns like "98/99", "098/113", "1/10", etc.
 	// Also check for "Part NN of NN"
 	suspiciousPatterns := []string{
-		`^\d+/\d+$`,           // 98/99, 098/113
-		`^\d+-\d+$`,           // 98-99
-		`^Part \d+ of \d+$`,   // Part 98 of 99
-		`^\d+\s*of\s*\d+$`,    // 98 of 99
+		`^\d+/\d+$`,         // 98/99, 098/113
+		`^\d+-\d+$`,         // 98-99
+		`^Part \d+ of \d+$`, // Part 98 of 99
+		`^\d+\s*of\s*\d+$`,  // 98 of 99
 	}
 
 	for _, pattern := range suspiciousPatterns {
@@ -716,6 +724,14 @@ func (o *Organizer) executeSingleFileMove(filePath, targetPath string, metadata 
 		fmt.Println(message)
 		// Add to summary even in dry-run mode
 		o.addSingleFileMoveToSummary(filePath, targetPath)
+		// Add to plan script if configured
+		if o.planWriter != nil {
+			o.planWriter.AddMove(filePath, targetPath, &metadata)
+		}
+		// Add to plan file if configured
+		if o.planFileWriter != nil {
+			o.planFileWriter.AddMove(filePath, targetPath, &metadata)
+		}
 		return nil
 	}
 
@@ -1210,7 +1226,16 @@ func (o *Organizer) processDirectoryFiles(entries []os.DirEntry, sourcePath, tar
 			fmt.Println(message)
 		}
 
-		if !o.config.DryRun {
+		if o.config.DryRun {
+			// Add to plan script if configured
+			if o.planWriter != nil {
+				o.planWriter.AddMove(sourceName, targetFullPath, dirMetadata)
+			}
+			// Add to plan file if configured
+			if o.planFileWriter != nil {
+				o.planFileWriter.AddMove(sourceName, targetFullPath, dirMetadata)
+			}
+		} else {
 			if err := o.moveFile(sourceName, targetFullPath); err != nil {
 				PrintRed("❌ Error moving %s: %v", sourceName, err)
 			}

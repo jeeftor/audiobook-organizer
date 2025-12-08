@@ -418,8 +418,8 @@ type opfDocument struct {
 			ID       string `xml:"id,attr"`
 			Value    string `xml:",chardata"`
 			// Calibre specific attributes
-			Name     string `xml:"name,attr"`
-			Content  string `xml:"content,attr"`
+			Name    string `xml:"name,attr"`
+			Content string `xml:"content,attr"`
 		} `xml:"meta"`
 	} `xml:"metadata"`
 }
@@ -486,6 +486,11 @@ type AudioMetadataProvider struct {
 
 func NewAudioMetadataProvider(path string) *AudioMetadataProvider {
 	return &AudioMetadataProvider{NewMetadataProvider(path)}
+}
+
+// GetMetadata extracts metadata only from embedded audio tags (ignores metadata.json)
+func (p *AudioMetadataProvider) GetMetadata() (Metadata, error) {
+	return p.extractAudioMetadata()
 }
 
 type FileMetadataProvider struct {

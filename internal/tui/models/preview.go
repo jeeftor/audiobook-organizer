@@ -2,7 +2,6 @@ package models
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -18,26 +17,50 @@ type MovePreview struct {
 
 // PreviewModel represents the preview screen
 type PreviewModel struct {
-	books       []AudioBook
-	config      map[string]string
-	fieldMapping organizer.FieldMapping
-	moves       []MovePreview
-	cursor      int
-	width       int
-	height      int
-	scrollOffset int
+	books             []AudioBook
+	config            map[string]string
+	fieldMapping      organizer.FieldMapping
+	pathPreviewWidget *PathPreviewWidget
+	moves             []MovePreview
+	lines             []string // Cached rendered lines
+	groupStarts       []int    // Line numbers where groups start
+	cursor            int      // For compatibility with tests
+	width             int
+	height            int
+	scrollOffset      int
+	totalAvailable    int // Total books available (for partial selection detection)
 }
 
 // NewPreviewModel creates a new preview model
 func NewPreviewModel(books []AudioBook, config map[string]string, fieldMapping organizer.FieldMapping) *PreviewModel {
-	m := &PreviewModel{
-		books:        books,
-		config:       config,
-		fieldMapping: fieldMapping,
-		cursor:       0,
+	return NewPreviewModelWithTotal(books, config, fieldMapping, len(books))
+}
+
+// NewPreviewModelWithTotal creates a new preview model with total available count
+func NewPreviewModelWithTotal(books []AudioBook, config map[string]string, fieldMapping organizer.FieldMapping, totalAvailable int) *PreviewModel {
+	// Create path preview widget
+	widget := NewPathPreviewWidget(books, fieldMapping)
+	widget.SetLayout(config["Layout"])
+	widget.SetOutputDir(config["Output Directory"])
+
+	// Check for rename settings
+	if config["Rename Files"] == "Yes" {
+		widget.SetRenameFiles(true)
+		widget.SetRenamePattern(config["Rename Pattern"])
+	}
+	if config["Add Track Numbers"] == "Yes" {
+		widget.SetAddTrackNumbers(true)
 	}
 
-	// Generate move previews
+	m := &PreviewModel{
+		books:             books,
+		config:            config,
+		fieldMapping:      fieldMapping,
+		pathPreviewWidget: widget,
+		totalAvailable:    totalAvailable,
+	}
+
+	// Generate move previews and cached lines
 	m.generatePreviews()
 
 	return m
@@ -49,29 +72,13 @@ func (m *PreviewModel) Init() tea.Cmd {
 	return tea.WindowSize()
 }
 
-// generatePreviews generates previews of file move operations
+// generatePreviews generates previews of file move operations using the widget
 func (m *PreviewModel) generatePreviews() {
-	m.moves = []MovePreview{}
+	// Use widget to generate moves
+	m.moves = m.pathPreviewWidget.GetMoves()
 
-	// In a real implementation, we would use the organizer package
-	// For now, we'll use our own implementation
-
-	// Generate previews for each book
-	for _, book := range m.books {
-		// Calculate target path using universal function
-		layout := m.config["Layout"]
-		outputDir := m.config["Output Directory"]
-		if outputDir == "" {
-			outputDir = "output"
-		}
-		targetPath := GenerateOutputPath(book, layout, m.fieldMapping, outputDir)
-
-		// Add to moves
-		m.moves = append(m.moves, MovePreview{
-			SourcePath: book.Path,
-			TargetPath: targetPath,
-		})
-	}
+	// Cache rendered lines and group starts for efficient scrolling
+	m.lines, m.groupStarts = m.pathPreviewWidget.RenderGroupedPreview()
 }
 
 // Update handles messages and user input
@@ -82,35 +89,71 @@ func (m *PreviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 	case tea.KeyMsg:
+		// Calculate total lines for scrolling
+		totalLines := m.getTotalLines()
+		maxVisible := m.height - 8
+
 		switch msg.String() {
 		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-				// Adjust scroll if necessary
-				if m.cursor < m.scrollOffset {
-					m.scrollOffset = m.cursor
-				}
+			if m.scrollOffset > 0 {
+				m.scrollOffset--
 			}
 
 		case "down", "j":
-			if m.cursor < len(m.moves)-1 {
-				m.cursor++
-				// Adjust scroll if necessary
-				maxVisible := m.height - 10 // Approximate space for header and footer
-				if m.cursor >= m.scrollOffset+maxVisible {
-					m.scrollOffset = m.cursor - maxVisible + 1
-				}
+			if m.scrollOffset < totalLines-maxVisible {
+				m.scrollOffset++
 			}
 
-		case "home":
-			m.cursor = 0
+		case "pgup":
+			m.scrollOffset -= maxVisible
+			if m.scrollOffset < 0 {
+				m.scrollOffset = 0
+			}
+
+		case "pgdown":
+			m.scrollOffset += maxVisible
+			if m.scrollOffset > totalLines-maxVisible {
+				m.scrollOffset = totalLines - maxVisible
+			}
+			if m.scrollOffset < 0 {
+				m.scrollOffset = 0
+			}
+
+		case "p", "{": // Jump to previous book group
+			groupStarts := m.getGroupStartLines()
+			for i := len(groupStarts) - 1; i >= 0; i-- {
+				if groupStarts[i] < m.scrollOffset {
+					m.scrollOffset = groupStarts[i]
+					break
+				}
+			}
+			if m.scrollOffset < 0 {
+				m.scrollOffset = 0
+			}
+
+		case "n", "}": // Jump to next book group
+			groupStarts := m.getGroupStartLines()
+			for _, start := range groupStarts {
+				if start > m.scrollOffset {
+					m.scrollOffset = start
+					break
+				}
+			}
+			// Clamp to max
+			if m.scrollOffset > totalLines-maxVisible {
+				m.scrollOffset = totalLines - maxVisible
+			}
+			if m.scrollOffset < 0 {
+				m.scrollOffset = 0
+			}
+
+		case "home", "g":
 			m.scrollOffset = 0
 
-		case "end":
-			m.cursor = len(m.moves) - 1
-			maxVisible := m.height - 10
-			if len(m.moves) > maxVisible {
-				m.scrollOffset = len(m.moves) - maxVisible
+		case "end", "G":
+			m.scrollOffset = totalLines - maxVisible
+			if m.scrollOffset < 0 {
+				m.scrollOffset = 0
 			}
 
 		case "b", "backspace":
@@ -129,7 +172,9 @@ func (m *PreviewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "c":
 			// Show CLI command instead of processing
-			return NewCommandOutputModel(m.books, m.config, m.fieldMapping), nil
+			// Warn if partial selection (selected books != total available)
+			partialSelection := len(m.books) < m.totalAvailable
+			return NewCommandOutputModelWithSelection(m.books, m.config, m.fieldMapping, partialSelection), nil
 		}
 	}
 
@@ -150,24 +195,22 @@ func (m *PreviewModel) View() string {
 
 	content.WriteString(header + "\n\n")
 
-	// Configuration summary
-	configSummary := fmt.Sprintf("Layout: %s | Embedded Metadata: %s | Flat Mode: %s",
-		m.config["Layout"],
-		m.config["Use Embedded Metadata"],
-		m.config["Flat Mode"])
-
+	// Configuration summary - more compact
+	configSummary := fmt.Sprintf("Layout: %s | %d files", m.config["Layout"], len(m.moves))
 	content.WriteString(lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#FFFF00")).
 		Render(configSummary) + "\n\n")
 
-	// Preview count
-	content.WriteString(fmt.Sprintf("Previewing %d file moves:\n\n", len(m.moves)))
+	// Calculate visible lines based on height
+	maxVisible := m.height - 8 // Space for header and footer
 
-	// Calculate visible range based on height
-	maxVisible := m.height - 12 // Approximate space for header and footer
+	// Use cached lines from widget
+	lines := m.lines
+
+	// Apply scrolling
 	endIdx := m.scrollOffset + maxVisible
-	if endIdx > len(m.moves) {
-		endIdx = len(m.moves)
+	if endIdx > len(lines) {
+		endIdx = len(lines)
 	}
 
 	// Show scroll indicator if needed
@@ -175,123 +218,37 @@ func (m *PreviewModel) View() string {
 		content.WriteString("↑ Scroll up for more\n")
 	}
 
-	// Moves preview
+	// Render visible lines
 	for i := m.scrollOffset; i < endIdx; i++ {
-		move := m.moves[i]
-
-		// Cursor indicator
-		cursor := " "
-		if i == m.cursor {
-			cursor = ">"
-		}
-
-		// Format paths
-		sourceName := filepath.Base(move.SourcePath)
-		sourceDir := filepath.Dir(move.SourcePath)
-
-		// Style for source path based on cursor position
-		var sourceStyle lipgloss.Style
-		if i == m.cursor {
-			sourceStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF"))
-		} else {
-			sourceStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#AAAAAA"))
-		}
-
-		// Add the move preview
-		content.WriteString(fmt.Sprintf("%s From: %s/%s\n",
-			cursor,
-			sourceStyle.Render(sourceDir),
-			sourceStyle.Render(sourceName)))
-
-		// Colorize the output path
-		coloredTarget := m.colorizeOutputPath(move.TargetPath, m.config["Layout"])
-		content.WriteString(fmt.Sprintf("  To:   %s\n\n", coloredTarget))
+		content.WriteString(lines[i] + "\n")
 	}
 
 	// Show scroll indicator if needed
-	if endIdx < len(m.moves) {
+	if endIdx < len(lines) {
 		content.WriteString("↓ Scroll down for more\n")
 	}
 
 	// Footer with help text
 	footer := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#888")).
-		Render("\n↑/↓: Navigate • Enter: Process Files • c: Show CLI Command • b: Back • q: Quit")
+		Render("\n↑/↓: Scroll • n/p: Next/Prev Book • Enter: Process • c: CLI • b: Back • q: Quit")
 
 	content.WriteString(footer)
 
 	return content.String()
 }
 
+// getTotalLines returns the total number of cached lines
+func (m *PreviewModel) getTotalLines() int {
+	return len(m.lines)
+}
+
+// getGroupStartLines returns the cached group start line numbers
+func (m *PreviewModel) getGroupStartLines() []int {
+	return m.groupStarts
+}
+
 // GetMoves returns the current move previews
 func (m *PreviewModel) GetMoves() []MovePreview {
 	return m.moves
-}
-
-// colorizeOutputPath colorizes the output path components based on the layout
-func (m *PreviewModel) colorizeOutputPath(path string, layout string) string {
-	// Define color styles
-	authorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF9500"))   // Orange
-	seriesStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00D9FF"))   // Cyan
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))    // Green
-	separatorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")) // Gray
-
-	// Split the path into components
-	parts := strings.Split(path, string(filepath.Separator))
-
-	// Skip the output directory (first component) and process the rest
-	var coloredParts []string
-	if len(parts) > 1 {
-		parts = parts[1:] // Skip output directory
-	}
-
-	// Apply colors based on layout
-	switch layout {
-	case "author-only":
-		if len(parts) >= 1 {
-			coloredParts = []string{
-				authorStyle.Render(parts[0]),
-			}
-			if len(parts) > 1 {
-				coloredParts = append(coloredParts, parts[1:]...)
-			}
-		}
-	case "author-title":
-		if len(parts) >= 2 {
-			coloredParts = []string{
-				authorStyle.Render(parts[0]),
-				titleStyle.Render(parts[1]),
-			}
-			if len(parts) > 2 {
-				coloredParts = append(coloredParts, parts[2:]...)
-			}
-		}
-	case "author-series-title":
-		if len(parts) >= 3 {
-			coloredParts = []string{
-				authorStyle.Render(parts[0]),
-				seriesStyle.Render(parts[1]),
-				titleStyle.Render(parts[2]),
-			}
-			if len(parts) > 3 {
-				coloredParts = append(coloredParts, parts[3:]...)
-			}
-		} else if len(parts) == 2 {
-			// Fallback when no series
-			coloredParts = []string{
-				authorStyle.Render(parts[0]),
-				titleStyle.Render(parts[1]),
-			}
-		}
-	default:
-		// No colorization for unknown layouts
-		coloredParts = parts
-	}
-
-	if len(coloredParts) == 0 {
-		return path
-	}
-
-	// Join with colorized separators
-	return strings.Join(coloredParts, separatorStyle.Render("/"))
 }

@@ -21,20 +21,22 @@ const (
 
 // DirPickerModel represents the directory picker screen
 type DirPickerModel struct {
-	filepicker     filepicker.Model
-	mode           PickerMode
-	inputDir       string
-	outputDir      string
-	err            error
-	width          int
-	height         int
-	filterText     string
-	filterActive   bool
-	filteredDirs   []string
-	filterCursor   int
-	scrollOffset   int
-	allDirs        []string // All directories in current location
-	cursor         int      // Cursor for non-filtered navigation
+	filepicker   filepicker.Model
+	mode         PickerMode
+	inputDir     string
+	outputDir    string
+	err          error
+	width        int
+	height       int
+	filterText   string
+	filterActive bool
+	filteredDirs []string
+	filterCursor int
+	scrollOffset int
+	allDirs      []string // All directories in current location
+	cursor       int      // Cursor for non-filtered navigation
+	creatingDir  bool     // Whether we're in "create new directory" mode
+	newDirName   string   // Name of the new directory being created
 }
 
 // NewDirPickerModel creates a new directory picker model
@@ -126,6 +128,41 @@ func (m *DirPickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		key := msg.String()
 
+		// Handle "create directory" mode input
+		if m.creatingDir {
+			switch key {
+			case "enter":
+				// Create the directory
+				if m.newDirName != "" {
+					newPath := filepath.Join(m.filepicker.CurrentDirectory, m.newDirName)
+					if err := os.MkdirAll(newPath, 0755); err == nil {
+						// Navigate into the new directory
+						m.filepicker.CurrentDirectory = newPath
+						m.loadDirectories()
+					}
+				}
+				m.creatingDir = false
+				m.newDirName = ""
+				return m, m.filepicker.Init()
+			case "esc":
+				// Cancel directory creation
+				m.creatingDir = false
+				m.newDirName = ""
+				return m, nil
+			case "backspace":
+				if len(m.newDirName) > 0 {
+					m.newDirName = m.newDirName[:len(m.newDirName)-1]
+				}
+				return m, nil
+			default:
+				// Add character to directory name
+				if len(key) == 1 && key >= " " && key <= "~" {
+					m.newDirName += key
+				}
+				return m, nil
+			}
+		}
+
 		// Handle special keys first
 		switch key {
 		case "ctrl+c":
@@ -133,6 +170,14 @@ func (m *DirPickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "ctrl+q":
 			return m, tea.Quit
+
+		case "ctrl+n":
+			// Create new directory (only for output picker)
+			if m.mode == PickingOutput {
+				m.creatingDir = true
+				m.newDirName = ""
+				return m, nil
+			}
 
 		case "ctrl+b":
 			// Navigate up one directory level
@@ -417,9 +462,16 @@ func (m *DirPickerModel) View() string {
 		}
 	}
 
-	// Show filter text if active
+	// Show "create directory" input if active
 	content += "\n\n"
-	if m.filterActive {
+	if m.creatingDir {
+		createStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFF00")).
+			Bold(true)
+		content += createStyle.Render(fmt.Sprintf("📁 New directory name: %s_", m.newDirName)) + "\n"
+		content += lipgloss.NewStyle().Foreground(lipgloss.Color("#888")).Render("Enter: Create • ESC: Cancel") + "\n"
+	} else if m.filterActive {
+		// Show filter text if active
 		filterStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#00FF00")).
 			Bold(true)
@@ -431,7 +483,11 @@ func (m *DirPickerModel) View() string {
 	// Help text
 	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#888"))
 	content += helpStyle.Render("↑/↓: Navigate • Enter: Open Directory • Ctrl+S: Select Current Directory")
-	content += "\n" + helpStyle.Render("Type to filter • ESC: Clear filter • Ctrl+B: Up • Ctrl+H: Home • Ctrl+R: Root • Ctrl+Q: Quit")
+	if m.mode == PickingOutput {
+		content += "\n" + helpStyle.Render("Ctrl+N: Create New Directory • Type to filter • ESC: Clear filter")
+	} else {
+		content += "\n" + helpStyle.Render("Type to filter • ESC: Clear filter • Ctrl+B: Up • Ctrl+H: Home • Ctrl+R: Root • Ctrl+Q: Quit")
+	}
 
 	return content
 }

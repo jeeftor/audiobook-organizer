@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/jeeftor/audiobook-organizer/internal/organizer"
 )
 
 // BookItem represents an item in the book list
@@ -106,8 +107,16 @@ func (i BookItem) Description() string {
 	}
 	desc.WriteString("\nInput: " + path)
 
-	// Third line: Output path preview
-	outputPath := generateOutputPathPreview(i.book)
+	// Third line: Output path preview (using default layout and field mapping)
+	defaultMapping := organizer.FieldMapping{
+		TitleField:   "title",
+		SeriesField:  "series",
+		AuthorFields: []string{"authors", "artist", "album_artist"},
+		TrackField:   "track",
+	}
+	outputPath := GenerateOutputPath(i.book, "author-series-title", defaultMapping, "output")
+	// Shorten the output path for display
+	outputPath = strings.TrimPrefix(outputPath, "output/")
 	desc.WriteString("\nOutput: " + outputPath)
 
 	return desc.String()
@@ -128,14 +137,14 @@ func (i BookItem) FilterValue() string {
 // CustomDelegate is a custom delegate for the book list
 type CustomDelegate struct {
 	Styles struct {
-		NormalTitle, SelectedTitle                lipgloss.Style
-		NormalDesc, SelectedDesc                  lipgloss.Style
-		NormalItemStyle, SelectedItemStyle        lipgloss.Style
-		DimmedDesc                                lipgloss.Style
+		NormalTitle, SelectedTitle         lipgloss.Style
+		NormalDesc, SelectedDesc           lipgloss.Style
+		NormalItemStyle, SelectedItemStyle lipgloss.Style
+		DimmedDesc                         lipgloss.Style
 	}
-	ItemHeight     int
-	ItemSpacing    int
-	SelectedPrefix  string
+	ItemHeight       int
+	ItemSpacing      int
+	SelectedPrefix   string
 	UnselectedPrefix string
 }
 

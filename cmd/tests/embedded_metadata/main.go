@@ -28,9 +28,9 @@ func main() {
 		{
 			Path: filepath.Join(testDataDir, "strange_audiobook_14_Tales_of__ngstr_m___Caf__Chronicles_Mar_a_L_pez_Tr1.m4b"),
 			Metadata: organizer.Metadata{
-				Title:   "Tales of Ångström & Café Chronicles",
-				Authors: []string{"María López"},
-				Series:  []string{"Café Chronicles"},
+				Title:       "Tales of Ångström & Café Chronicles",
+				Authors:     []string{"María López"},
+				Series:      []string{"Café Chronicles"},
 				TrackNumber: 1,
 			},
 		},
@@ -62,9 +62,15 @@ func testEmbeddedMetadata(books []models.AudioBook, useEmbeddedMetadata bool) {
 
 		// Generate output paths with different layouts
 		layouts := []string{"author-only", "author-title", "author-series-title"}
+		defaultMapping := organizer.FieldMapping{
+			TitleField:   "title",
+			SeriesField:  "series",
+			AuthorFields: []string{"authors", "artist", "album_artist"},
+			TrackField:   "track",
+		}
 		for _, layout := range layouts {
 			// Use the exported function to generate output path
-			outputPath := models.GenerateOutputPathWithLayout(book, layout, useEmbeddedMetadata)
+			outputPath := models.GenerateOutputPath(book, layout, defaultMapping, "output")
 			fmt.Printf("  Output (%s): %s\n", layout, outputPath)
 		}
 	}

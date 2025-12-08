@@ -30,7 +30,8 @@ var (
 	replaceSpace        string
 	verbose             bool
 	dryRun              bool
-	planFile            string // File to write dry-run plan to
+	planScript          string // Script file to write dry-run plan to
+	planFile            string // Text file to write dry-run plan to
 	undo                bool
 	prompt              bool
 	removeEmpty         bool
@@ -54,25 +55,26 @@ var (
 
 // envAliases maps config keys to their possible environment variable names
 var envAliases = map[string][]string{
-	"dir":              {"AO_DIR", "AO_INPUT", "AUDIOBOOK_ORGANIZER_DIR", "AUDIOBOOK_ORGANIZER_INPUT"},
-	"input":            {"AO_DIR", "AO_INPUT", "AUDIOBOOK_ORGANIZER_DIR", "AUDIOBOOK_ORGANIZER_INPUT"},
-	"out":              {"AO_OUT", "AO_OUTPUT", "AUDIOBOOK_ORGANIZER_OUT", "AUDIOBOOK_ORGANIZER_OUTPUT"},
-	"output":           {"AO_OUT", "AO_OUTPUT", "AUDIOBOOK_ORGANIZER_OUT", "AUDIOBOOK_ORGANIZER_OUTPUT"},
-	"replace_space":    {"AO_REPLACE_SPACE", "AUDIOBOOK_ORGANIZER_REPLACE_SPACE"},
-	"verbose":          {"AO_VERBOSE", "AUDIOBOOK_ORGANIZER_VERBOSE"},
-	dryRunKey:          {"AO_DRY_RUN", "AUDIOBOOK_ORGANIZER_DRY_RUN"},
-	"plan-file":        {"AO_PLAN_FILE", "AUDIOBOOK_ORGANIZER_PLAN_FILE"},
-	"undo":             {"AO_UNDO", "AUDIOBOOK_ORGANIZER_UNDO"},
-	"prompt":           {"AO_PROMPT", "AUDIOBOOK_ORGANIZER_PROMPT"},
-	removeEmptyKey:     {"AO_REMOVE_EMPTY", "AUDIOBOOK_ORGANIZER_REMOVE_EMPTY"},
-	useEmbeddedMetaKey: {"AO_USE_EMBEDDED_METADATA", "AUDIOBOOK_ORGANIZER_USE_EMBEDDED_METADATA"},
-	"flat":             {"AO_FLAT", "AUDIOBOOK_ORGANIZER_FLAT"},
+	"dir":               {"AO_DIR", "AO_INPUT", "AUDIOBOOK_ORGANIZER_DIR", "AUDIOBOOK_ORGANIZER_INPUT"},
+	"input":             {"AO_DIR", "AO_INPUT", "AUDIOBOOK_ORGANIZER_DIR", "AUDIOBOOK_ORGANIZER_INPUT"},
+	"out":               {"AO_OUT", "AO_OUTPUT", "AUDIOBOOK_ORGANIZER_OUT", "AUDIOBOOK_ORGANIZER_OUTPUT"},
+	"output":            {"AO_OUT", "AO_OUTPUT", "AUDIOBOOK_ORGANIZER_OUT", "AUDIOBOOK_ORGANIZER_OUTPUT"},
+	"replace_space":     {"AO_REPLACE_SPACE", "AUDIOBOOK_ORGANIZER_REPLACE_SPACE"},
+	"verbose":           {"AO_VERBOSE", "AUDIOBOOK_ORGANIZER_VERBOSE"},
+	dryRunKey:           {"AO_DRY_RUN", "AUDIOBOOK_ORGANIZER_DRY_RUN"},
+	"plan-script":       {"AO_PLAN_SCRIPT", "AUDIOBOOK_ORGANIZER_PLAN_SCRIPT"},
+	"plan-file":         {"AO_PLAN_FILE", "AUDIOBOOK_ORGANIZER_PLAN_FILE"},
+	"undo":              {"AO_UNDO", "AUDIOBOOK_ORGANIZER_UNDO"},
+	"prompt":            {"AO_PROMPT", "AUDIOBOOK_ORGANIZER_PROMPT"},
+	removeEmptyKey:      {"AO_REMOVE_EMPTY", "AUDIOBOOK_ORGANIZER_REMOVE_EMPTY"},
+	useEmbeddedMetaKey:  {"AO_USE_EMBEDDED_METADATA", "AUDIOBOOK_ORGANIZER_USE_EMBEDDED_METADATA"},
+	"flat":              {"AO_FLAT", "AUDIOBOOK_ORGANIZER_FLAT"},
 	"add-track-numbers": {"AO_ADD_TRACK_NUMBERS", "AUDIOBOOK_ORGANIZER_ADD_TRACK_NUMBERS"},
-	"rename-files":     {"AO_RENAME_FILES", "AUDIOBOOK_ORGANIZER_RENAME_FILES"},
-	"rename-pattern":   {"AO_RENAME_PATTERN", "AUDIOBOOK_ORGANIZER_RENAME_PATTERN"},
-	"layout":           {"AO_LAYOUT", "AUDIOBOOK_ORGANIZER_LAYOUT"},
-	seriesFormatKey:    {"AO_SERIES_FORMAT", "AUDIOBOOK_ORGANIZER_SERIES_FORMAT"},
-	seriesPaddingKey:   {"AO_SERIES_PADDING", "AUDIOBOOK_ORGANIZER_SERIES_PADDING"},
+	"rename-files":      {"AO_RENAME_FILES", "AUDIOBOOK_ORGANIZER_RENAME_FILES"},
+	"rename-pattern":    {"AO_RENAME_PATTERN", "AUDIOBOOK_ORGANIZER_RENAME_PATTERN"},
+	"layout":            {"AO_LAYOUT", "AUDIOBOOK_ORGANIZER_LAYOUT"},
+	seriesFormatKey:     {"AO_SERIES_FORMAT", "AUDIOBOOK_ORGANIZER_SERIES_FORMAT"},
+	seriesPaddingKey:    {"AO_SERIES_PADDING", "AUDIOBOOK_ORGANIZER_SERIES_PADDING"},
 
 	// Field mapping environment variables
 	titleFieldKey:   {"AO_TITLE_FIELD", "AUDIOBOOK_ORGANIZER_TITLE_FIELD"},
@@ -135,6 +137,7 @@ var rootCmd = &cobra.Command{
 				ReplaceSpace:        viper.GetString("replace_space"),
 				Verbose:             viper.GetBool("verbose"),
 				DryRun:              viper.GetBool(dryRunKey),
+				PlanScript:          viper.GetString("plan-script"),
 				PlanFile:            viper.GetString("plan-file"),
 				Undo:                viper.GetBool("undo"),
 				Prompt:              viper.GetBool("prompt"),
@@ -224,7 +227,8 @@ func init() {
 	rootCmd.Flags().StringVar(&replaceSpace, "replace_space", "", "Character to replace spaces")
 	rootCmd.Flags().BoolVar(&verbose, "verbose", false, "Verbose output")
 	rootCmd.Flags().BoolVar(&dryRun, dryRunKey, false, "Show what would happen without making changes")
-	rootCmd.Flags().StringVar(&planFile, "plan-file", "", "File to write dry-run plan to (e.g., 'plan.txt'). Works with --dry-run to create a detailed move plan.")
+	rootCmd.Flags().StringVar(&planScript, "plan-script", "", "Shell script file to write dry-run plan to (e.g., 'organize.sh'). Generates an executable script with all planned moves.")
+	rootCmd.Flags().StringVar(&planFile, "plan-file", "", "Text file to write dry-run plan to (e.g., 'plan.txt'). Generates a human-readable summary of planned moves.")
 	rootCmd.Flags().BoolVar(&undo, "undo", false, "Restore files to their original locations")
 	rootCmd.Flags().BoolVar(&prompt, "prompt", false, "Prompt for confirmation before moving each book")
 	rootCmd.Flags().BoolVar(&removeEmpty, removeEmptyKey, false, "Remove empty directories after moving files")
@@ -250,6 +254,7 @@ func init() {
 	viper.BindPFlag("replace_space", rootCmd.Flags().Lookup("replace_space"))
 	viper.BindPFlag("verbose", rootCmd.Flags().Lookup("verbose"))
 	viper.BindPFlag(dryRunKey, rootCmd.Flags().Lookup(dryRunKey))
+	viper.BindPFlag("plan-script", rootCmd.Flags().Lookup("plan-script"))
 	viper.BindPFlag("plan-file", rootCmd.Flags().Lookup("plan-file"))
 	viper.BindPFlag("undo", rootCmd.Flags().Lookup("undo"))
 	viper.BindPFlag("prompt", rootCmd.Flags().Lookup("prompt"))

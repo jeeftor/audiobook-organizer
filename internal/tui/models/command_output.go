@@ -11,20 +11,27 @@ import (
 
 // CommandOutputModel represents the command output screen
 type CommandOutputModel struct {
-	books        []AudioBook
-	config       map[string]string
-	fieldMapping organizer.FieldMapping
-	command      string
-	width        int
-	height       int
+	books            []AudioBook
+	config           map[string]string
+	fieldMapping     organizer.FieldMapping
+	command          string
+	width            int
+	height           int
+	partialSelection bool // True if not all available books were selected
 }
 
 // NewCommandOutputModel creates a new command output model
 func NewCommandOutputModel(books []AudioBook, config map[string]string, fieldMapping organizer.FieldMapping) *CommandOutputModel {
+	return NewCommandOutputModelWithSelection(books, config, fieldMapping, false)
+}
+
+// NewCommandOutputModelWithSelection creates a new command output model with partial selection info
+func NewCommandOutputModelWithSelection(books []AudioBook, config map[string]string, fieldMapping organizer.FieldMapping, partialSelection bool) *CommandOutputModel {
 	m := &CommandOutputModel{
-		books:        books,
-		config:       config,
-		fieldMapping: fieldMapping,
+		books:            books,
+		config:           config,
+		fieldMapping:     fieldMapping,
+		partialSelection: partialSelection,
 	}
 
 	// Generate the CLI command
@@ -158,7 +165,18 @@ func (m *CommandOutputModel) View() string {
 
 	// Safety note
 	noteStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF8800")).Italic(true)
-	content.WriteString(noteStyle.Render("Note: --dry-run is always included for safety. Remove it to actually move files.") + "\n\n")
+	content.WriteString(noteStyle.Render("Note: --dry-run is always included for safety. Remove it to actually move files.") + "\n")
+
+	// Warning for partial selection
+	if m.partialSelection {
+		warningStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FF0000")).
+			Bold(true)
+		content.WriteString("\n" + warningStyle.Render("⚠️  WARNING: You selected only some books in the GUI.") + "\n")
+		content.WriteString(noteStyle.Render("   The CLI command below will process ALL files in the input directory.") + "\n")
+		content.WriteString(noteStyle.Render("   To process only specific files, use the GUI's Enter key instead.") + "\n")
+	}
+	content.WriteString("\n")
 
 	// Separator line
 	content.WriteString(strings.Repeat("─", 80) + "\n")

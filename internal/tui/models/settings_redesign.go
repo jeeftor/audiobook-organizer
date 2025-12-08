@@ -46,45 +46,67 @@ const (
 	MetadataFocus
 )
 
+// Setting represents a configurable setting
+type Setting struct {
+	Name        string
+	Description string
+	Options     []string
+	Value       int
+	Focused     bool
+}
+
+// FieldMappingSetting represents a field mapping configuration
+type FieldMappingSetting struct {
+	Name        string
+	Description string
+	Options     []string
+	Value       int
+	Focused     bool
+}
+
 // SettingsTableModel represents the redesigned settings screen with table layout
 type SettingsTableModel struct {
-	table            table.Model
-	metadataViewport viewport.Model
-	selectedBooks    []AudioBook
-	width            int
-	height           int
-	showAdvanced     bool
-	focusArea        FocusArea
+	table             table.Model
+	metadataViewport  viewport.Model
+	metadataWidget    *MetadataWidget
+	pathPreviewWidget *PathPreviewWidget
+	selectedBooks     []AudioBook
+	width             int
+	height            int
+	showAdvanced      bool
+	focusArea         FocusArea
 
 	// Popup state
-	showPopup        bool
-	popupOptions     []string
-	popupSelection   int
-	popupSettingIdx  int
-	justClosedPopup  bool
-
-	// Metadata navigation
-	metadataBookIndex int
+	showPopup       bool
+	popupOptions    []string
+	popupSelection  int
+	popupSettingIdx int
+	justClosedPopup bool
 
 	// Settings values
 	settings      []Setting
 	fieldMappings []FieldMappingSetting
+
+	// Scan mode (set during scan, not changeable)
+	scanMode string
 }
 
 // NewSettingsTableModel creates a new table-based settings model
 func NewSettingsTableModel(selectedBooks []AudioBook, showAdvanced bool) *SettingsTableModel {
+	return NewSettingsTableModelWithMode(selectedBooks, showAdvanced, "Embedded")
+}
+
+// NewSettingsTableModelWithMode creates a new table-based settings model with scan mode
+func NewSettingsTableModelWithMode(selectedBooks []AudioBook, showAdvanced bool, scanMode string) *SettingsTableModel {
 	// Create settings (same as before)
 	settings := []Setting{
 		{Name: "Layout", Description: "Directory structure", Options: []string{"author-only", "author-title", "author-series-title", "author-series-title-number"}, Value: 2},
-		{Name: "Use Embedded Metadata", Description: "Use file metadata", Options: []string{"No", "Yes"}, Value: 1},
-		{Name: "Flat Mode", Description: "Process files individually", Options: []string{"No", "Yes"}, Value: 0},
 		{Name: "Dry Run", Description: "Preview without moving", Options: []string{"No", "Yes"}, Value: 0},
 		{Name: "Verbose", Description: "Detailed output", Options: []string{"No", "Yes"}, Value: 1},
 	}
 
 	fieldMappings := []FieldMappingSetting{
 		{Name: "Layout", Description: "Directory structure", Options: []string{"author-only", "author-title", "author-series-title", "author-series-title-number"}, Value: 2},
-		{Name: "Flat Mode", Description: "Process individually", Options: []string{"No", "Yes"}, Value: 0},
 		{Name: "Title Field", Description: "Field for title", Options: []string{"title", "album", "series", "track_title"}, Value: 0},
 		{Name: "Series Field", Description: "Field for series", Options: []string{"series", "album", "title"}, Value: 0},
 		{Name: "Author Fields", Description: "Author priority", Options: []string{"authors→artist→album_artist", "authors→narrators→artist", "artist→album_artist→composer", "authors only"}, Value: 0},
@@ -93,15 +115,21 @@ func NewSettingsTableModel(selectedBooks []AudioBook, showAdvanced bool) *Settin
 
 	// Combine ALL settings into one unified view
 	// Always show all settings (basic + advanced field mappings)
+	// Note: Scan mode (Flat/Embedded/Normal) is set during scan and shown in header, not changeable here
 	allSettings := []FieldMappingSetting{
 		// Basic settings converted to FieldMappingSetting format
-		{Name: "Use Embedded Metadata", Description: "Use file metadata", Options: []string{"No", "Yes"}, Value: 1},
 		{Name: "Dry Run", Description: "Preview without moving", Options: []string{"No", "Yes"}, Value: 0},
 		{Name: "Verbose", Description: "Detailed output", Options: []string{"No", "Yes"}, Value: 1},
 		{Name: "───────────────────", Description: "separator", Options: []string{""}, Value: 0}, // Visual separator
-		// Advanced field mapping settings
+		// Layout and structure settings
 		{Name: "Layout", Description: "Directory structure", Options: []string{"author-only", "author-title", "author-series-title", "author-series-title-number"}, Value: 2},
-		{Name: "Flat Mode", Description: "Process individually", Options: []string{"No", "Yes"}, Value: 0},
+		{Name: "───────────────────", Description: "separator", Options: []string{""}, Value: 0}, // Visual separator
+		// Rename options
+		{Name: "Add Track Numbers", Description: "Prefix with track #", Options: []string{"No", "Yes"}, Value: 0},
+		{Name: "Rename Files", Description: "Rename using pattern", Options: []string{"No", "Yes"}, Value: 0},
+		{Name: "Rename Pattern", Description: "Pattern for rename", Options: []string{"{track} - {title}", "{title}", "{track}. {title}", "{author} - {title}"}, Value: 0},
+		{Name: "───────────────────", Description: "separator", Options: []string{""}, Value: 0}, // Visual separator
+		// Field mapping settings
 		{Name: "Title Field", Description: "Field for title", Options: []string{"title", "album", "series", "track_title"}, Value: 0},
 		{Name: "Series Field", Description: "Field for series", Options: []string{"series", "album", "title"}, Value: 0},
 		{Name: "Author Fields", Description: "Author priority", Options: []string{"authors→artist→album_artist", "authors→narrators→artist", "artist→album_artist→composer", "authors only"}, Value: 0},
@@ -151,7 +179,7 @@ func NewSettingsTableModel(selectedBooks []AudioBook, showAdvanced bool) *Settin
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(10), // Show all 10 rows
+		table.WithHeight(15), // Show all rows including new rename options
 	)
 
 	s := table.DefaultStyles()
@@ -174,7 +202,14 @@ func NewSettingsTableModel(selectedBooks []AudioBook, showAdvanced bool) *Settin
 		fieldMappings:    fieldMappings,
 		showAdvanced:     showAdvanced,
 		focusArea:        TableFocus,
+		scanMode:         scanMode,
 	}
+
+	// Initialize metadata widget
+	m.metadataWidget = NewMetadataWidget(selectedBooks, m.GetFieldMapping())
+
+	// Initialize path preview widget
+	m.pathPreviewWidget = NewPathPreviewWidget(selectedBooks, m.GetFieldMapping())
 
 	// Initialize metadata content
 	m.updateMetadata()
@@ -205,23 +240,23 @@ func (m *SettingsTableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// - Metadata title bar: 1 line
 		// - Output preview: 5 lines
 		// - Footer: 2 lines (newline + text)
-		usedLines := 3 + 12 + 2 + 1 + 5 + 2  // = 25
+		usedLines := 3 + 12 + 2 + 1 + 5 + 2 // = 25
 
-		// Give all remaining space to metadata viewport
+		// Give remaining space to metadata viewport, but cap to avoid whitespace
 		// The viewport's border/padding is handled by its own Style, not counted here
 		metadataHeight := msg.Height - usedLines
 
-		// Cap at a reasonable maximum to avoid too much empty space
-		if metadataHeight > 30 {
-			metadataHeight = 30
+		// Cap at a reasonable maximum - 22 lines is enough for ~20 metadata fields
+		if metadataHeight > 22 {
+			metadataHeight = 22
 		}
 
 		// Ensure reasonable minimum
-		if metadataHeight < 10 {
-			metadataHeight = 10
+		if metadataHeight < 8 {
+			metadataHeight = 8
 		}
 
-		vpWidth := msg.Width - 4  // Account for viewport borders
+		vpWidth := msg.Width - 4 // Account for viewport borders
 
 		m.metadataViewport.Width = vpWidth
 		m.metadataViewport.Height = metadataHeight
@@ -237,9 +272,9 @@ func (m *SettingsTableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		keyStr := msg.String()
 
-		// Handle c/n globally to advance to next screen - ALWAYS works regardless of popup
-		// Let these pass through to main.go (don't consume them)
-		if keyStr == "c" || keyStr == "n" {
+		// Handle c globally to advance to next screen - ALWAYS works regardless of popup
+		// Let it pass through to main.go (don't consume it)
+		if keyStr == "c" {
 			// Don't consume - let main.go handle advancing to next screen
 			// Just continue processing normally (fall through)
 		} else if m.showPopup {
@@ -319,10 +354,8 @@ func (m *SettingsTableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			} else if m.focusArea == MetadataFocus {
 				// Navigate to previous book in metadata view
-				if m.metadataBookIndex > 0 {
-					m.metadataBookIndex--
-					m.updateMetadata()
-				}
+				m.metadataWidget.PrevBook()
+				m.updateMetadata()
 			}
 
 		case "right", "l":
@@ -347,10 +380,8 @@ func (m *SettingsTableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			} else if m.focusArea == MetadataFocus {
 				// Navigate to next book in metadata view
-				if m.metadataBookIndex < len(m.selectedBooks)-1 {
-					m.metadataBookIndex++
-					m.updateMetadata()
-				}
+				m.metadataWidget.NextBook()
+				m.updateMetadata()
 			}
 
 		case "enter", " ":
@@ -369,6 +400,26 @@ func (m *SettingsTableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			// Enter no longer advances to next screen - use c/n instead
+
+		case "p":
+			// Navigate to previous file (works from any focus area)
+			m.metadataWidget.PrevBook()
+			m.updateMetadata()
+
+		case "n":
+			// Navigate to next file (works from any focus area)
+			m.metadataWidget.NextBook()
+			m.updateMetadata()
+
+		case "P":
+			// Navigate to previous book group (works from any focus area)
+			m.metadataWidget.PrevBookGroup()
+			m.updateMetadata()
+
+		case "N":
+			// Navigate to next book group (works from any focus area)
+			m.metadataWidget.NextBookGroup()
+			m.updateMetadata()
 
 		case "pgup":
 			// Only works when metadata is focused
@@ -407,11 +458,11 @@ func (m *SettingsTableModel) colorizeOutputPath(path string, layout string) stri
 	parts := strings.Split(path, string(filepath.Separator))
 
 	// Color scheme for different components
-	authorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF9500"))      // Orange for author
-	seriesStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00D9FF"))      // Cyan for series
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))       // Green for title
-	fileStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#AAAAAA"))        // Gray for filename
-	separatorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))   // Gray for /
+	authorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF9500"))    // Orange for author
+	seriesStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00D9FF"))    // Cyan for series
+	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))     // Green for title
+	fileStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#AAAAAA"))      // Gray for filename
+	separatorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")) // Gray for /
 
 	// Skip the output directory (first part) and work with the rest
 	if len(parts) > 0 {
@@ -466,189 +517,63 @@ func (m *SettingsTableModel) colorizeOutputPath(path string, layout string) stri
 	return strings.Join(coloredParts, separatorStyle.Render("/"))
 }
 
-// generateOutputPreview generates a simple preview of output paths (non-scrollable)
+// generateOutputPreview generates a simple preview of output paths using the widget
 func (m *SettingsTableModel) generateOutputPreview() string {
-	var content strings.Builder
+	// Update widget settings from current field mappings
+	m.updatePathPreviewWidget()
 
-	// Get layout setting (index 4 in unified list)
-	layout := "author-series-title"
-	if len(m.fieldMappings) > 4 {
-		layout = m.fieldMappings[4].Options[m.fieldMappings[4].Value]
-	}
-
-	// Get field mapping configuration
-	fieldMapping := m.GetFieldMapping()
-
-	// Show preview for up to 3 books
-	previewCount := 3
-	if len(m.selectedBooks) < previewCount {
-		previewCount = len(m.selectedBooks)
-	}
-
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FFFF"))
-	content.WriteString(titleStyle.Render("Output Path Preview:") + "\n")
-
-	for i := 0; i < previewCount; i++ {
-		book := m.selectedBooks[i]
-
-		// Generate output path using universal function
-		outputPath := GenerateOutputPath(book, layout, fieldMapping, "output")
-
-		// Colorize and format path
-		coloredPath := m.colorizeOutputPath(outputPath, layout)
-		content.WriteString("  " + coloredPath + "\n")
-	}
-
-	if len(m.selectedBooks) > previewCount {
-		moreStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Italic(true)
-		content.WriteString(moreStyle.Render(fmt.Sprintf("  ... and %d more", len(m.selectedBooks)-previewCount)) + "\n")
-	}
-
-	return content.String()
+	// Use widget to render compact preview
+	return m.pathPreviewWidget.RenderCompactPreview(3)
 }
 
-// updateMetadata updates the metadata viewport content
+// updatePathPreviewWidget syncs widget settings with current field mappings
+func (m *SettingsTableModel) updatePathPreviewWidget() {
+	// Get layout setting (index 3 in unified list)
+	layout := "author-series-title"
+	if len(m.fieldMappings) > 3 {
+		layout = m.fieldMappings[3].Options[m.fieldMappings[3].Value]
+	}
+
+	// Get Add Track Numbers setting (index 5)
+	addTrackNumbers := false
+	if len(m.fieldMappings) > 5 {
+		addTrackNumbers = m.fieldMappings[5].Value == 1
+	}
+
+	// Get Rename Files setting (index 6)
+	renameFiles := false
+	if len(m.fieldMappings) > 6 {
+		renameFiles = m.fieldMappings[6].Value == 1
+	}
+
+	// Get Rename Pattern (index 7)
+	renamePattern := "{track} - {title}"
+	if len(m.fieldMappings) > 7 {
+		renamePattern = m.fieldMappings[7].Options[m.fieldMappings[7].Value]
+	}
+
+	// Update widget
+	m.pathPreviewWidget.SetLayout(layout)
+	m.pathPreviewWidget.SetFieldMapping(m.GetFieldMapping())
+	m.pathPreviewWidget.SetAddTrackNumbers(addTrackNumbers)
+	m.pathPreviewWidget.SetRenameFiles(renameFiles)
+	m.pathPreviewWidget.SetRenamePattern(renamePattern)
+}
+
+// updateMetadata updates the metadata viewport content using the widget
 func (m *SettingsTableModel) updateMetadata() {
-	var content strings.Builder
+	// Update widget's field mapping to reflect current settings
+	m.metadataWidget.SetFieldMapping(m.GetFieldMapping())
 
-	if len(m.selectedBooks) == 0 {
-		content.WriteString("No books selected")
-		m.metadataViewport.SetContent(content.String())
-		return
-	}
+	// Sync path preview widget's current index with metadata widget
+	m.pathPreviewWidget.SetCurrentIndex(m.metadataWidget.CurrentIndex())
 
-	// Get field mapping to see what's being used
-	fieldMapping := m.GetFieldMapping()
+	// Update path preview widget settings
+	m.updatePathPreviewWidget()
 
-	// Get the book to display based on current index
-	if m.metadataBookIndex >= len(m.selectedBooks) {
-		m.metadataBookIndex = 0
-	}
-	book := m.selectedBooks[m.metadataBookIndex]
+	// Get content from widget and set it in viewport
+	m.metadataViewport.SetContent(m.metadataWidget.View())
 
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFAAFF"))
-
-	// Color styles matching the output path components
-	authorLabelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF9500"))  // Orange for author
-	seriesLabelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00D9FF"))  // Cyan for series
-	titleLabelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))   // Green for title
-	defaultLabelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#AAAAFF")) // Default for other fields
-
-	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
-	usedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00"))
-	checkmark := usedStyle.Render("✓ ")
-
-	content.WriteString(titleStyle.Render(fmt.Sprintf("Metadata Preview (Book %d/%d):", m.metadataBookIndex+1, len(m.selectedBooks))) + "\n\n")
-
-	// Show key metadata fields with checkmarks for fields being used
-	// Title field - use title color (green)
-	titleCheck := ""
-	if fieldMapping.TitleField == "title" {
-		titleCheck = checkmark
-	}
-	content.WriteString(titleCheck + titleLabelStyle.Render("Title: ") + valueStyle.Render(book.Metadata.Title) + "\n")
-
-	// Authors - use author color (orange)
-	authorCheck := ""
-	for _, af := range fieldMapping.AuthorFields {
-		if af == "authors" {
-			authorCheck = checkmark
-			break
-		}
-	}
-	if len(book.Metadata.Authors) > 0 {
-		content.WriteString(authorCheck + authorLabelStyle.Render("Authors: ") + valueStyle.Render(strings.Join(book.Metadata.Authors, ", ")) + "\n")
-	}
-
-	// Series - use series color (cyan)
-	seriesCheck := ""
-	if fieldMapping.SeriesField == "series" {
-		seriesCheck = checkmark
-	}
-	if series := book.Metadata.GetValidSeries(); series != "" {
-		content.WriteString(seriesCheck + seriesLabelStyle.Render("Series: ") + valueStyle.Render(series) + "\n")
-	}
-
-	// Album - could be title or series, determine color based on mapping
-	albumCheck := ""
-	albumLabelStyle := defaultLabelStyle
-	if fieldMapping.TitleField == "album" {
-		albumCheck = checkmark
-		albumLabelStyle = titleLabelStyle
-	} else if fieldMapping.SeriesField == "album" {
-		albumCheck = checkmark
-		albumLabelStyle = seriesLabelStyle
-	}
-	if book.Metadata.Album != "" {
-		content.WriteString(albumCheck + albumLabelStyle.Render("Album: ") + valueStyle.Render(book.Metadata.Album) + "\n")
-	}
-
-	// Track title - could be used as title field
-	trackTitleCheck := ""
-	trackTitleLabelStyle := defaultLabelStyle
-	if fieldMapping.TitleField == "track_title" {
-		trackTitleCheck = checkmark
-		trackTitleLabelStyle = titleLabelStyle
-	}
-	if book.Metadata.TrackTitle != "" {
-		content.WriteString(trackTitleCheck + trackTitleLabelStyle.Render("Track Title: ") + valueStyle.Render(book.Metadata.TrackTitle) + "\n")
-	}
-
-	// Track number
-	trackCheck := ""
-	if fieldMapping.TrackField == "track" || fieldMapping.TrackField == "track_number" {
-		trackCheck = checkmark
-	}
-	if book.Metadata.TrackNumber != 0 {
-		content.WriteString(trackCheck + defaultLabelStyle.Render("Track Number: ") + valueStyle.Render(fmt.Sprintf("%d", book.Metadata.TrackNumber)) + "\n")
-	}
-
-	// Show file path (shortened to last 3 components)
-	pathParts := strings.Split(book.Path, string(filepath.Separator))
-	displayPath := book.Path
-	if len(pathParts) > 3 {
-		displayPath = ".../" + strings.Join(pathParts[len(pathParts)-3:], "/")
-	}
-	content.WriteString("\n" + defaultLabelStyle.Render("Source: ") + valueStyle.Render(displayPath) + "\n")
-	content.WriteString(defaultLabelStyle.Render("Source Type: ") + valueStyle.Render(book.Metadata.SourceType) + "\n")
-
-	// Show raw metadata fields if available
-	if len(book.Metadata.RawData) > 0 {
-		content.WriteString("\n" + defaultLabelStyle.Render("Raw Metadata Fields:") + "\n")
-		for key, val := range book.Metadata.RawData {
-			// Check if this raw field is being used and determine color
-			rawCheck := ""
-			rawLabelStyle := defaultLabelStyle
-
-			// Check if it's the title field
-			if key == fieldMapping.TitleField {
-				rawCheck = checkmark
-				rawLabelStyle = titleLabelStyle
-			}
-			// Check if it's the series field
-			if key == fieldMapping.SeriesField {
-				rawCheck = checkmark
-				rawLabelStyle = seriesLabelStyle
-			}
-			// Check if it's an author field
-			for _, af := range fieldMapping.AuthorFields {
-				if key == af {
-					rawCheck = checkmark
-					rawLabelStyle = authorLabelStyle
-					break
-				}
-			}
-			// Check if it's the track field
-			if key == fieldMapping.TrackField {
-				rawCheck = checkmark
-				// Track field doesn't have a special color
-			}
-
-			content.WriteString(fmt.Sprintf("  %s%s: %v\n", rawCheck, rawLabelStyle.Render(key), val))
-		}
-	}
-
-	m.metadataViewport.SetContent(content.String())
 	// Reset scroll position to top when content changes
 	m.metadataViewport.GotoTop()
 }
@@ -763,6 +688,47 @@ func (m *SettingsTableModel) getSingleMetadataFieldValue(fieldName string, book 
 	return ""
 }
 
+// generateRenamePreview generates a preview of what the renamed file would look like
+func (m *SettingsTableModel) generateRenamePreview(pattern string, book *AudioBook) string {
+	// Get track number from metadata
+	trackNum := book.TrackNumber
+	if trackNum == 0 {
+		trackNum = book.Metadata.TrackNumber
+	}
+	if trackNum == 0 {
+		// Try raw metadata
+		if rawTrack, ok := book.Metadata.RawData["track"].(float64); ok {
+			trackNum = int(rawTrack)
+		} else if rawTrack, ok := book.Metadata.RawData["track_number"].(float64); ok {
+			trackNum = int(rawTrack)
+		}
+	}
+	if trackNum == 0 {
+		trackNum = 1 // Default for preview
+	}
+
+	// Get title
+	title := book.Metadata.Title
+	if title == "" {
+		base := filepath.Base(book.Path)
+		title = strings.TrimSuffix(base, filepath.Ext(base))
+	}
+
+	// Get author
+	author := book.Metadata.GetFirstAuthor("Unknown")
+
+	// Get extension from original file
+	ext := filepath.Ext(book.Path)
+
+	// Apply pattern
+	result := pattern
+	result = strings.ReplaceAll(result, "{track}", fmt.Sprintf("%02d", trackNum))
+	result = strings.ReplaceAll(result, "{title}", title)
+	result = strings.ReplaceAll(result, "{author}", author)
+
+	return result + ext
+}
+
 // renderPopup renders a centered popup selector
 func (m *SettingsTableModel) renderPopup() string {
 	var content strings.Builder
@@ -777,7 +743,7 @@ func (m *SettingsTableModel) renderPopup() string {
 		Background(lipgloss.Color("#7D56F4")).
 		Padding(0, 1)
 
-	content.WriteString(titleStyle.Render("Select " + settingName) + "\n\n")
+	content.WriteString(titleStyle.Render("Select "+settingName) + "\n\n")
 
 	// Options list
 	selectedStyle := lipgloss.NewStyle().
@@ -793,10 +759,7 @@ func (m *SettingsTableModel) renderPopup() string {
 		Italic(true)
 
 	// Get current book's metadata for showing values
-	var currentBook *AudioBook
-	if m.metadataBookIndex < len(m.selectedBooks) {
-		currentBook = &m.selectedBooks[m.metadataBookIndex]
-	}
+	currentBook := m.metadataWidget.CurrentBook()
 
 	for i, option := range m.popupOptions {
 		var optionText string
@@ -813,7 +776,11 @@ func (m *SettingsTableModel) renderPopup() string {
 			coloredPreview := m.colorizeOutputPath(previewPath, option)
 
 			// Format with layout name and preview
-			optionText = fmt.Sprintf("%-20s %s", option, valueStyle.Render(coloredPreview))
+			optionText = fmt.Sprintf("%-25s %s", option, coloredPreview)
+		} else if settingName == "Rename Pattern" && currentBook != nil {
+			// Show preview of renamed file for each pattern
+			previewName := m.generateRenamePreview(option, currentBook)
+			optionText = fmt.Sprintf("%-20s → %s", option, valueStyle.Render(previewName))
 		} else {
 			// Get the value for this field from metadata
 			var fieldValue string
@@ -860,9 +827,24 @@ func (m *SettingsTableModel) renderPopup() string {
 
 // View renders the UI
 func (m *SettingsTableModel) View() string {
-	// Header with debug info
+	// Header with debug info and scan mode
 	debugInfo := fmt.Sprintf(" [Terminal: %dx%d, Viewport: %d lines]", m.width, m.height, m.metadataViewport.Height)
-	header := headerStyle.Render("⚙️ All Settings (Basic + Advanced)"+debugInfo) + "\n\n"
+
+	// Scan mode styling
+	modeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00")).Bold(true)
+	modeDescStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#888")).Italic(true)
+
+	modeInfo := modeStyle.Render(fmt.Sprintf(" [Scan Mode: %s]", m.scanMode))
+	switch m.scanMode {
+	case "Flat":
+		modeInfo += " " + modeDescStyle.Render("(files grouped by metadata)")
+	case "Embedded":
+		modeInfo += " " + modeDescStyle.Render("(files grouped by directory)")
+	case "Normal":
+		modeInfo += " " + modeDescStyle.Render("(using metadata.json)")
+	}
+
+	header := headerStyle.Render("⚙️ All Settings (Basic + Advanced)"+debugInfo) + modeInfo + "\n\n"
 
 	// Table with border
 	tableBorderStyle := lipgloss.NewStyle().
@@ -883,9 +865,9 @@ func (m *SettingsTableModel) View() string {
 	if m.showPopup {
 		helpText = "Selecting option..."
 	} else if m.focusArea == MetadataFocus {
-		helpText = "TAB: Back to settings • ←/→: Browse books • ↑/↓: Scroll • PgUp/PgDn: Scroll faster • c/n: Continue • q: Back"
+		helpText = "TAB: Back to settings • p/n: Prev/Next file • P/N: Prev/Next book • ↑/↓: Scroll • c: Continue • q: Back"
 	} else {
-		helpText = "↑/↓: Navigate • ←/→ or Enter: Pick value • TAB: View metadata • c/n: Continue • q: Back"
+		helpText = "↑/↓: Navigate • ←/→ or Enter: Pick value • p/n: Files • P/N: Books • TAB: Metadata • c: Continue • q: Back"
 	}
 
 	footer := lipgloss.NewStyle().
@@ -908,6 +890,11 @@ func (m *SettingsTableModel) ShouldAdvance() bool {
 	return !m.showPopup && !m.justClosedPopup
 }
 
+// GetSelectedBooks returns the selected books
+func (m *SettingsTableModel) GetSelectedBooks() []AudioBook {
+	return m.selectedBooks
+}
+
 // GetConfig returns the current configuration
 func (m *SettingsTableModel) GetConfig() map[string]string {
 	config := make(map[string]string)
@@ -924,42 +911,70 @@ func (m *SettingsTableModel) GetConfig() map[string]string {
 
 // GetFieldMapping returns the field mapping configuration
 func (m *SettingsTableModel) GetFieldMapping() organizer.FieldMapping {
-	// Unified settings indices:
+	// Unified settings indices (after adding rename options):
 	// 0: Use Embedded Metadata
 	// 1: Dry Run
 	// 2: Verbose
 	// 3: separator
 	// 4: Layout
 	// 5: Flat Mode
-	// 6: Title Field
-	// 7: Series Field
-	// 8: Author Fields
-	// 9: Track Field
+	// 6: separator
+	// 7: Add Track Numbers
+	// 8: Rename Files
+	// 9: Rename Pattern
+	// 10: separator
+	// 11: Title Field
+	// 12: Series Field
+	// 13: Author Fields
+	// 14: Track Field
 
-	// Parse author fields
+	// Find settings by name for robustness
+	var titleField, seriesField, trackField string
 	var authorFields []string
-	if len(m.fieldMappings) > 8 {
-		authorFieldsOption := m.fieldMappings[8].Options[m.fieldMappings[8].Value]
-		switch authorFieldsOption {
-		case "authors→artist→album_artist":
-			authorFields = []string{"authors", "artist", "album_artist"}
-		case "authors→narrators→artist":
-			authorFields = []string{"authors", "narrators", "artist"}
-		case "artist→album_artist→composer":
-			authorFields = []string{"artist", "album_artist", "composer"}
-		case "authors only":
-			authorFields = []string{"authors"}
-		default:
-			authorFields = []string{"authors", "artist", "album_artist"}
+
+	for _, fm := range m.fieldMappings {
+		switch fm.Name {
+		case "Title Field":
+			titleField = fm.Options[fm.Value]
+		case "Series Field":
+			seriesField = fm.Options[fm.Value]
+		case "Track Field":
+			trackField = fm.Options[fm.Value]
+		case "Author Fields":
+			authorFieldsOption := fm.Options[fm.Value]
+			switch authorFieldsOption {
+			case "authors→artist→album_artist":
+				authorFields = []string{"authors", "artist", "album_artist"}
+			case "authors→narrators→artist":
+				authorFields = []string{"authors", "narrators", "artist"}
+			case "artist→album_artist→composer":
+				authorFields = []string{"artist", "album_artist", "composer"}
+			case "authors only":
+				authorFields = []string{"authors"}
+			default:
+				authorFields = []string{"authors", "artist", "album_artist"}
+			}
 		}
-	} else {
+	}
+
+	// Defaults if not found
+	if titleField == "" {
+		titleField = "title"
+	}
+	if seriesField == "" {
+		seriesField = "series"
+	}
+	if trackField == "" {
+		trackField = "track"
+	}
+	if len(authorFields) == 0 {
 		authorFields = []string{"authors", "artist", "album_artist"}
 	}
 
 	return organizer.FieldMapping{
-		TitleField:   m.fieldMappings[6].Options[m.fieldMappings[6].Value],
-		SeriesField:  m.fieldMappings[7].Options[m.fieldMappings[7].Value],
+		TitleField:   titleField,
+		SeriesField:  seriesField,
 		AuthorFields: authorFields,
-		TrackField:   m.fieldMappings[9].Options[m.fieldMappings[9].Value],
+		TrackField:   trackField,
 	}
 }
