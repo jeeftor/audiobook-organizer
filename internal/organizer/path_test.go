@@ -124,6 +124,119 @@ func TestCleanSeriesName(t *testing.T) {
 	}
 }
 
+func TestSanitizePathTrimming(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		replaceSpace string
+		want         string
+	}{
+		{
+			name:         "leading_underscore",
+			input:        "_Test Book",
+			replaceSpace: "",
+			want:         "Test Book",
+		},
+		{
+			name:         "trailing_underscore",
+			input:        "Test Book_",
+			replaceSpace: "",
+			want:         "Test Book",
+		},
+		{
+			name:         "leading_and_trailing_underscore",
+			input:        "_Test Book_",
+			replaceSpace: "",
+			want:         "Test Book",
+		},
+		{
+			name:         "leading_space",
+			input:        " Test Book",
+			replaceSpace: "",
+			want:         "Test Book",
+		},
+		{
+			name:         "trailing_space",
+			input:        "Test Book ",
+			replaceSpace: "",
+			want:         "Test Book",
+		},
+		{
+			name:         "leading_and_trailing_spaces",
+			input:        "  Test Book  ",
+			replaceSpace: "",
+			want:         "Test Book",
+		},
+		{
+			name:         "leading_dot",
+			input:        ".Test Book",
+			replaceSpace: "",
+			want:         "Test Book",
+		},
+		{
+			name:         "trailing_dot",
+			input:        "Test Book.",
+			replaceSpace: "",
+			want:         "Test Book",
+		},
+		{
+			name:         "leading_and_trailing_dots",
+			input:        "..Test Book..",
+			replaceSpace: "",
+			want:         "Test Book",
+		},
+		{
+			name:         "mixed_leading_trailing",
+			input:        "_ .Test Book. _",
+			replaceSpace: "",
+			want:         "Test Book",
+		},
+		{
+			name:         "colon_replaced_with_underscore_then_trimmed",
+			input:        ":Test Book:",
+			replaceSpace: "",
+			want:         "Test Book",
+		},
+		{
+			name:         "multiple_trailing_characters",
+			input:        "Test Book___...",
+			replaceSpace: "",
+			want:         "Test Book",
+		},
+		{
+			name:         "space_replacement_with_trailing_trim",
+			input:        " Test Book ",
+			replaceSpace: ".",
+			want:         "Test.Book",
+		},
+		{
+			name:         "internal_underscores_preserved",
+			input:        "Test_Book_Title",
+			replaceSpace: "",
+			want:         "Test_Book_Title",
+		},
+		{
+			name:         "internal_dots_preserved",
+			input:        "Test.Book.Title",
+			replaceSpace: "",
+			want:         "Test.Book.Title",
+		},
+	}
+
+	config := &OrganizerConfig{}
+	org := NewOrganizer(config)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			org.config.ReplaceSpace = tt.replaceSpace
+			got := org.SanitizePath(tt.input)
+			if got != tt.want {
+				t.Errorf("SanitizePath(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSanitizePathWithProblematicMetadata(t *testing.T) {
 	config := &OrganizerConfig{}
 	org := NewOrganizer(config)

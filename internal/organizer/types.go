@@ -3,6 +3,7 @@ package organizer
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -89,12 +90,19 @@ func (m *Metadata) GetFirstAuthor(defaultValue string) string {
 	return defaultValue
 }
 
-// GetValidSeries returns the first valid series name, cleaning it of series numbers
-func (m *Metadata) GetValidSeries() string {
+// GetFullValidSeries returns the first valid series name with series number intact
+// Sorts the series array to ensure consistent series choice
+func (m *Metadata) GetFullValidSeries() string {
+	sort.Strings(m.Series)
 	if len(m.Series) > 0 && m.Series[0] != "" && m.Series[0] != InvalidSeriesValue {
-		return CleanSeriesName(m.Series[0])
+		return m.Series[0]
 	}
 	return ""
+}
+
+// GetValidSeries returns the first valid series name, cleaning it of series numbers
+func (m *Metadata) GetValidSeries() string {
+	return CleanSeriesName(m.GetFullValidSeries())
 }
 
 // IsValid checks if metadata contains the minimum required fields

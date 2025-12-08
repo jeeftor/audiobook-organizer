@@ -75,7 +75,7 @@ type SettingsTableModel struct {
 func NewSettingsTableModel(selectedBooks []AudioBook, showAdvanced bool) *SettingsTableModel {
 	// Create settings (same as before)
 	settings := []Setting{
-		{Name: "Layout", Description: "Directory structure", Options: []string{"author-only", "author-title", "author-series-title", "author-series-title-number"}, Value: 2},
+		{Name: "Layout", Description: "Directory structure", Options: []string{"author-only", "author-title", "author-series-title", "author-series-title-number", "series-title", "series-title-number"}, Value: 2},
 		{Name: "Use Embedded Metadata", Description: "Use file metadata", Options: []string{"No", "Yes"}, Value: 1},
 		{Name: "Flat Mode", Description: "Process files individually", Options: []string{"No", "Yes"}, Value: 0},
 		{Name: "Dry Run", Description: "Preview without moving", Options: []string{"No", "Yes"}, Value: 0},
@@ -83,7 +83,7 @@ func NewSettingsTableModel(selectedBooks []AudioBook, showAdvanced bool) *Settin
 	}
 
 	fieldMappings := []FieldMappingSetting{
-		{Name: "Layout", Description: "Directory structure", Options: []string{"author-only", "author-title", "author-series-title", "author-series-title-number"}, Value: 2},
+		{Name: "Layout", Description: "Directory structure", Options: []string{"author-only", "author-title", "author-series-title", "author-series-title-number", "series-title", "series-title-number"}, Value: 2},
 		{Name: "Flat Mode", Description: "Process individually", Options: []string{"No", "Yes"}, Value: 0},
 		{Name: "Title Field", Description: "Field for title", Options: []string{"title", "album", "series", "track_title"}, Value: 0},
 		{Name: "Series Field", Description: "Field for series", Options: []string{"series", "album", "title"}, Value: 0},
@@ -100,7 +100,7 @@ func NewSettingsTableModel(selectedBooks []AudioBook, showAdvanced bool) *Settin
 		{Name: "Verbose", Description: "Detailed output", Options: []string{"No", "Yes"}, Value: 1},
 		{Name: "───────────────────", Description: "separator", Options: []string{""}, Value: 0}, // Visual separator
 		// Advanced field mapping settings
-		{Name: "Layout", Description: "Directory structure", Options: []string{"author-only", "author-title", "author-series-title", "author-series-title-number"}, Value: 2},
+		{Name: "Layout", Description: "Directory structure", Options: []string{"author-only", "author-title", "author-series-title", "author-series-title-number", "series-title", "series-title-number"}, Value: 2},
 		{Name: "Flat Mode", Description: "Process individually", Options: []string{"No", "Yes"}, Value: 0},
 		{Name: "Title Field", Description: "Field for title", Options: []string{"title", "album", "series", "track_title"}, Value: 0},
 		{Name: "Series Field", Description: "Field for series", Options: []string{"series", "album", "title"}, Value: 0},
@@ -453,6 +453,21 @@ func (m *SettingsTableModel) colorizeOutputPath(path string, layout string) stri
 				authorStyle.Render(parts[0]),
 				titleStyle.Render(parts[1]),
 				fileStyle.Render(parts[2]),
+			}
+		}
+	case "series-title", "series-title-number":
+		// series/title/filename
+		if len(parts) >= 3 {
+			coloredParts = []string{
+				seriesStyle.Render(parts[0]),
+				titleStyle.Render(parts[1]),
+				fileStyle.Render(parts[2]),
+			}
+		} else if len(parts) >= 2 {
+			// No series, fallback to title/filename
+			coloredParts = []string{
+				titleStyle.Render(parts[0]),
+				fileStyle.Render(parts[1]),
 			}
 		}
 	default:

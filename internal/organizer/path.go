@@ -4,6 +4,7 @@ package organizer
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 )
@@ -15,6 +16,8 @@ var (
 	// Additional problematic characters to sanitize for all platforms
 	// Note: Removed apostrophe (') from this list to ensure consistent behavior across platforms
 	commonProblematicChars = []string{"<", ">", ":", "|", "?", "*", "`", "\""}
+	// Regex to trim leading/trailing underscores, spaces, and dots
+	reTrim = regexp.MustCompile(`(^[_ .]+)|([_ .]+$)`)
 )
 
 // SupportedAudioExtensions as a map for O(1) lookup instead of slice iteration
@@ -57,8 +60,8 @@ func (o *Organizer) SanitizePath(s string) string {
 		s = strings.ReplaceAll(s, char, "_")
 	}
 
-	// Trim leading and trailing spaces and dots
-	s = strings.Trim(s, " .")
+	// Trim leading and trailing spaces, dots, and underscores using regex
+	s = reTrim.ReplaceAllString(s, "")
 
 	return s
 }
@@ -94,8 +97,8 @@ func GetSeriesNumberFromMetadata(metadata Metadata) string {
 	}
 
 	// Fall back to extracting from series string
-	if len(metadata.Series) > 0 && metadata.Series[0] != "" {
-		return ExtractSeriesNumber(metadata.Series[0])
+	if series := metadata.GetFullValidSeries(); series != "" {
+		return ExtractSeriesNumber(series)
 	}
 
 	return ""

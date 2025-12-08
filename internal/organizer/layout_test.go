@@ -505,6 +505,14 @@ func TestAllLayoutOptions(t *testing.T) {
 			expected: filepath.Join("testbase", "Brandon Sanderson", "Mistborn", "#1 - The Final Empire"),
 		},
 		{
+			layout:   "series-title",
+			expected: filepath.Join("testbase", "Mistborn", "The Final Empire"),
+		},
+		{
+			layout:   "series-title-number",
+			expected: filepath.Join("testbase", "Mistborn", "#1 - The Final Empire"),
+		},
+		{
 			layout:   "", // Default should be author-series-title
 			expected: filepath.Join("testbase", "Brandon Sanderson", "Mistborn", "The Final Empire"),
 		},
@@ -596,6 +604,137 @@ func TestSeriesNumberEdgeCases(t *testing.T) {
 			},
 			layout:   "author-series-title-number",
 			expected: filepath.Join("testbase", "Test Author", "Test Series", "#1 - Test Book"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &OrganizerConfig{
+				BaseDir: "testbase",
+				Layout:  tt.layout,
+			}
+
+			sanitizer := func(s string) string { return s }
+			lc := NewLayoutCalculator(config, sanitizer)
+
+			result := lc.CalculateTargetPath(tt.metadata)
+			if result != tt.expected {
+				t.Errorf("CalculateTargetPath() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestSeriesOnlyLayouts tests the series-title and series-title-number layouts
+func TestSeriesOnlyLayouts(t *testing.T) {
+	tests := []struct {
+		name     string
+		layout   string
+		metadata Metadata
+		expected string
+	}{
+		{
+			name:   "series-title with series",
+			layout: "series-title",
+			metadata: Metadata{
+				Title:   "The Final Empire",
+				Authors: []string{"Brandon Sanderson"},
+				Series:  []string{"Mistborn"},
+				RawData: map[string]interface{}{},
+			},
+			expected: filepath.Join("testbase", "Mistborn", "The Final Empire"),
+		},
+		{
+			name:   "series-title without series",
+			layout: "series-title",
+			metadata: Metadata{
+				Title:   "Elantris",
+				Authors: []string{"Brandon Sanderson"},
+				Series:  []string{},
+				RawData: map[string]interface{}{},
+			},
+			expected: filepath.Join("testbase", "Elantris"),
+		},
+		{
+			name:   "series-title-number with series_index",
+			layout: "series-title-number",
+			metadata: Metadata{
+				Title:   "The Final Empire",
+				Authors: []string{"Brandon Sanderson"},
+				Series:  []string{"Mistborn"},
+				RawData: map[string]interface{}{
+					"series_index": 1.0,
+				},
+			},
+			expected: filepath.Join("testbase", "Mistborn", "#1 - The Final Empire"),
+		},
+		{
+			name:   "series-title-number with series string number",
+			layout: "series-title-number",
+			metadata: Metadata{
+				Title:   "The Well of Ascension",
+				Authors: []string{"Brandon Sanderson"},
+				Series:  []string{"Mistborn #2"},
+				RawData: map[string]interface{}{},
+			},
+			expected: filepath.Join("testbase", "Mistborn", "#2 - The Well of Ascension"),
+		},
+		{
+			name:   "series-title-number without series",
+			layout: "series-title-number",
+			metadata: Metadata{
+				Title:   "Elantris",
+				Authors: []string{"Brandon Sanderson"},
+				Series:  []string{},
+				RawData: map[string]interface{}{},
+			},
+			expected: filepath.Join("testbase", "Elantris"),
+		},
+		{
+			name:   "series-title-number with series but no number",
+			layout: "series-title-number",
+			metadata: Metadata{
+				Title:   "The Hero of Ages",
+				Authors: []string{"Brandon Sanderson"},
+				Series:  []string{"Mistborn"},
+				RawData: map[string]interface{}{},
+			},
+			expected: filepath.Join("testbase", "Mistborn", "The Hero of Ages"),
+		},
+		{
+			name:   "series-title with multiple series (sorted)",
+			layout: "series-title",
+			metadata: Metadata{
+				Title:   "Test Book",
+				Authors: []string{"Test Author"},
+				Series:  []string{"Z Series", "A Series"},
+				RawData: map[string]interface{}{},
+			},
+			expected: filepath.Join("testbase", "A Series", "Test Book"),
+		},
+		{
+			name:   "series-title-number with decimal series_index",
+			layout: "series-title-number",
+			metadata: Metadata{
+				Title:   "The Eleventh Metal",
+				Authors: []string{"Brandon Sanderson"},
+				Series:  []string{"Mistborn"},
+				RawData: map[string]interface{}{
+					"series_index": 0.5,
+				},
+			},
+			expected: filepath.Join("testbase", "Mistborn", "#0.5 - The Eleventh Metal"),
+		},
+		{
+			name:   "series-title with invalid series marker",
+			layout: "series-title",
+			metadata: Metadata{
+				Title:   "Test Book",
+				Authors: []string{"Test Author"},
+				Series:  []string{InvalidSeriesValue},
+				RawData: map[string]interface{}{},
+			},
+			expected: filepath.Join("testbase", "Test Book"),
 		},
 	}
 
