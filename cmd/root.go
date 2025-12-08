@@ -20,6 +20,8 @@ const ( // This makes sonar pass
 	useEmbeddedMetaKey = "use-embedded-metadata"
 	removeEmptyKey     = "remove-empty"
 	dryRunKey          = "dry-run"
+	seriesFormatKey    = "series-format"
+	seriesPaddingKey   = "series-padding"
 )
 
 var (
@@ -34,6 +36,8 @@ var (
 	useEmbeddedMetadata bool
 	flat                bool
 	layout              string // Directory structure layout
+	seriesFormat        string // Series number format (bracket or hash)
+	seriesPadding       int    // Series number padding width
 
 	// Field mapping flags
 	titleField   string
@@ -59,6 +63,8 @@ var envAliases = map[string][]string{
 	useEmbeddedMetaKey: {"AO_USE_EMBEDDED_METADATA", "AUDIOBOOK_ORGANIZER_USE_EMBEDDED_METADATA"},
 	"flat":             {"AO_FLAT", "AUDIOBOOK_ORGANIZER_FLAT"},
 	"layout":           {"AO_LAYOUT", "AUDIOBOOK_ORGANIZER_LAYOUT"},
+	seriesFormatKey:    {"AO_SERIES_FORMAT", "AUDIOBOOK_ORGANIZER_SERIES_FORMAT"},
+	seriesPaddingKey:   {"AO_SERIES_PADDING", "AUDIOBOOK_ORGANIZER_SERIES_PADDING"},
 
 	// Field mapping environment variables
 	titleFieldKey:   {"AO_TITLE_FIELD", "AUDIOBOOK_ORGANIZER_TITLE_FIELD"},
@@ -127,6 +133,8 @@ var rootCmd = &cobra.Command{
 				UseEmbeddedMetadata: viper.GetBool(useEmbeddedMetaKey),
 				Flat:                viper.GetBool("flat"),
 				Layout:              viper.GetString("layout"),
+				SeriesFormat:        viper.GetString(seriesFormatKey),
+				SeriesPadding:       viper.GetInt(seriesPaddingKey),
 				FieldMapping: organizer.FieldMapping{
 					TitleField:   viper.GetString(titleFieldKey),
 					SeriesField:  viper.GetString(seriesFieldKey),
@@ -210,6 +218,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&useEmbeddedMetadata, useEmbeddedMetaKey, false, "Use metadata embedded in EPUB files if metadata.json is not found")
 	rootCmd.Flags().BoolVar(&flat, "flat", false, "Process files in a flat directory structure (automatically enables --use-embedded-metadata)")
 	rootCmd.Flags().StringVarP(&layout, "layout", "l", "author-series-title", "Directory structure layout:\n  - author-series-title:        Author/Series/Title/ (default)\n  - author-series-title-number: Author/Series/#1 - Title/ (include series number in title)\n  - author-title:               Author/Title/ (ignore series)\n  - author-only:                Author/ (flatten all books)")
+	rootCmd.Flags().StringVar(&seriesFormat, seriesFormatKey, "bracket", "Series number format:\n  - bracket: [NN] format with zero-padding (default, better sorting)\n  - hash:    #N format without padding (legacy)")
+	rootCmd.Flags().IntVar(&seriesPadding, seriesPaddingKey, 2, "Number of digits to pad series numbers to (default: 2 for up to 99 books)")
 	// Field mapping flags
 	rootCmd.Flags().StringVar(&titleField, titleFieldKey, "", "Field to use as title (e.g., 'album', 'title', 'track_title')")
 	rootCmd.Flags().StringVar(&seriesField, seriesFieldKey, "", "Field to use as series (e.g., 'series', 'album')")
@@ -230,6 +240,8 @@ func init() {
 	viper.BindPFlag(useEmbeddedMetaKey, rootCmd.Flags().Lookup(useEmbeddedMetaKey))
 	viper.BindPFlag("flat", rootCmd.Flags().Lookup("flat"))
 	viper.BindPFlag("layout", rootCmd.Flags().Lookup("layout"))
+	viper.BindPFlag(seriesFormatKey, rootCmd.Flags().Lookup(seriesFormatKey))
+	viper.BindPFlag(seriesPaddingKey, rootCmd.Flags().Lookup(seriesPaddingKey))
 
 	// Bind field mapping flags to viper
 	viper.BindPFlag(titleFieldKey, rootCmd.Flags().Lookup(titleFieldKey))

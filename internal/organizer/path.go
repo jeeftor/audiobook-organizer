@@ -101,6 +101,61 @@ func GetSeriesNumberFromMetadata(metadata Metadata) string {
 	return ""
 }
 
+// FormatSeriesNumber formats a series number according to the specified format and padding.
+// Supported formats:
+//   - "bracket": [NN] format with zero-padding (e.g., "[01]", "[02.5]")
+//   - "hash": #N format without padding (e.g., "#1", "#2.5") - legacy format
+//
+// Parameters:
+//   - seriesNumber: The series number as a string (e.g., "1", "2.5", "12")
+//   - format: The format to use ("bracket" or "hash"). Empty defaults to "bracket"
+//   - padding: Number of digits to pad to. Only applies to bracket format. 0 defaults to 2.
+//
+// Returns the formatted series number, or empty string if seriesNumber is empty.
+func FormatSeriesNumber(seriesNumber, format string, padding int) string {
+	if seriesNumber == "" {
+		return ""
+	}
+
+	// Default format is bracket
+	if format == "" {
+		format = "bracket"
+	}
+
+	// Default padding is 2
+	if padding <= 0 {
+		padding = 2
+	}
+
+	switch format {
+	case "bracket":
+		// Check if the number contains a decimal point
+		if strings.Contains(seriesNumber, ".") {
+			// For decimal numbers, pad only the integer part
+			parts := strings.SplitN(seriesNumber, ".", 2)
+			intPart := parts[0]
+			decPart := parts[1]
+
+			// Pad the integer part
+			paddedInt := fmt.Sprintf("%0*s", padding, intPart)
+			return fmt.Sprintf("[%s.%s]", paddedInt, decPart)
+		}
+
+		// For whole numbers, pad normally
+		padded := fmt.Sprintf("%0*s", padding, seriesNumber)
+		return fmt.Sprintf("[%s]", padded)
+
+	case "hash":
+		// Legacy format - no padding
+		return fmt.Sprintf("#%s", seriesNumber)
+
+	default:
+		// Unknown format, default to bracket
+		padded := fmt.Sprintf("%0*s", padding, seriesNumber)
+		return fmt.Sprintf("[%s]", padded)
+	}
+}
+
 // IsSupportedAudioFile checks if a file extension represents a supported audio format.
 // Uses a map for O(1) lookup performance instead of slice iteration.
 func IsSupportedAudioFile(ext string) bool {

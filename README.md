@@ -293,10 +293,46 @@ Options:
 - `--use-embedded-metadata`: Use metadata embedded in EPUB, MP3, and M4B files if metadata.json is not found
 - `--flat`: Process files in a flat directory structure (automatically enables --use-embedded-metadata)
 - `--layout`: Directory structure layout (options: author-series-title, author-series-title-number, author-title, author-only)
+- `--series-format`: Series number format (bracket or hash, default: bracket)
+- `--series-padding`: Number of digits to pad series numbers to (default: 2)
 - `--author-fields`: Comma-separated list of fields to try for author (e.g., 'authors,narrators,album_artist,artist')
 - `--series-field`: Field to use as series (e.g., 'series', 'album')
 - `--title-field`: Field to use as title (e.g., 'album', 'title', 'track_title')
 - `--track-field`: Field to use for track number (e.g., 'track', 'track_number')
+
+### Series Number Formatting
+
+When using the `author-series-title-number` layout, the series number can be formatted in two ways:
+
+#### Bracket Format (Default, Recommended)
+- Format: `[NN] Title`
+- Example: `Author/Series/[01] The Final Empire/`
+- **Benefits:**
+  - Better shell compatibility (no special quoting needed)
+  - Correct lexicographic sorting (`[01]`, `[02]`, `[10]` sorts correctly)
+  - Handles decimal numbers: `[02.5] Novella`
+  - Configurable padding for large series
+
+#### Hash Format (Legacy)
+- Format: `#N - Title`
+- Example: `Author/Series/#1 - The Final Empire/`
+- **Issues:**
+  - Requires shell quoting due to `#` symbol
+  - Incorrect sorting (`#1`, `#10`, `#2` - wrong order)
+  - Maintained for backward compatibility
+
+**Configuration:**
+```bash
+# Use bracket format with default 2-digit padding (up to 99 books)
+audiobook-organizer --layout=author-series-title-number
+
+# Use bracket format with 3-digit padding (up to 999 books)
+audiobook-organizer --layout=author-series-title-number --series-padding=3
+
+# Use legacy hash format
+audiobook-organizer --layout=author-series-title-number --series-format=hash
+```
+
 ### Directory Layout Options
 
 #### `--layout` Flag
@@ -304,7 +340,7 @@ Options:
 Controls the directory structure of the organized audiobooks. Available options:
 
 - `author-series-title` (default): Organizes as `Author/Series/Book Title/`
-- `author-series-title-number`: Organizes as `Author/Series/#1 - Book Title/` (includes series number in title directory)
+- `author-series-title-number`: Organizes as `Author/Series/[01] Book Title/` (includes series number in title directory)
 - `author-title`: Organizes as `Author/Book Title/`
 - `author-only`: Organizes as `Author/` with all files directly in the author directory
 
@@ -601,6 +637,8 @@ remove-empty: true  # Remove empty directories
 use-embedded-metadata: true # Use metadata embedded in EPUB, MP3, and M4B files
 flat: false  # Process files in a flat directory structure
 layout: "author-series-title"  # Directory structure layout options: author-series-title, author-series-title-number, author-title, author-only
+series-format: "bracket"  # Series number format: bracket (default, [NN]) or hash (legacy, #N)
+series-padding: 2  # Number of digits to pad series numbers (default: 2 for up to 99 books)
 use-series-as-title: false  # Use Series field as the main title directory for MP3 files
 
 # Metadata field mapping
@@ -634,6 +672,8 @@ export AO_VERBOSE=true
 export AO_REMOVE_EMPTY=true
 export AO_USE_EMBEDDED_METADATA=true
 export AO_LAYOUT="author-series-title"  # Options: author-series-title, author-series-title-number, author-title, author-only
+export AO_SERIES_FORMAT="bracket"  # Options: bracket (default), hash (legacy)
+export AO_SERIES_PADDING=2  # Number of digits to pad series numbers
 export AO_USE_SERIES_AS_TITLE=false
 export AO_AUTHOR_FIELDS="authors,narrators,album_artist,artist"
 export AO_SERIES_FIELD="series"
@@ -646,6 +686,8 @@ export AUDIOBOOK_ORGANIZER_VERBOSE=true
 export AUDIOBOOK_ORGANIZER_REMOVE_EMPTY=true
 export AUDIOBOOK_ORGANIZER_USE_EMBEDDED_METADATA=true
 export AUDIOBOOK_ORGANIZER_LAYOUT="author-series-title"
+export AUDIOBOOK_ORGANIZER_SERIES_FORMAT="bracket"
+export AUDIOBOOK_ORGANIZER_SERIES_PADDING=2
 export AUDIOBOOK_ORGANIZER_USE_SERIES_AS_TITLE=false
 export AUDIOBOOK_ORGANIZER_AUTHOR_FIELDS="authors,narrators,album_artist,artist"
 export AUDIOBOOK_ORGANIZER_SERIES_FIELD="series"
