@@ -238,6 +238,9 @@ func (o *Organizer) organizeAlbumGroup(albumGroup *AlbumGroup) error {
 		}
 	}
 
+	// Get total number of files for proper track number padding
+	totalFiles := len(albumGroup.Files)
+
 	// Move each file to the target directory with appropriate track numbering
 	for i, filePath := range albumGroup.Files {
 		// Get original track number or use index+1 if not available
@@ -246,9 +249,15 @@ func (o *Organizer) organizeAlbumGroup(albumGroup *AlbumGroup) error {
 			trackNum = i + 1
 		}
 
-		// Calculate target filename with track prefix
+		// Calculate target filename
 		fileName := filepath.Base(filePath)
-		targetName := AddTrackPrefix(fileName, trackNum)
+		targetName := fileName
+
+		// Add track prefix if enabled
+		if o.config.AddTrackNumbers {
+			targetName = AddTrackPrefix(fileName, trackNum, totalFiles)
+		}
+
 		targetPath := filepath.Join(targetDir, targetName)
 
 		if o.config.Verbose || o.config.DryRun {

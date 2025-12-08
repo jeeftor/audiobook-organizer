@@ -205,6 +205,111 @@ func (o *Organizer) calculateTestBookTargetDir(metadata Metadata) string {
 	return filepath.Join(o.config.OutputDir, author)
 }
 
+// isSuspiciousTitle detects if a title looks like track numbers (e.g., "098/113", "98/99")
+func isSuspiciousTitle(title string) bool {
+	// Pattern: digits/digits or digits-digits
+	if len(title) < 3 {
+		return false
+	}
+
+	// Check for patterns like "98/99", "098/113", "1/10", etc.
+	// Also check for "Part NN of NN"
+	suspiciousPatterns := []string{
+		`^\d+/\d+$`,           // 98/99, 098/113
+		`^\d+-\d+$`,           // 98-99
+		`^Part \d+ of \d+$`,   // Part 98 of 99
+		`^\d+\s*of\s*\d+$`,    // 98 of 99
+	}
+
+	for _, pattern := range suspiciousPatterns {
+		matched, _ := regexp.MatchString(pattern, strings.TrimSpace(title))
+		if matched {
+			return true
+		}
+	}
+
+	return false
+}
+
+// checkForSuspiciousTitles analyzes parsed files and warns about suspicious titles
+func (o *Organizer) checkForSuspiciousTitles(parsedFiles []FileWithMetadata) (int, []string) {
+	suspiciousCount := 0
+	examples := []string{}
+
+	for _, parsed := range parsedFiles {
+		if parsed.Error != nil {
+			continue
+		}
+
+		if isSuspiciousTitle(parsed.Metadata.Title) {
+			suspiciousCount++
+			if len(examples) < 5 {
+				examples = append(examples, fmt.Sprintf("  • %s → Title: \"%s\"",
+					filepath.Base(parsed.FilePath), parsed.Metadata.Title))
+			}
+		}
+	}
+
+	return suspiciousCount, examples
+}
+
+// parseMetadataParallel parses metadata for all files in parallel using a worker pool
+func (o *Organizer) parseMetadataParallel(filePaths []string, workerCount int) []FileWithMetadata {
+	if len(filePaths) == 0 {
+		return []FileWithMetadata{}
+	}
+
+	// Create channels for work distribution
+	jobs := make(chan string, len(filePaths))
+	results := make(chan FileWithMetadata, len(filePaths))
+
+	// Start worker pool
+	for w := 0; w < workerCount; w++ {
+		go func() {
+			for filePath := range jobs {
+				result := FileWithMetadata{
+					FilePath: filePath,
+				}
+
+				// Get metadata provider for this file
+				provider, err := o.getMetadataProvider(filePath)
+				if err != nil {
+					result.Error = err
+					results <- result
+					continue
+				}
+
+				// Parse metadata
+				metadata, err := o.prepareMetadata(provider)
+				if err != nil {
+					result.Error = err
+					results <- result
+					continue
+				}
+
+				result.Metadata = metadata
+				result.Provider = provider
+				results <- result
+			}
+		}()
+	}
+
+	// Send jobs to workers
+	for _, filePath := range filePaths {
+		jobs <- filePath
+	}
+	close(jobs)
+
+	// Collect results
+	parsedFiles := make([]FileWithMetadata, 0, len(filePaths))
+	for i := 0; i < len(filePaths); i++ {
+		parsedFiles = append(parsedFiles, <-results)
+	}
+	close(results)
+
+	return parsedFiles
+}
+
 // processAudioFilesInDirectory should be renamed to processSupportedFilesInDirectory
 // and updated to handle all supported file types in flat mode
 func (o *Organizer) processSupportedFilesInDirectory(path string) error {
@@ -213,6 +318,8 @@ func (o *Organizer) processSupportedFilesInDirectory(path string) error {
 		return fmt.Errorf("error reading directory: %w", err)
 	}
 
+	// Collect all supported file paths
+	var filePaths []string
 	for _, entry := range entries {
 		if entry.IsDir() {
 			if o.config.Verbose {
@@ -226,11 +333,57 @@ func (o *Organizer) processSupportedFilesInDirectory(path string) error {
 
 		// Clean, centralized check for supported file types
 		if IsSupportedFile(ext) {
-			if err := o.OrganizeSingleFile(filePath, nil); err != nil {
-				PrintRed("❌ Error organizing file %s: %v", filePath, err)
-			}
+			filePaths = append(filePaths, filePath)
 		} else if o.config.Verbose {
 			PrintYellow("⏩ Skipping unsupported file type: %s", filePath)
+		}
+	}
+
+	// Parse metadata in parallel
+	if o.config.Verbose {
+		PrintCyan("📊 Parsing metadata for %d files in parallel...", len(filePaths))
+	}
+
+	// Use 20 workers for parallel parsing (good balance for I/O bound operations)
+	parsedFiles := o.parseMetadataParallel(filePaths, 20)
+
+	// Check for suspicious titles that look like track numbers
+	suspiciousCount, examples := o.checkForSuspiciousTitles(parsedFiles)
+	if suspiciousCount > 0 {
+		PrintYellow("\n⚠️  WARNING: Found %d files with suspicious titles that look like track numbers!", suspiciousCount)
+		PrintYellow("This may create nested folders like: Author/Series/098/113/filename.mp3\n")
+		PrintYellow("Examples:")
+		for _, example := range examples {
+			PrintYellow(example)
+		}
+		if suspiciousCount > len(examples) {
+			PrintYellow("  ... and %d more\n", suspiciousCount-len(examples))
+		}
+
+		PrintCyan("\n💡 Suggestions:")
+		PrintCyan("  1. Use --layout author-title to skip the series/title nesting")
+		PrintCyan("  2. Use --title-field album to use the Album field as title")
+		PrintCyan("  3. Continue anyway if this is intentional\n")
+
+		if !o.config.DryRun {
+			response := o.PromptYesNo("Do you want to continue?")
+			if !response {
+				PrintYellow("⏩ Aborting organization")
+				return nil
+			}
+		}
+	}
+
+	// Process files sequentially with pre-parsed metadata
+	for _, parsed := range parsedFiles {
+		if parsed.Error != nil {
+			PrintRed("❌ Error parsing metadata for %s: %v", parsed.FilePath, parsed.Error)
+			continue
+		}
+
+		// Pass the pre-parsed metadata to OrganizeSingleFile
+		if err := o.OrganizeSingleFile(parsed.FilePath, parsed.Provider); err != nil {
+			PrintRed("❌ Error organizing file %s: %v", parsed.FilePath, err)
 		}
 	}
 
@@ -454,8 +607,53 @@ func (o *Organizer) OrganizeSingleFile(filePath string, provider MetadataProvide
 // including both directory and filename components.
 func (o *Organizer) calculateSingleFileTargetPath(filePath string, metadata Metadata) string {
 	targetDir := o.calculateSingleFileTargetDir(filePath, metadata)
-	targetFileName := AddTrackPrefix(filepath.Base(filePath), metadata.TrackNumber)
-	return filepath.Join(targetDir, targetFileName)
+
+	fileName := filepath.Base(filePath)
+
+	// Only add track prefix if enabled
+	if o.config.AddTrackNumbers && metadata.TrackNumber > 0 {
+		// Get total tracks for proper padding
+		totalTracks := o.getTotalTracksForFile(filePath, metadata)
+		fileName = AddTrackPrefix(fileName, metadata.TrackNumber, totalTracks)
+	}
+
+	return filepath.Join(targetDir, fileName)
+}
+
+// getTotalTracksForFile determines the total number of tracks for proper padding
+// It checks metadata first, then counts files in the parent directory
+func (o *Organizer) getTotalTracksForFile(filePath string, metadata Metadata) int {
+	// First try to get from metadata's RawData
+	if totalTracks, ok := metadata.RawData["track_total"].(float64); ok && totalTracks > 0 {
+		return int(totalTracks)
+	}
+	if totalTracks, ok := metadata.RawData["track_total"].(int); ok && totalTracks > 0 {
+		return totalTracks
+	}
+
+	// If not in metadata, count audio files in the parent directory
+	parentDir := filepath.Dir(filePath)
+	entries, err := os.ReadDir(parentDir)
+	if err != nil {
+		// Default to 100 if we can't read the directory (results in 3-digit padding)
+		return 100
+	}
+
+	count := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			ext := strings.ToLower(filepath.Ext(entry.Name()))
+			if IsSupportedAudioFile(ext) {
+				count++
+			}
+		}
+	}
+
+	// If we found files, use that count; otherwise default to 100
+	if count > 0 {
+		return count
+	}
+	return 100
 }
 
 // calculateSingleFileTargetDir determines the target directory for a single file
@@ -606,28 +804,25 @@ func (o *Organizer) formatTargetPathComponents(targetPath string) string {
 func (o *Organizer) formatPathComponentsWithColors(pathParts []string) string {
 	var result strings.Builder
 
-	// Author
-	if len(pathParts) > 1 {
-		result.WriteString(AuthorColor(pathParts[0]))
-	}
+	for i, part := range pathParts {
+		if i > 0 {
+			result.WriteString("/")
+		}
 
-	// Series
-	if len(pathParts) > 2 {
-		result.WriteString("/")
-		result.WriteString(SeriesColor(pathParts[1]))
-	}
-
-	// Title
-	if len(pathParts) > 3 {
-		result.WriteString("/")
-		result.WriteString(TitleColor(pathParts[2]))
-	}
-
-	// Filename
-	if len(pathParts) > 0 {
-		result.WriteString("/")
-		filename := pathParts[len(pathParts)-1]
-		result.WriteString(o.formatColoredFilename(filename))
+		switch {
+		case i == 0:
+			// Author - Green
+			result.WriteString(AuthorColor(part))
+		case i == 1:
+			// Series - Cyan
+			result.WriteString(SeriesColor(part))
+		case i == len(pathParts)-1:
+			// Filename - White with track numbers colored
+			result.WriteString(o.formatColoredFilename(part))
+		default:
+			// Title and any subdirectories - Yellow
+			result.WriteString(TitleColor(part))
+		}
 	}
 
 	return result.String()
@@ -992,13 +1187,21 @@ func (o *Organizer) getDirectoryMetadata(sourcePath string) *Metadata {
 func (o *Organizer) processDirectoryFiles(entries []os.DirEntry, sourcePath, targetPath string, dirMetadata *Metadata) ([]string, error) {
 	var fileNames []string
 
+	// Count total files (excluding directories) for proper track number padding
+	totalFiles := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			totalFiles++
+		}
+	}
+
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue // Skip subdirectories
 		}
 
 		sourceName := filepath.Join(sourcePath, entry.Name())
-		targetName := o.calculateFileTargetName(entry.Name(), dirMetadata)
+		targetName := o.calculateFileTargetName(entry.Name(), dirMetadata, totalFiles)
 		targetFullPath := filepath.Join(targetPath, targetName)
 		fileNames = append(fileNames, targetName)
 
@@ -1018,13 +1221,27 @@ func (o *Organizer) processDirectoryFiles(entries []os.DirEntry, sourcePath, tar
 }
 
 // calculateFileTargetName determines the target filename, adding track prefixes when appropriate.
-func (o *Organizer) calculateFileTargetName(fileName string, dirMetadata *Metadata) string {
-	// Use the FilenameNormalizer for consistent processing
+// totalFiles is used to calculate proper padding (e.g., 2 digits for <100 files, 3 for 100+)
+func (o *Organizer) calculateFileTargetName(fileName string, dirMetadata *Metadata, totalFiles int) string {
+	// If rename-files is enabled, apply the pattern completely
+	if o.config.RenameFiles && dirMetadata != nil {
+		ext := filepath.Ext(fileName)
+		newBaseName := ApplyFilenamePattern(o.config.RenamePattern, *dirMetadata, totalFiles)
+
+		// Apply space replacement if configured
+		if o.config.ReplaceSpace != "" {
+			newBaseName = strings.ReplaceAll(newBaseName, " ", o.config.ReplaceSpace)
+		}
+
+		return newBaseName + ext
+	}
+
+	// Otherwise, use the FilenameNormalizer for standard processing
 	normalizer := NewFilenameNormalizer()
 
-	// Add track prefix if available in metadata
-	if dirMetadata != nil && dirMetadata.TrackNumber > 0 {
-		normalizer = normalizer.WithTrackPrefix(dirMetadata.TrackNumber)
+	// Add track prefix if enabled and available in metadata
+	if o.config.AddTrackNumbers && dirMetadata != nil && dirMetadata.TrackNumber > 0 {
+		normalizer = normalizer.WithTrackPrefix(dirMetadata.TrackNumber, totalFiles)
 	}
 
 	// Apply space replacement if configured

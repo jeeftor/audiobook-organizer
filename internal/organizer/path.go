@@ -4,6 +4,7 @@ package organizer
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 )
@@ -108,8 +109,9 @@ func IsSupportedAudioFile(ext string) bool {
 }
 
 // AddTrackPrefix adds a track number prefix to a filename if not already present.
-// Returns the original filename if track number is 0 or prefix already exists.
-func AddTrackPrefix(filename string, trackNumber int) string {
+// If a prefix exists but has wrong padding, it will be re-formatted with correct padding.
+// The padding is automatically determined based on totalTracks (2 digits for <100, 3 for 100-999, etc.)
+func AddTrackPrefix(filename string, trackNumber int, totalTracks int) string {
 	if trackNumber <= 0 {
 		return filename
 	}
@@ -117,26 +119,68 @@ func AddTrackPrefix(filename string, trackNumber int) string {
 	ext := filepath.Ext(filename)
 	baseName := strings.TrimSuffix(filename, ext)
 
-	prefix := fmt.Sprintf(TrackPrefixFormat, trackNumber)
-	if strings.HasPrefix(baseName, prefix) {
+	// Calculate the required padding based on total tracks
+	format := GetTrackPrefixFormat(totalTracks)
+	correctPrefix := fmt.Sprintf(format, trackNumber)
+
+	// Check if the filename already has a track prefix
+	if HasTrackPrefix(baseName) {
+		// Extract existing track number
+		existingTrackNum := ExtractTrackNumber(baseName)
+
+		// If the track number matches, remove old prefix and add new one with correct padding
+		if existingTrackNum == trackNumber {
+			// Remove the old prefix
+			nameWithoutPrefix := RemoveTrackPrefix(baseName)
+			return fmt.Sprintf("%s%s%s", correctPrefix, nameWithoutPrefix, ext)
+		}
+
+		// If track numbers don't match, keep original (something's wrong)
 		return filename
 	}
 
-	return fmt.Sprintf("%s%s%s", prefix, baseName, ext)
+	// No existing prefix - add new one
+	return fmt.Sprintf("%s%s%s", correctPrefix, baseName, ext)
+}
+
+// GetTrackPrefixFormat returns the appropriate format string based on the total number of tracks
+// Examples:
+//   - totalTracks < 100:  returns "%02d - " (e.g., "01 - ", "99 - ")
+//   - totalTracks < 1000: returns "%03d - " (e.g., "001 - ", "999 - ")
+//   - totalTracks >= 1000: returns "%04d - " (e.g., "0001 - ")
+func GetTrackPrefixFormat(totalTracks int) string {
+	if totalTracks < 100 {
+		return "%02d - "
+	} else if totalTracks < 1000 {
+		return "%03d - "
+	} else {
+		return "%04d - "
+	}
 }
 
 // HasTrackPrefix checks if a filename already has a track number prefix.
+// Supports variable-length prefixes: "01 - ", "001 - ", "0001 - ", etc.
 func HasTrackPrefix(filename string) bool {
-	// Look for pattern like "01 - ", "02 - ", etc.
 	if len(filename) < 5 {
 		return false
 	}
 
-	// Check if it starts with digits followed by " - "
-	if filename[2] == ' ' && filename[3] == '-' && filename[4] == ' ' {
-		first := filename[0]
-		second := filename[1]
-		return first >= '0' && first <= '9' && second >= '0' && second <= '9'
+	// Check for patterns: NN - , NNN - , NNNN - , etc.
+	// Find the position of " - " separator
+	for i := 2; i <= 4 && i < len(filename)-2; i++ {
+		if i < len(filename) && filename[i] == ' ' &&
+		   i+1 < len(filename) && filename[i+1] == '-' &&
+		   i+2 < len(filename) && filename[i+2] == ' ' {
+			// Check if all characters before the separator are digits
+			allDigits := true
+			for j := 0; j < i; j++ {
+				if filename[j] < '0' || filename[j] > '9' {
+					allDigits = false
+					break
+				}
+			}
+			return allDigits
+		}
 	}
 
 	return false
@@ -144,29 +188,43 @@ func HasTrackPrefix(filename string) bool {
 
 // ExtractTrackNumber extracts the track number from a filename prefix.
 // Returns 0 if no track number prefix is found.
+// Supports variable-length prefixes: "01 - ", "001 - ", "0001 - ", etc.
 func ExtractTrackNumber(filename string) int {
 	if !HasTrackPrefix(filename) {
 		return 0
 	}
 
-	// Extract the two-digit number from the beginning
-	trackStr := filename[:2]
-	var trackNum int
-	if _, err := fmt.Sscanf(trackStr, "%d", &trackNum); err == nil {
-		return trackNum
+	// Find where " - " starts to determine the length of the track number
+	for i := 2; i <= 4 && i < len(filename)-2; i++ {
+		if filename[i] == ' ' && filename[i+1] == '-' && filename[i+2] == ' ' {
+			trackStr := filename[:i]
+			var trackNum int
+			if _, err := fmt.Sscanf(trackStr, "%d", &trackNum); err == nil {
+				return trackNum
+			}
+			break
+		}
 	}
 
 	return 0
 }
 
 // RemoveTrackPrefix removes the track number prefix from a filename if present.
+// Supports variable-length prefixes: "01 - ", "001 - ", "0001 - ", etc.
 func RemoveTrackPrefix(filename string) string {
 	if !HasTrackPrefix(filename) {
 		return filename
 	}
 
-	// Remove the "XX - " prefix (5 characters)
-	return filename[5:]
+	// Find where " - " ends to determine how many characters to remove
+	for i := 2; i <= 4 && i < len(filename)-2; i++ {
+		if filename[i] == ' ' && filename[i+1] == '-' && filename[i+2] == ' ' {
+			// Remove everything up to and including " - "
+			return filename[i+3:]
+		}
+	}
+
+	return filename
 }
 
 // NormalizeFilename provides various filename normalization options.
@@ -175,6 +233,7 @@ type FilenameNormalizer struct {
 	spaceReplacement string
 	addTrackPrefix   bool
 	trackNumber      int
+	totalTracks      int
 }
 
 // NewFilenameNormalizer creates a new filename normalizer with the given options.
@@ -190,9 +249,11 @@ func (fn *FilenameNormalizer) WithSpaceReplacement(replacement string) *Filename
 }
 
 // WithTrackPrefix configures the normalizer to add a track number prefix.
-func (fn *FilenameNormalizer) WithTrackPrefix(trackNumber int) *FilenameNormalizer {
+// totalTracks is used to determine the padding (e.g., 2 digits for <100 tracks, 3 for 100+)
+func (fn *FilenameNormalizer) WithTrackPrefix(trackNumber int, totalTracks int) *FilenameNormalizer {
 	fn.addTrackPrefix = true
 	fn.trackNumber = trackNumber
+	fn.totalTracks = totalTracks
 	return fn
 }
 
@@ -202,7 +263,7 @@ func (fn *FilenameNormalizer) Normalize(filename string) string {
 
 	// Add track prefix if configured
 	if fn.addTrackPrefix {
-		result = AddTrackPrefix(result, fn.trackNumber)
+		result = AddTrackPrefix(result, fn.trackNumber, fn.totalTracks)
 	}
 
 	// Replace spaces if configured
@@ -415,4 +476,67 @@ var SupportedExtensions = map[string]bool{
 	".ogg":  true,
 	".flac": true,
 	".epub": true,
+}
+
+// ApplyFilenamePattern applies a filename pattern with metadata variables.
+// Supported variables:
+//   - {track}: Track number with appropriate padding (e.g., "001", "01")
+//   - {title}: Title from metadata
+//   - {series}: Series name from metadata
+//   - {author}: First author from metadata
+//   - {album}: Album from metadata (if available in RawData)
+//
+// Example pattern: "{track} - {title}" with metadata title "My Book" and track 5
+// would produce "05 - My Book" (padding depends on totalTracks)
+func ApplyFilenamePattern(pattern string, metadata Metadata, totalTracks int) string {
+	result := pattern
+
+	// Replace {track} with padded track number
+	if metadata.TrackNumber > 0 {
+		format := GetTrackPrefixFormat(totalTracks)
+		// Remove the " - " suffix from the format for track replacement
+		trackFormat := strings.TrimSuffix(format, " - ")
+		trackStr := fmt.Sprintf(trackFormat, metadata.TrackNumber)
+		result = strings.ReplaceAll(result, "{track}", trackStr)
+	} else {
+		// If no track number, remove the {track} variable
+		result = strings.ReplaceAll(result, "{track}", "")
+	}
+
+	// Replace {title}
+	if metadata.Title != "" {
+		result = strings.ReplaceAll(result, "{title}", metadata.Title)
+	}
+
+	// Replace {series}
+	if len(metadata.Series) > 0 && metadata.Series[0] != "" {
+		cleanSeries := CleanSeriesName(metadata.Series[0])
+		result = strings.ReplaceAll(result, "{series}", cleanSeries)
+	} else {
+		result = strings.ReplaceAll(result, "{series}", "")
+	}
+
+	// Replace {author}
+	if len(metadata.Authors) > 0 {
+		result = strings.ReplaceAll(result, "{author}", metadata.Authors[0])
+	} else {
+		result = strings.ReplaceAll(result, "{author}", "")
+	}
+
+	// Replace {album} if available in RawData
+	if album, ok := metadata.RawData["album"].(string); ok && album != "" {
+		result = strings.ReplaceAll(result, "{album}", album)
+	} else {
+		result = strings.ReplaceAll(result, "{album}", "")
+	}
+
+	// Clean up any extra spaces or dashes that might result from empty variables
+	result = strings.TrimSpace(result)
+	// Clean up patterns like " - -" or "  -  " that result from missing variables
+	result = regexp.MustCompile(`\s*-\s*-\s*`).ReplaceAllString(result, " - ")
+	result = regexp.MustCompile(`^\s*-\s*|\s*-\s*$`).ReplaceAllString(result, "")
+	// Clean up multiple spaces
+	result = regexp.MustCompile(`\s+`).ReplaceAllString(result, " ")
+
+	return strings.TrimSpace(result)
 }

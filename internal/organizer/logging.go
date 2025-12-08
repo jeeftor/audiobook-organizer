@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -72,6 +73,153 @@ func (o *Organizer) undoMoves() error {
 	return nil
 }
 
+// printGroupedMoveSummary displays moves grouped by destination book with pretty formatting
+func (o *Organizer) printGroupedMoveSummary() {
+	// Group moves by Author/Series (first 2 path components after output dir)
+	// This handles cases where bad titles create multiple subdirectories
+	bookMoves := make(map[string][]MoveSummary)
+
+	for _, move := range o.summary.Moves {
+		// Get relative path from output dir
+		relPath := move.To
+		if o.config.OutputDir != "" {
+			if rel, err := filepath.Rel(o.config.OutputDir, move.To); err == nil {
+				relPath = rel
+			}
+		}
+
+		// Extract Author/Series (first 2 components)
+		parts := strings.Split(filepath.ToSlash(relPath), "/")
+		var bookKey string
+		if len(parts) >= 2 {
+			bookKey = filepath.Join(parts[0], parts[1]) // Author/Series
+		} else {
+			bookKey = filepath.Dir(move.To) // Fallback
+		}
+
+		bookMoves[bookKey] = append(bookMoves[bookKey], move)
+	}
+
+	// Sort book keys
+	var bookKeys []string
+	for key := range bookMoves {
+		bookKeys = append(bookKeys, key)
+	}
+	sort.Strings(bookKeys)
+
+	// Fancy header with lipgloss
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FFFFFF")).
+		Background(lipgloss.Color("#5F00D7")).
+		BorderStyle(lipgloss.DoubleBorder()).
+		BorderForeground(lipgloss.Color("#AF87FF")).
+		Padding(0, 2).
+		MarginTop(1).
+		MarginBottom(1).
+		Align(lipgloss.Center)
+
+	// Book section header - colorful box
+	bookHeaderStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FFFFFF")).
+		Background(lipgloss.Color("#0087AF")).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#00D7FF")).
+		Padding(0, 1).
+		MarginTop(1)
+
+	// Color styles for path components
+	authorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00")) // Green
+	seriesStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFFF")) // Cyan
+	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00"))  // Yellow
+	fileStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))   // White
+	sepStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))    // Dark gray
+
+	// Ellipsis styling
+	ellipsisStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#666666")).
+		Italic(true).
+		Faint(true)
+
+	// Print fancy header
+	fmt.Println(headerStyle.Render("✨ 📚  GROUPED MOVE SUMMARY  📚 ✨"))
+
+	for _, bookKey := range bookKeys {
+		moves := bookMoves[bookKey]
+
+		// Sort files within each book by destination path
+		sort.Slice(moves, func(i, j int) bool {
+			return moves[i].To < moves[j].To
+		})
+
+		// Book header section
+		fmt.Printf("\n%s\n",
+			bookHeaderStyle.Render(fmt.Sprintf("📖 %s (%d files)", bookKey, len(moves))))
+
+		// List files with their destination paths, color-coded
+		maxDisplay := 5
+		displayCount := len(moves)
+		if displayCount > maxDisplay {
+			displayCount = maxDisplay
+		}
+
+		for i := 0; i < displayCount; i++ {
+			relPath := moves[i].To
+			if o.config.OutputDir != "" {
+				if rel, err := filepath.Rel(o.config.OutputDir, moves[i].To); err == nil {
+					relPath = rel
+				}
+			}
+
+			// Split path and color each component
+			parts := strings.Split(filepath.ToSlash(relPath), "/")
+			var coloredParts []string
+
+			for idx, part := range parts {
+				switch {
+				case idx == 0:
+					// Author - green
+					coloredParts = append(coloredParts, authorStyle.Render(part))
+				case idx == 1:
+					// Series - cyan
+					coloredParts = append(coloredParts, seriesStyle.Render(part))
+				case idx == len(parts)-1:
+					// Filename - white
+					coloredParts = append(coloredParts, fileStyle.Render(part))
+				default:
+					// Title/subdirs - yellow
+					coloredParts = append(coloredParts, titleStyle.Render(part))
+				}
+			}
+
+			fmt.Printf("  %s\n", strings.Join(coloredParts, sepStyle.Render("/")))
+		}
+
+		if len(moves) > maxDisplay {
+			remaining := len(moves) - maxDisplay
+			fmt.Printf("  %s\n",
+				ellipsisStyle.Render(fmt.Sprintf("... %d more files ...", remaining)))
+		}
+	}
+
+	// Fancy footer with totals
+	footerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FFFFFF")).
+		Background(lipgloss.Color("#00875F")).
+		BorderStyle(lipgloss.ThickBorder()).
+		BorderForeground(lipgloss.Color("#00D787")).
+		Padding(0, 2).
+		MarginTop(1).
+		Align(lipgloss.Center)
+
+	totalText := fmt.Sprintf("📊 TOTAL: %d Books • %d Files",
+		len(bookKeys),
+		len(o.summary.Moves))
+	fmt.Println(footerStyle.Render(totalText))
+}
+
 func (o *Organizer) printSummary(startTime time.Time) {
 	duration := time.Since(startTime)
 
@@ -110,9 +258,10 @@ func (o *Organizer) printSummary(startTime time.Time) {
 	}
 
 	PrintCyan("\n🔄 Moves planned/executed: %d", len(o.summary.Moves))
-	for _, move := range o.summary.Moves {
-		PrintBase("  From: %s", move.From)
-		PrintBase("  To: %s\n", move.To)
+
+	// Display grouped summary if there are moves
+	if len(o.summary.Moves) > 0 {
+		o.printGroupedMoveSummary()
 	}
 
 	// Print information about removed empty directories

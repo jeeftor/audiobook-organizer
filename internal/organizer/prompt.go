@@ -7,6 +7,21 @@ import (
 	"strings"
 )
 
+// PromptYesNo asks the user a yes/no question and returns their response
+func (o *Organizer) PromptYesNo(question string) bool {
+	fmt.Print(RenderPromptIcon("\n❓ " + question + " [y/N] "))
+
+	reader := bufio.NewReader(os.Stdin)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Printf(RenderError("Error reading response: %v\n"), err)
+		return false
+	}
+
+	response = strings.TrimSpace(strings.ToLower(response))
+	return response == "y" || response == "yes"
+}
+
 // PromptForDirectoryRemoval asks the user for confirmation before removing an empty directory
 func (o *Organizer) PromptForDirectoryRemoval(dir string, isParent bool) bool {
 	if isParent {

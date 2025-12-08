@@ -8,6 +8,14 @@ import (
 	"time"
 )
 
+// FileWithMetadata pairs a file path with its parsed metadata for parallel processing
+type FileWithMetadata struct {
+	FilePath string
+	Metadata Metadata
+	Provider MetadataProvider
+	Error    error
+}
+
 // FieldMapping defines how fields map to our final fields
 type FieldMapping struct {
 	TitleField   string   `json:"title_field,omitempty"`   // "title", "album", "series"

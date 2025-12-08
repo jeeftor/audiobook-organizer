@@ -28,11 +28,15 @@ var (
 	replaceSpace        string
 	verbose             bool
 	dryRun              bool
+	planFile            string // File to write dry-run plan to
 	undo                bool
 	prompt              bool
 	removeEmpty         bool
 	useEmbeddedMetadata bool
 	flat                bool
+	addTrackNumbers     bool
+	renameFiles         bool
+	renamePattern       string
 	layout              string // Directory structure layout
 
 	// Field mapping flags
@@ -53,11 +57,15 @@ var envAliases = map[string][]string{
 	"replace_space":    {"AO_REPLACE_SPACE", "AUDIOBOOK_ORGANIZER_REPLACE_SPACE"},
 	"verbose":          {"AO_VERBOSE", "AUDIOBOOK_ORGANIZER_VERBOSE"},
 	dryRunKey:          {"AO_DRY_RUN", "AUDIOBOOK_ORGANIZER_DRY_RUN"},
+	"plan-file":        {"AO_PLAN_FILE", "AUDIOBOOK_ORGANIZER_PLAN_FILE"},
 	"undo":             {"AO_UNDO", "AUDIOBOOK_ORGANIZER_UNDO"},
 	"prompt":           {"AO_PROMPT", "AUDIOBOOK_ORGANIZER_PROMPT"},
 	removeEmptyKey:     {"AO_REMOVE_EMPTY", "AUDIOBOOK_ORGANIZER_REMOVE_EMPTY"},
 	useEmbeddedMetaKey: {"AO_USE_EMBEDDED_METADATA", "AUDIOBOOK_ORGANIZER_USE_EMBEDDED_METADATA"},
 	"flat":             {"AO_FLAT", "AUDIOBOOK_ORGANIZER_FLAT"},
+	"add-track-numbers": {"AO_ADD_TRACK_NUMBERS", "AUDIOBOOK_ORGANIZER_ADD_TRACK_NUMBERS"},
+	"rename-files":     {"AO_RENAME_FILES", "AUDIOBOOK_ORGANIZER_RENAME_FILES"},
+	"rename-pattern":   {"AO_RENAME_PATTERN", "AUDIOBOOK_ORGANIZER_RENAME_PATTERN"},
 	"layout":           {"AO_LAYOUT", "AUDIOBOOK_ORGANIZER_LAYOUT"},
 
 	// Field mapping environment variables
@@ -121,11 +129,15 @@ var rootCmd = &cobra.Command{
 				ReplaceSpace:        viper.GetString("replace_space"),
 				Verbose:             viper.GetBool("verbose"),
 				DryRun:              viper.GetBool(dryRunKey),
+				PlanFile:            viper.GetString("plan-file"),
 				Undo:                viper.GetBool("undo"),
 				Prompt:              viper.GetBool("prompt"),
 				RemoveEmpty:         viper.GetBool(removeEmptyKey),
 				UseEmbeddedMetadata: viper.GetBool(useEmbeddedMetaKey),
 				Flat:                viper.GetBool("flat"),
+				AddTrackNumbers:     viper.GetBool("add-track-numbers"),
+				RenameFiles:         viper.GetBool("rename-files"),
+				RenamePattern:       viper.GetString("rename-pattern"),
 				Layout:              viper.GetString("layout"),
 				FieldMapping: organizer.FieldMapping{
 					TitleField:   viper.GetString(titleFieldKey),
@@ -204,11 +216,15 @@ func init() {
 	rootCmd.Flags().StringVar(&replaceSpace, "replace_space", "", "Character to replace spaces")
 	rootCmd.Flags().BoolVar(&verbose, "verbose", false, "Verbose output")
 	rootCmd.Flags().BoolVar(&dryRun, dryRunKey, false, "Show what would happen without making changes")
+	rootCmd.Flags().StringVar(&planFile, "plan-file", "", "File to write dry-run plan to (e.g., 'plan.txt'). Works with --dry-run to create a detailed move plan.")
 	rootCmd.Flags().BoolVar(&undo, "undo", false, "Restore files to their original locations")
 	rootCmd.Flags().BoolVar(&prompt, "prompt", false, "Prompt for confirmation before moving each book")
 	rootCmd.Flags().BoolVar(&removeEmpty, removeEmptyKey, false, "Remove empty directories after moving files")
 	rootCmd.Flags().BoolVar(&useEmbeddedMetadata, useEmbeddedMetaKey, false, "Use metadata embedded in EPUB files if metadata.json is not found")
 	rootCmd.Flags().BoolVar(&flat, "flat", false, "Process files in a flat directory structure (automatically enables --use-embedded-metadata)")
+	rootCmd.Flags().BoolVar(&addTrackNumbers, "add-track-numbers", false, "Add track number prefixes to filenames (e.g., '01 - ', '001 - ' for 100+ tracks)")
+	rootCmd.Flags().BoolVar(&renameFiles, "rename-files", false, "Rename files using the pattern specified in --rename-pattern")
+	rootCmd.Flags().StringVar(&renamePattern, "rename-pattern", "{track} - {title}", "Pattern for renaming files. Variables: {track}, {title}, {series}, {author}, {album}")
 	rootCmd.Flags().StringVarP(&layout, "layout", "l", "author-series-title", "Directory structure layout:\n  - author-series-title:        Author/Series/Title/ (default)\n  - author-series-title-number: Author/Series/#1 - Title/ (include series number in title)\n  - author-title:               Author/Title/ (ignore series)\n  - author-only:                Author/ (flatten all books)")
 	// Field mapping flags
 	rootCmd.Flags().StringVar(&titleField, titleFieldKey, "", "Field to use as title (e.g., 'album', 'title', 'track_title')")
@@ -224,11 +240,15 @@ func init() {
 	viper.BindPFlag("replace_space", rootCmd.Flags().Lookup("replace_space"))
 	viper.BindPFlag("verbose", rootCmd.Flags().Lookup("verbose"))
 	viper.BindPFlag(dryRunKey, rootCmd.Flags().Lookup(dryRunKey))
+	viper.BindPFlag("plan-file", rootCmd.Flags().Lookup("plan-file"))
 	viper.BindPFlag("undo", rootCmd.Flags().Lookup("undo"))
 	viper.BindPFlag("prompt", rootCmd.Flags().Lookup("prompt"))
 	viper.BindPFlag(removeEmptyKey, rootCmd.Flags().Lookup(removeEmptyKey))
 	viper.BindPFlag(useEmbeddedMetaKey, rootCmd.Flags().Lookup(useEmbeddedMetaKey))
 	viper.BindPFlag("flat", rootCmd.Flags().Lookup("flat"))
+	viper.BindPFlag("add-track-numbers", rootCmd.Flags().Lookup("add-track-numbers"))
+	viper.BindPFlag("rename-files", rootCmd.Flags().Lookup("rename-files"))
+	viper.BindPFlag("rename-pattern", rootCmd.Flags().Lookup("rename-pattern"))
 	viper.BindPFlag("layout", rootCmd.Flags().Lookup("layout"))
 
 	// Bind field mapping flags to viper

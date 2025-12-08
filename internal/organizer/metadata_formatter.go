@@ -83,25 +83,64 @@ func (mf *MetadataFormatter) getFileTypeDisplay() (string, string) {
 }
 
 func (mf *MetadataFormatter) formatCoreFields(sb *strings.Builder) {
-	// Title - clean display with just icon colored
+	// Title - with layout annotation showing actual field name
 	if mf.metadata.Title != "" {
-		sb.WriteString(fmt.Sprintf("%s Title: %s\n", IconColor("📖"), mf.metadata.Title))
+		titleDisplay := mf.metadata.Title
+
+		// Determine which field is being used
+		titleFieldName := "title"
+		if mf.fieldMapping.TitleField != "" {
+			titleFieldName = mf.fieldMapping.TitleField
+		}
+
+		// Check if title looks suspicious
+		var annotation string
+		if isSuspiciousTitle(mf.metadata.Title) {
+			annotation = TitleColor(fmt.Sprintf(" ← Layout: Title (field: '%s') ⚠️ suspicious", titleFieldName))
+		} else {
+			annotation = TitleColor(fmt.Sprintf(" ← Layout: Title (field: '%s')", titleFieldName))
+		}
+
+		sb.WriteString(fmt.Sprintf("%s Title: %s%s\n", IconColor("📖"), titleDisplay, annotation))
 	}
 
-	// Authors - clean display
+	// Authors - with layout annotation showing actual field names
 	if len(mf.metadata.Authors) > 0 {
-		sb.WriteString(fmt.Sprintf("%s Authors: %s\n", IconColor("👥"), strings.Join(mf.metadata.Authors, ", ")))
+		authorsDisplay := strings.Join(mf.metadata.Authors, ", ")
+
+		// Determine which field is being used
+		authorFieldNames := "authors"
+		if len(mf.fieldMapping.AuthorFields) > 0 {
+			authorFieldNames = strings.Join(mf.fieldMapping.AuthorFields, ", ")
+		}
+
+		annotation := AuthorColor(fmt.Sprintf(" ← Layout: Author (field: '%s')", authorFieldNames))
+		sb.WriteString(fmt.Sprintf("%s Authors: %s%s\n", IconColor("👥"), authorsDisplay, annotation))
 	}
 
-	// Series - clean display with series index if available
+	// Series - with layout annotation showing actual field name
 	if len(mf.metadata.Series) > 0 {
 		seriesName := mf.metadata.Series[0]
 
+		// Determine which field is being used
+		seriesFieldName := "series"
+		if mf.fieldMapping.SeriesField != "" {
+			seriesFieldName = mf.fieldMapping.SeriesField
+		}
+		// Special case: if series came from album for audio files
+		if mf.metadata.SourceType == "audio" {
+			if album, ok := mf.metadata.RawData["album"].(string); ok && album == seriesName {
+				seriesFieldName = "album"
+			}
+		}
+
+		annotation := SeriesColor(fmt.Sprintf(" ← Layout: Series (field: '%s')", seriesFieldName))
+
 		// Check if we have a series index
 		if seriesIndex, ok := mf.metadata.RawData["series_index"].(float64); ok && seriesIndex > 0 {
-			sb.WriteString(fmt.Sprintf("%s Series: %s (#%.1f)\n", IconColor("📚"), seriesName, seriesIndex))
+			sb.WriteString(fmt.Sprintf("%s Series: %s (#%.1f)%s\n", IconColor("📚"), seriesName, seriesIndex, annotation))
 		} else {
-			sb.WriteString(fmt.Sprintf("%s Series: %s\n", IconColor("📚"), seriesName))
+			sb.WriteString(fmt.Sprintf("%s Series: %s%s\n", IconColor("📚"), seriesName, annotation))
 		}
 	}
 

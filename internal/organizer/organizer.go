@@ -34,6 +34,9 @@ type OrganizerConfig struct {
 	RemoveEmpty         bool
 	UseEmbeddedMetadata bool
 	Flat                bool
+	AddTrackNumbers     bool         // Add track number prefixes to filenames
+	RenameFiles         bool         // Rename files using a pattern
+	RenamePattern       string       // Pattern for renaming files (e.g., "{track} - {title}")
 	Layout              string       // Directory structure layout (author-series-title, author-title, author-only)
 	FieldMapping        FieldMapping // Configuration for mapping metadata fields
 }
