@@ -38,6 +38,8 @@ type OrganizerConfig struct {
 	RenameFiles         bool         // Rename files using a pattern
 	RenamePattern       string       // Pattern for renaming files (e.g., "{track} - {title}")
 	Layout              string       // Directory structure layout (author-series-title, author-title, author-only)
+	SeriesFormat        string       // Series number format (bracket or hash). Default: bracket
+	SeriesPadding       int          // Number of digits to pad series numbers to. Default: 2
 	FieldMapping        FieldMapping // Configuration for mapping metadata fields
 }
 
@@ -140,7 +142,19 @@ func (lc *LayoutCalculator) calculateSeriesPathWithNumber(targetBase, authorDir,
 		// Get series number and prefix the title with it
 		seriesNumber := GetSeriesNumberFromMetadata(metadata)
 		if seriesNumber != "" {
-			numberedTitle := fmt.Sprintf("#%s - %s", seriesNumber, titleDir)
+			// Format the series number according to config
+			formattedNumber := FormatSeriesNumber(seriesNumber, lc.config.SeriesFormat, lc.config.SeriesPadding)
+
+			// Determine separator based on format
+			var numberedTitle string
+			if lc.config.SeriesFormat == "hash" {
+				// Legacy format uses " - " separator
+				numberedTitle = fmt.Sprintf("%s - %s", formattedNumber, titleDir)
+			} else {
+				// Bracket format uses just space separator
+				numberedTitle = fmt.Sprintf("%s %s", formattedNumber, titleDir)
+			}
+
 			return filepath.Join(targetBase, authorDir, seriesDir, numberedTitle)
 		}
 

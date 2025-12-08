@@ -29,7 +29,7 @@ func TestSeriesNumberLayoutIntegration(t *testing.T) {
 					"series_index": 1.0,
 				},
 			},
-			expected: filepath.Join("/library", "Brandon Sanderson", "Mistborn", "#1 - The Final Empire"),
+			expected: filepath.Join("/library", "Brandon Sanderson", "Mistborn", "[01] The Final Empire"),
 		},
 		{
 			name:        "expanse_series",
@@ -46,7 +46,7 @@ func TestSeriesNumberLayoutIntegration(t *testing.T) {
 					"series_index": 8.0,
 				},
 			},
-			expected: filepath.Join("/library", "James S.A. Corey", "The Expanse", "#8 - Tiamat's Wrath"),
+			expected: filepath.Join("/library", "James S.A. Corey", "The Expanse", "[08] Tiamat's Wrath"),
 		},
 		{
 			name:        "novella_with_decimal",
@@ -63,7 +63,7 @@ func TestSeriesNumberLayoutIntegration(t *testing.T) {
 					"series_index": 0.5,
 				},
 			},
-			expected: filepath.Join("/library", "Brandon Sanderson", "Mistborn", "#0.5 - The Eleventh Metal"),
+			expected: filepath.Join("/library", "Brandon Sanderson", "Mistborn", "[00.5] The Eleventh Metal"),
 		},
 		{
 			name:        "series_from_string",
@@ -78,7 +78,7 @@ func TestSeriesNumberLayoutIntegration(t *testing.T) {
 				Series:  []string{"Mistborn #2"},
 				RawData: map[string]interface{}{},
 			},
-			expected: filepath.Join("/library", "Brandon Sanderson", "Mistborn", "#2 - The Well of Ascension"),
+			expected: filepath.Join("/library", "Brandon Sanderson", "Mistborn", "[02] The Well of Ascension"),
 		},
 		{
 			name:        "standalone_book",
@@ -111,7 +111,7 @@ func TestSeriesNumberLayoutIntegration(t *testing.T) {
 					"series_index": 1.0,
 				},
 			},
-			expected: filepath.Join("/organized", "Brandon Sanderson", "Mistborn", "#1 - The Final Empire"),
+			expected: filepath.Join("/organized", "Brandon Sanderson", "Mistborn", "[01] The Final Empire"),
 		},
 		{
 			name:        "comparison_with_regular_layout",
@@ -145,7 +145,7 @@ func TestSeriesNumberLayoutIntegration(t *testing.T) {
 					"series_index": 1.0,
 				},
 			},
-			expected: filepath.Join("/library", "C.S. Lewis", "The Chronicles of Narnia", "#1 - The Lion, the Witch and the Wardrobe"),
+			expected: filepath.Join("/library", "C.S. Lewis", "The Chronicles of Narnia", "[01] The Lion, the Witch and the Wardrobe"),
 		},
 		{
 			name:        "narnia_chronological_order",
@@ -162,7 +162,7 @@ func TestSeriesNumberLayoutIntegration(t *testing.T) {
 					"series_index": 1.0,
 				},
 			},
-			expected: filepath.Join("/library", "C.S. Lewis", "The Chronicles of Narnia", "#1 - The Magician's Nephew"),
+			expected: filepath.Join("/library", "C.S. Lewis", "The Chronicles of Narnia", "[01] The Magician's Nephew"),
 		},
 		{
 			name:        "collaborative_work",
@@ -179,7 +179,7 @@ func TestSeriesNumberLayoutIntegration(t *testing.T) {
 					"series_index": 1.0,
 				},
 			},
-			expected: filepath.Join("/library", "Stephen King,Peter Straub", "The Talisman", "#1 - The Talisman"),
+			expected: filepath.Join("/library", "Stephen King,Peter Straub", "The Talisman", "[01] The Talisman"),
 		},
 	}
 
@@ -227,7 +227,7 @@ func TestSeriesNumberLayoutRealWorldScenarios(t *testing.T) {
 		lc := NewLayoutCalculator(&config, sanitizer)
 		result := lc.CalculateTargetPath(metadata)
 
-		expected := filepath.Join("/mp3_library", "James S.A. Corey", "The Expanse", "#1 - Leviathan Wakes")
+		expected := filepath.Join("/mp3_library", "James S.A. Corey", "The Expanse", "[01] Leviathan Wakes")
 		if result != expected {
 			t.Errorf("MP3 field mapping: got %v, want %v", result, expected)
 		}
@@ -254,7 +254,7 @@ func TestSeriesNumberLayoutRealWorldScenarios(t *testing.T) {
 		lc := NewLayoutCalculator(&config, sanitizer)
 		result := lc.CalculateTargetPath(metadata)
 
-		expected := filepath.Join("/epub_library", "Brandon Sanderson", "Mistborn", "#1 - The Final Empire")
+		expected := filepath.Join("/epub_library", "Brandon Sanderson", "Mistborn", "[01] The Final Empire")
 		if result != expected {
 			t.Errorf("EPUB Calibre metadata: got %v, want %v", result, expected)
 		}
@@ -279,7 +279,7 @@ func TestSeriesNumberLayoutRealWorldScenarios(t *testing.T) {
 			},
 		}
 		result1 := lc.CalculateTargetPath(metadata1)
-		expected1 := filepath.Join("/library", "Brandon Sanderson", "Mistborn", "#1 - The Final Empire")
+		expected1 := filepath.Join("/library", "Brandon Sanderson", "Mistborn", "[01] The Final Empire")
 
 		// Standalone book
 		metadata2 := Metadata{
