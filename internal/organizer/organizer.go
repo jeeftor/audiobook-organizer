@@ -104,9 +104,13 @@ func (lc *LayoutCalculator) CalculateTargetPath(metadata Metadata) string {
 	case "author-title":
 		return filepath.Join(targetBase, authorDir, titleDir)
 	case "author-series-title", "":
-		return lc.calculateSeriesPath(targetBase, authorDir, titleDir, metadata)
+		return filepath.Join(targetBase, authorDir, lc.calculateSeriesPath(titleDir, metadata))
 	case "author-series-title-number":
-		return lc.calculateSeriesPathWithNumber(targetBase, authorDir, titleDir, metadata)
+		return filepath.Join(targetBase, authorDir, lc.calculateSeriesPathWithNumber(titleDir, metadata))
+	case "series-title":
+		return filepath.Join(targetBase, lc.calculateSeriesPath(titleDir, metadata))
+	case "series-title-number":
+		return filepath.Join(targetBase, lc.calculateSeriesPathWithNumber(titleDir, metadata))
 	default:
 		return filepath.Join(targetBase, authorDir, titleDir)
 	}
@@ -121,16 +125,18 @@ func (lc *LayoutCalculator) getTargetBase() string {
 }
 
 // calculateSeriesPath handles series-based path calculation
-func (lc *LayoutCalculator) calculateSeriesPath(targetBase, authorDir, titleDir string, metadata Metadata) string {
+// Returns the series/title portion of the path (e.g., "Series/Title" or just "Title")
+func (lc *LayoutCalculator) calculateSeriesPath(titleDir string, metadata Metadata) string {
 	if validSeries := metadata.GetValidSeries(); validSeries != "" {
 		seriesDir := lc.sanitizer(validSeries)
-		return filepath.Join(targetBase, authorDir, seriesDir, titleDir)
+		return filepath.Join(seriesDir, titleDir)
 	}
-	return filepath.Join(targetBase, authorDir, titleDir)
+	return titleDir
 }
 
 // calculateSeriesPathWithNumber handles series-based path calculation with series number in title
-func (lc *LayoutCalculator) calculateSeriesPathWithNumber(targetBase, authorDir, titleDir string, metadata Metadata) string {
+// Returns the series/title portion of the path (e.g., "Series/#1 - Title" or just "Title")
+func (lc *LayoutCalculator) calculateSeriesPathWithNumber(titleDir string, metadata Metadata) string {
 	if validSeries := metadata.GetValidSeries(); validSeries != "" {
 		seriesDir := lc.sanitizer(validSeries)
 
@@ -138,13 +144,13 @@ func (lc *LayoutCalculator) calculateSeriesPathWithNumber(targetBase, authorDir,
 		seriesNumber := GetSeriesNumberFromMetadata(metadata)
 		if seriesNumber != "" {
 			numberedTitle := fmt.Sprintf("#%s - %s", seriesNumber, titleDir)
-			return filepath.Join(targetBase, authorDir, seriesDir, numberedTitle)
+			return filepath.Join(seriesDir, numberedTitle)
 		}
 
 		// If no series number, fall back to regular series path
-		return filepath.Join(targetBase, authorDir, seriesDir, titleDir)
+		return filepath.Join(seriesDir, titleDir)
 	}
-	return filepath.Join(targetBase, authorDir, titleDir)
+	return titleDir
 }
 
 // Organizer is the main struct that performs audiobook organization

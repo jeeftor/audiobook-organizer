@@ -292,7 +292,7 @@ Options:
 - `--replace_space`: Character to replace spaces (optional)
 - `--use-embedded-metadata`: Use metadata embedded in EPUB, MP3, and M4B files if metadata.json is not found
 - `--flat`: Process files in a flat directory structure (automatically enables --use-embedded-metadata)
-- `--layout`: Directory structure layout (options: author-series-title, author-series-title-number, author-title, author-only)
+- `--layout`: Directory structure layout (options: author-series-title, author-series-title-number, author-title, author-only, series-title, series-title-number)
 - `--author-fields`: Comma-separated list of fields to try for author (e.g., 'authors,narrators,album_artist,artist')
 - `--series-field`: Field to use as series (e.g., 'series', 'album')
 - `--title-field`: Field to use as title (e.g., 'album', 'title', 'track_title')
@@ -303,10 +303,15 @@ Options:
 
 Controls the directory structure of the organized audiobooks. Available options:
 
+**Author-based layouts:**
 - `author-series-title` (default): Organizes as `Author/Series/Book Title/`
 - `author-series-title-number`: Organizes as `Author/Series/#1 - Book Title/` (includes series number in title directory)
 - `author-title`: Organizes as `Author/Book Title/`
 - `author-only`: Organizes as `Author/` with all files directly in the author directory
+
+**Series-based layouts (no author directory):**
+- `series-title`: Organizes as `Series/Book Title/` (useful when organizing by series only)
+- `series-title-number`: Organizes as `Series/#1 - Book Title/` (includes series number, no author directory)
 
 #### `--use-series-as-title` Flag
 
@@ -464,6 +469,47 @@ With series:
 /output/Author Name/
 ```
 
+### Series-Title Layout (--layout=series-title)
+
+Organizes by series without author directory. Books without series fall back to title only.
+
+Without series:
+```
+/output/Book Title/
+```
+
+With series:
+```
+/output/Series Name/Book Title/
+```
+
+### Series-Title-Number Layout (--layout=series-title-number)
+
+Organizes by series with numbered titles. Books without series fall back to title only.
+
+Without series:
+```
+/output/Book Title/
+```
+
+With series and series number:
+```
+/output/Series Name/#1 - Book Title/
+```
+
+With series but no number:
+```
+/output/Series Name/Book Title/
+```
+
+### Author-Series-Title-Number Layout (--layout=author-series-title-number)
+
+Includes series number in the title directory for better sorting.
+
+```
+/output/Author Name/Series Name/#1 - Book Title/
+```
+
 ### Using Series as Title (--use-series-as-title)
 
 For MP3 files where the Series field contains the actual book title and Title contains chapter info:
@@ -600,7 +646,7 @@ prompt: true
 remove-empty: true  # Remove empty directories
 use-embedded-metadata: true # Use metadata embedded in EPUB, MP3, and M4B files
 flat: false  # Process files in a flat directory structure
-layout: "author-series-title"  # Directory structure layout options: author-series-title, author-series-title-number, author-title, author-only
+layout: "author-series-title"  # Directory structure layout options: author-series-title, author-series-title-number, author-title, author-only, series-title, series-title-number
 use-series-as-title: false  # Use Series field as the main title directory for MP3 files
 
 # Metadata field mapping
@@ -633,7 +679,7 @@ export AO_REPLACE_SPACE="_"
 export AO_VERBOSE=true
 export AO_REMOVE_EMPTY=true
 export AO_USE_EMBEDDED_METADATA=true
-export AO_LAYOUT="author-series-title"  # Options: author-series-title, author-series-title-number, author-title, author-only
+export AO_LAYOUT="author-series-title"  # Options: author-series-title, author-series-title-number, author-title, author-only, series-title, series-title-number
 export AO_USE_SERIES_AS_TITLE=false
 export AO_AUTHOR_FIELDS="authors,narrators,album_artist,artist"
 export AO_SERIES_FIELD="series"
