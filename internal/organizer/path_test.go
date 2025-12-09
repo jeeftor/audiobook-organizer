@@ -19,7 +19,7 @@ func TestSanitizePath(t *testing.T) {
 			input:        "Book: Title? (Part 1) <Test> |Series| *Special*",
 			replaceSpace: "",
 			os:           "windows",
-			want:         "Book_ Title_ (Part 1) _Test_ _Series_ _Special_",
+			want:         "Book_ Title_ (Part 1) _Test_ _Series_ _Special",
 		},
 		{
 			name:         "windows_with_space_replacement",
@@ -41,7 +41,7 @@ func TestSanitizePath(t *testing.T) {
 			input:        "Book: Title? (Part 1) <Test> |Series| *Special*",
 			replaceSpace: "",
 			os:           "linux",
-			want:         "Book_ Title_ (Part 1) _Test_ _Series_ _Special_",
+			want:         "Book_ Title_ (Part 1) _Test_ _Series_ _Special",
 		},
 		{
 			name:         "unix_with_forward_slash",
