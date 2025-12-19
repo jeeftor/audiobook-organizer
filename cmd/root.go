@@ -241,14 +241,6 @@ func init() {
 	viper.SetEnvPrefix("AUDIOBOOK_ORGANIZER") // This will still be used for unmapped variables
 	viper.AutomaticEnv()
 
-	// Set up custom environment variable handling for our aliases
-	for key := range envAliases {
-		viper.RegisterAlias(key, strings.ToUpper(key))
-		if value := getEnvValue(key); value != "" {
-			viper.Set(key, value)
-		}
-	}
-
 	// Custom validation instead of using MarkFlagRequired
 	rootCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		// First run the existing PreRun function
@@ -256,8 +248,13 @@ func init() {
 			cmd.PreRun(cmd, args)
 		}
 
-		// Check if either dir or input flag is set
-		if !cmd.Flags().Changed("dir") && !cmd.Flags().Changed("input") {
+		// Check if input directory is set via flags, env vars, or config file
+		inputDir := viper.GetString("dir")
+		if inputDir == "" {
+			inputDir = viper.GetString("input")
+		}
+
+		if inputDir == "" {
 			return fmt.Errorf("either --dir or --input must be specified")
 		}
 		return nil
@@ -290,6 +287,23 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		if viper.GetBool("verbose") {
 			color.Cyan("Using config file: %s", viper.ConfigFileUsed())
+		}
+	} else {
+		// Only show error if a config file was explicitly specified
+		if cfgFile != "" {
+			fmt.Fprintf(os.Stderr, "Error reading config file: %v\n", err)
+		}
+	}
+
+	// Set up custom environment variable handling for our aliases
+	// This needs to happen after config file is read but before validation
+	for key := range envAliases {
+		viper.RegisterAlias(key, strings.ToUpper(key))
+		if value := getEnvValue(key); value != "" {
+			// Only set if not already set by config file or flags
+			if !viper.IsSet(key) {
+				viper.Set(key, value)
+			}
 		}
 	}
 }

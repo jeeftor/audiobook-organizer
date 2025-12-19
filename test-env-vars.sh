@@ -122,7 +122,7 @@ unset AO_DIR AO_OUTPUT AO_DRY_RUN
 echo "========================================"
 echo "Test 4: Config file override"
 echo "========================================"
-CONFIG_FILE=$(mktemp)
+CONFIG_FILE=$(mktemp --suffix=.yaml)
 cat > "$CONFIG_FILE" << EOF
 input: $TEST_INPUT
 output: $TEST_OUTPUT
