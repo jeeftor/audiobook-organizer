@@ -1,6 +1,8 @@
 package models
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -346,4 +348,59 @@ func TestScanModelWindowSizeHandling(t *testing.T) {
 	}
 
 	_ = cmd // Command can be nil
+}
+
+// TestScanDirectoryWithMetadataJson tests that scanning a directory with
+// metadata.json files correctly uses the JSON metadata instead of embedded metadata
+func TestScanDirectoryWithMetadataJson(t *testing.T) {
+	// Create a temporary directory structure with metadata.json
+	tmpDir := t.TempDir()
+
+	bookDir := filepath.Join(tmpDir, "Author Name", "Book Title")
+	if err := os.MkdirAll(bookDir, 0755); err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
+	}
+
+	// Create a metadata.json file with specific metadata
+	metadataContent := `{
+		"title": "The Great Book from JSON",
+		"authors": ["JSON Author"],
+		"series": ["JSON Series"],
+		"track_number": 1
+	}`
+
+	metadataPath := filepath.Join(bookDir, "metadata.json")
+	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0644); err != nil {
+		t.Fatalf("Failed to write metadata.json: %v", err)
+	}
+
+	// Create a dummy audio file (just an empty file with .m4b extension)
+	audioPath := filepath.Join(bookDir, "audiobook.m4b")
+	if err := os.WriteFile(audioPath, []byte("dummy audio content"), 0644); err != nil {
+		t.Fatalf("Failed to write audio file: %v", err)
+	}
+
+	// Create scan model and scan the directory
+	model := NewScanModel(tmpDir)
+	books := model.scanDirectory(tmpDir)
+
+	// Verify we found the book
+	if len(books) == 0 {
+		t.Fatal("Expected to find at least one book, got none")
+	}
+
+	// Verify the metadata came from metadata.json, not embedded metadata
+	book := books[0]
+
+	if book.Metadata.Title != "The Great Book from JSON" {
+		t.Errorf("Expected title 'The Great Book from JSON' from metadata.json, got '%s'", book.Metadata.Title)
+	}
+
+	if len(book.Metadata.Authors) == 0 || book.Metadata.Authors[0] != "JSON Author" {
+		t.Errorf("Expected author 'JSON Author' from metadata.json, got %v", book.Metadata.Authors)
+	}
+
+	if len(book.Metadata.Series) == 0 || book.Metadata.Series[0] != "JSON Series" {
+		t.Errorf("Expected series 'JSON Series' from metadata.json, got %v", book.Metadata.Series)
+	}
 }
