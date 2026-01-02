@@ -123,9 +123,24 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 		for _, validExt := range extensions {
 			if ext == validExt {
 
-				// Extract metadata using the organizer package's UnifiedMetadataProvider
-				provider := organizer.NewMetadataProvider(path)
-				metadata, err := provider.GetMetadata()
+				// First, check if there's a metadata.json in the same directory
+				dirPath := filepath.Dir(path)
+				metadataJsonPath := filepath.Join(dirPath, "metadata.json")
+
+				var metadata organizer.Metadata
+				var err error
+
+				// Try to use metadata.json if it exists
+				if _, statErr := os.Stat(metadataJsonPath); statErr == nil {
+					// metadata.json exists, use it
+					provider := organizer.NewJSONMetadataProvider(metadataJsonPath)
+					metadata, err = provider.GetMetadata()
+				} else {
+					// No metadata.json, extract from the file itself
+					provider := organizer.NewMetadataProvider(path)
+					metadata, err = provider.GetMetadata()
+				}
+
 				if err != nil {
 					// If metadata extraction fails, create basic metadata from filename
 					baseName := filepath.Base(path)
@@ -136,7 +151,6 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 				}
 
 				// Store file info for later processing
-				dirPath := filepath.Dir(path)
 				fileInfos = append(fileInfos, fileInfo{
 					path:     path,
 					metadata: metadata,
