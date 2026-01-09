@@ -64,15 +64,19 @@ func main() {
 
 	// Run the organizer in flat mode
 	fmt.Println("Running organizer in flat mode...")
-	org := organizer.NewOrganizer(&organizer.OrganizerConfig{
+	org, err := organizer.NewOrganizer(&organizer.OrganizerConfig{
 		BaseDir:   inputDir,
 		OutputDir: outputDir,
 		Flat:      true,
 		Verbose:   true,
 		DryRun:    false,
 	})
+	if err != nil {
+		fmt.Printf("Error creating organizer: %v\n", err)
+		os.Exit(1)
+	}
 
-	err := org.Execute()
+	err = org.Execute()
 	if err != nil {
 		fmt.Printf("Error running organizer: %v\n", err)
 		os.Exit(1)

@@ -117,10 +117,14 @@ func TestOrganizer_Integration(t *testing.T) {
 				UseFileTimes: true,
 			}
 
-			org := organizer.NewOrganizer(config)
-
-			// Run the organizer
-			err := org.Organize()
+			org, err := organizer.NewOrganizer(config)
+			if err != nil && !tt.expectedError {
+				t.Fatalf("NewOrganizer() error = %v", err)
+			}
+			if err == nil {
+				// Run the organizer
+				err = org.Organize()
+			}
 
 			// Verify results
 			if tt.expectedError {

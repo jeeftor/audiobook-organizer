@@ -185,7 +185,7 @@ func TestMainModelQuitHandling(t *testing.T) {
 
 	// Check if quitting is handled (implementation dependent)
 	_ = mainModel.quitting // This would depend on actual implementation
-	_ = cmd // Command handling varies by implementation
+	_ = cmd                // Command handling varies by implementation
 }
 
 func TestMainModelErrorHandling(t *testing.T) {

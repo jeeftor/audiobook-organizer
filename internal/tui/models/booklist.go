@@ -128,14 +128,14 @@ func (i BookItem) FilterValue() string {
 // CustomDelegate is a custom delegate for the book list
 type CustomDelegate struct {
 	Styles struct {
-		NormalTitle, SelectedTitle                lipgloss.Style
-		NormalDesc, SelectedDesc                  lipgloss.Style
-		NormalItemStyle, SelectedItemStyle        lipgloss.Style
-		DimmedDesc                                lipgloss.Style
+		NormalTitle, SelectedTitle         lipgloss.Style
+		NormalDesc, SelectedDesc           lipgloss.Style
+		NormalItemStyle, SelectedItemStyle lipgloss.Style
+		DimmedDesc                         lipgloss.Style
 	}
-	ItemHeight     int
-	ItemSpacing    int
-	SelectedPrefix  string
+	ItemHeight       int
+	ItemSpacing      int
+	SelectedPrefix   string
 	UnselectedPrefix string
 }
 

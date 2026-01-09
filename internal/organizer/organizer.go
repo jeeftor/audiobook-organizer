@@ -38,6 +38,67 @@ type OrganizerConfig struct {
 	FieldMapping        FieldMapping // Configuration for mapping metadata fields
 }
 
+// Validate checks if the configuration is valid and returns helpful error messages
+func (c *OrganizerConfig) Validate() error {
+	// Check base directory
+	if c.BaseDir == "" {
+		return fmt.Errorf("base directory is required\n\nPlease specify an input directory:\n  --dir=/path/to/audiobooks\n  or\n  --input=/path/to/audiobooks")
+	}
+
+	// Check if base directory exists
+	info, err := os.Stat(c.BaseDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("base directory does not exist: %s\n\nPlease check the path and try again", c.BaseDir)
+		}
+		if os.IsPermission(err) {
+			return fmt.Errorf("permission denied accessing: %s\n\nTry running with appropriate permissions:\n  sudo audiobook-organizer --dir=%s", c.BaseDir, c.BaseDir)
+		}
+		return fmt.Errorf("error accessing base directory %s: %w", c.BaseDir, err)
+	}
+
+	// Verify it's a directory
+	if !info.IsDir() {
+		return fmt.Errorf("%s is not a directory\n\nPlease specify a directory, not a file", c.BaseDir)
+	}
+
+	// If output directory is specified, validate it
+	if c.OutputDir != "" {
+		// Check if output directory exists or can be created
+		if _, err := os.Stat(c.OutputDir); err != nil {
+			if os.IsNotExist(err) && !c.DryRun {
+				// Try to create it
+				if err := os.MkdirAll(c.OutputDir, 0755); err != nil {
+					return fmt.Errorf("cannot create output directory %s: %w\n\nPlease check permissions or create it manually", c.OutputDir, err)
+				}
+			} else if os.IsPermission(err) {
+				return fmt.Errorf("permission denied accessing output directory: %s\n\nTry running with appropriate permissions", c.OutputDir)
+			}
+		}
+	}
+
+	// Validate layout option
+	validLayouts := map[string]bool{
+		"author-series-title":        true,
+		"author-series-title-number": true,
+		"author-series":              true,
+		"author-title":               true,
+		"author-only":                true,
+		"series-title":               true,
+		"series-title-number":        true,
+	}
+	if c.Layout != "" && !validLayouts[c.Layout] {
+		return fmt.Errorf("invalid layout: %s\n\nValid options are:\n  author-series-title (default)\n  author-series-title-number\n  author-series\n  author-title\n  author-only\n  series-title\n  series-title-number", c.Layout)
+	}
+
+	// Validate replace_space character (should be single char or empty)
+	if len(c.ReplaceSpace) > 1 {
+		return fmt.Errorf("replace_space must be a single character, got: %q\n\nExamples:\n  --replace_space=_\n  --replace_space=.\n  --replace_space=-", c.ReplaceSpace)
+	}
+
+	return nil
+}
+
 // FileOps handles file system operations with dry-run support
 type FileOps struct {
 	dryRun bool
@@ -101,6 +162,15 @@ func (lc *LayoutCalculator) CalculateTargetPath(metadata Metadata) string {
 	switch lc.config.Layout {
 	case "author-only":
 		return filepath.Join(targetBase, authorDir)
+	case "author-series":
+		// Author/Series layout (no title subdirectory)
+		// Used for multi-file audiobooks where each file is a chapter
+		if validSeries := metadata.GetValidSeries(); validSeries != "" {
+			seriesDir := lc.sanitizer(validSeries)
+			return filepath.Join(targetBase, authorDir, seriesDir)
+		}
+		// If no series, fall back to author/title
+		return filepath.Join(targetBase, authorDir, titleDir)
 	case "author-title":
 		return filepath.Join(targetBase, authorDir, titleDir)
 	case "author-series-title", "":
@@ -163,7 +233,12 @@ type Organizer struct {
 }
 
 // NewOrganizer creates a new Organizer with the provided configuration
-func NewOrganizer(config *OrganizerConfig) *Organizer {
+func NewOrganizer(config *OrganizerConfig) (*Organizer, error) {
+	// Validate configuration first
+	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+
 	org := &Organizer{
 		config:  *config,
 		fileOps: NewFileOps(config.DryRun),
@@ -179,7 +254,7 @@ func NewOrganizer(config *OrganizerConfig) *Organizer {
 		config.FieldMapping = DefaultFieldMapping()
 	}
 
-	return org
+	return org, nil
 }
 
 // GetLogPath returns the path where operation logs are stored
@@ -189,6 +264,11 @@ func (o *Organizer) GetLogPath() string {
 		logBase = o.config.OutputDir
 	}
 	return filepath.Join(logBase, LogFileName)
+}
+
+// GetSummary returns the current operation summary
+func (o *Organizer) GetSummary() Summary {
+	return o.summary
 }
 
 // Execute runs the main organization process

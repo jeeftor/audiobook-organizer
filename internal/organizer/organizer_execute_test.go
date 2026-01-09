@@ -58,7 +58,7 @@ func TestOrganizerExecute(t *testing.T) {
 				FieldMapping: DefaultFieldMapping(),
 			},
 			expectError: true,
-			errorMsg:    "error resolving base directory path",
+			errorMsg:    "base directory does not exist",
 		},
 		{
 			name: "empty directory",
@@ -107,7 +107,18 @@ func TestOrganizerExecute(t *testing.T) {
 			}
 
 			// Create organizer
-			org := NewOrganizer(&tt.config)
+			org, err := NewOrganizer(&tt.config)
+
+			// Check if error occurred during construction (validation errors)
+			if err != nil && tt.expectError {
+				// Expected error during NewOrganizer (e.g., invalid config)
+				if tt.errorMsg != "" && !containsString(err.Error(), tt.errorMsg) {
+					t.Errorf("Expected error containing %q, got %q", tt.errorMsg, err.Error())
+				}
+				return // Test passed
+			} else if err != nil {
+				t.Fatalf("NewOrganizer() unexpected error = %v", err)
+			}
 
 			// Execute
 			err = org.Execute()
@@ -178,10 +189,13 @@ func TestOrganizerExecuteWithOutput(t *testing.T) {
 		FieldMapping: DefaultFieldMapping(),
 	}
 
-	org := NewOrganizer(&config)
+	org, err := NewOrganizer(&config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
 
 	// Execute
-	if err := org.Execute(); err != nil {
+	if err = org.Execute(); err != nil {
 		t.Fatalf("Execute failed: %v", err)
 	}
 
@@ -223,10 +237,13 @@ func TestOrganizerExecuteUndo(t *testing.T) {
 		FieldMapping: DefaultFieldMapping(),
 	}
 
-	org := NewOrganizer(&config)
+	org, err := NewOrganizer(&config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
 
 	// Execute (should call undoMoves)
-	if err := org.Execute(); err != nil {
+	if err = org.Execute(); err != nil {
 		t.Fatalf("Execute undo failed: %v", err)
 	}
 }
@@ -267,7 +284,10 @@ func TestOrganizerExecuteRemoveEmpty(t *testing.T) {
 		FieldMapping: DefaultFieldMapping(),
 	}
 
-	org := NewOrganizer(&config)
+	org, err := NewOrganizer(&config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
 
 	// Execute should complete without infinite loops
 	if err := org.Execute(); err != nil {
@@ -295,7 +315,10 @@ func TestOrganizerExecutePathResolution(t *testing.T) {
 		FieldMapping: DefaultFieldMapping(),
 	}
 
-	org := NewOrganizer(&config)
+	org, err := NewOrganizer(&config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
 
 	// Log initial state
 	t.Logf("Initial BaseDir: %q", org.config.BaseDir)
@@ -346,7 +369,10 @@ func TestOrganizerExecuteFieldMapping(t *testing.T) {
 		// Note: FieldMapping is intentionally empty to test default initialization
 	}
 
-	org := NewOrganizer(&config)
+	org, err := NewOrganizer(&config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
 
 	// The NewOrganizer constructor should initialize default field mapping on the original config
 	// Check that the original config pointer was modified
@@ -393,7 +419,10 @@ func TestOrganizerExecuteVerboseMode(t *testing.T) {
 		FieldMapping: DefaultFieldMapping(),
 	}
 
-	org := NewOrganizer(&config)
+	org, err := NewOrganizer(&config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
 
 	// Execute should not fail in verbose mode
 	if err := org.Execute(); err != nil {
@@ -404,9 +433,9 @@ func TestOrganizerExecuteVerboseMode(t *testing.T) {
 // Helper function for string containment check
 func containsString(s, substr string) bool {
 	return len(substr) == 0 || len(s) >= len(substr) &&
-		   (s == substr || len(s) > len(substr) &&
-		   (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
-		   containsSubstring(s, substr)))
+		(s == substr || len(s) > len(substr) &&
+			(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
+				containsSubstring(s, substr)))
 }
 
 func containsSubstring(s, substr string) bool {
@@ -459,8 +488,14 @@ func TestOrganizerExecuteErrorScenarios(t *testing.T) {
 				FieldMapping: DefaultFieldMapping(),
 			}
 
-			org := NewOrganizer(&config)
-			err := org.Execute()
+			org, newErr := NewOrganizer(&config)
+			if newErr != nil && !tt.expectError {
+				t.Fatalf("NewOrganizer() error = %v", newErr)
+			}
+			err := newErr
+			if err == nil {
+				err = org.Execute()
+			}
 
 			if tt.expectError {
 				if err == nil {
@@ -491,7 +526,10 @@ func TestOrganizerExecuteTiming(t *testing.T) {
 		FieldMapping: DefaultFieldMapping(),
 	}
 
-	org := NewOrganizer(&config)
+	org, err := NewOrganizer(&config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
 
 	start := time.Now()
 	err = org.Execute()

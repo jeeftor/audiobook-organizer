@@ -709,8 +709,8 @@ func TestGroupFilesByAlbum(t *testing.T) {
 			},
 			expectedGroups: 2, // Different titles create different groups
 			expectedFiles: map[string]int{
-				"series author|book one|book series":  1,
-				"series author|book two|book series":  1,
+				"series author|book one|book series": 1,
+				"series author|book two|book series": 1,
 			},
 		},
 		{

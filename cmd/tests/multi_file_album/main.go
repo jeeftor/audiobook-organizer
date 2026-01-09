@@ -48,15 +48,19 @@ func main() {
 
 	// Initialize the organizer
 	config := &organizer.OrganizerConfig{
-		BaseDir:            testDir,
-		OutputDir:          outputDir,
-		Flat:               true,
-		Verbose:            true,
+		BaseDir:             testDir,
+		OutputDir:           outputDir,
+		Flat:                true,
+		Verbose:             true,
 		UseEmbeddedMetadata: true,
-		Layout:             "author-series-title",
+		Layout:              "author-series-title",
 	}
 
-	org := organizer.NewOrganizer(config)
+	org, err := organizer.NewOrganizer(config)
+	if err != nil {
+		fmt.Printf("Error creating organizer: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Run the organizer
 	fmt.Println("Starting multi-file album test...")

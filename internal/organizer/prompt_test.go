@@ -91,13 +91,16 @@ func TestPromptConfirmation(t *testing.T) {
 				Title:   "Test Book",
 			}
 
-			org := NewOrganizer(
+			org, err := NewOrganizer(
 				&OrganizerConfig{
 					BaseDir:      tempDir,
 					OutputDir:    "",
 					ReplaceSpace: "",
 					Prompt:       true,
 				})
+			if err != nil {
+				t.Fatalf("NewOrganizer() error = %v", err)
+			}
 
 			got := org.PromptForConfirmation(metadata, sourceDir, filepath.Join(tempDir, "Test Author/Test Book"))
 			if got != tt.want {

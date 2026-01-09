@@ -18,13 +18,13 @@ type MovePreview struct {
 
 // PreviewModel represents the preview screen
 type PreviewModel struct {
-	books       []AudioBook
-	config      map[string]string
+	books        []AudioBook
+	config       map[string]string
 	fieldMapping organizer.FieldMapping
-	moves       []MovePreview
-	cursor      int
-	width       int
-	height      int
+	moves        []MovePreview
+	cursor       int
+	width        int
+	height       int
 	scrollOffset int
 }
 
@@ -231,9 +231,9 @@ func (m *PreviewModel) GetMoves() []MovePreview {
 // colorizeOutputPath colorizes the output path components based on the layout
 func (m *PreviewModel) colorizeOutputPath(path string, layout string) string {
 	// Define color styles
-	authorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF9500"))   // Orange
-	seriesStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00D9FF"))   // Cyan
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))    // Green
+	authorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF9500"))    // Orange
+	seriesStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00D9FF"))    // Cyan
+	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))     // Green
 	separatorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")) // Gray
 
 	// Split the path into components

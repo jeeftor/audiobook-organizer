@@ -9,22 +9,22 @@ import (
 // This centralizes styling to make it consistent and easy to modify.
 var Styles = struct {
 	// Text styles
-	Title       lipgloss.Style
-	Subtitle    lipgloss.Style
-	Normal      lipgloss.Style
-	Bold        lipgloss.Style
-	Faint       lipgloss.Style
+	Title    lipgloss.Style
+	Subtitle lipgloss.Style
+	Normal   lipgloss.Style
+	Bold     lipgloss.Style
+	Faint    lipgloss.Style
 
 	// Color styles
-	Success     lipgloss.Style
-	Error       lipgloss.Style
-	Warning     lipgloss.Style
-	Info        lipgloss.Style
+	Success lipgloss.Style
+	Error   lipgloss.Style
+	Warning lipgloss.Style
+	Info    lipgloss.Style
 
 	// UI element styles
-	Prompt      lipgloss.Style
-	Path        lipgloss.Style
-	Highlight   lipgloss.Style
+	Prompt    lipgloss.Style
+	Path      lipgloss.Style
+	Highlight lipgloss.Style
 
 	// Icon styles
 	IconSuccess lipgloss.Style
@@ -34,22 +34,22 @@ var Styles = struct {
 	IconPrompt  lipgloss.Style
 }{
 	// Text styles
-	Title:       lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF")),
-	Subtitle:    lipgloss.NewStyle().Foreground(lipgloss.Color("#DDDDDD")),
-	Normal:      lipgloss.NewStyle(),
-	Bold:        lipgloss.NewStyle().Bold(true),
-	Faint:       lipgloss.NewStyle().Faint(true),
+	Title:    lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF")),
+	Subtitle: lipgloss.NewStyle().Foreground(lipgloss.Color("#DDDDDD")),
+	Normal:   lipgloss.NewStyle(),
+	Bold:     lipgloss.NewStyle().Bold(true),
+	Faint:    lipgloss.NewStyle().Faint(true),
 
 	// Color styles - matching fatih/color defaults as closely as possible
-	Success:     lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00")), // Green
-	Error:       lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000")), // Red
-	Warning:     lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00")), // Yellow
-	Info:        lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFFF")), // Cyan
+	Success: lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00")), // Green
+	Error:   lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000")), // Red
+	Warning: lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00")), // Yellow
+	Info:    lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFFF")), // Cyan
 
 	// UI element styles
-	Prompt:      lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")),
-	Path:        lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00")), // Yellow
-	Highlight:   lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFFF")), // Cyan
+	Prompt:    lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")),
+	Path:      lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00")), // Yellow
+	Highlight: lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFFF")), // Cyan
 
 	// Icon styles - for emoji and symbols
 	IconSuccess: lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00")), // Green

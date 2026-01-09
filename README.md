@@ -6,12 +6,16 @@
 
 CLI tool to organize audiobooks based on **EITHER** `metadata.json` files **OR** embedded metadata in `.epub`, `.mp3`, and `.m4b` files.
 
-## 🎉 NEW: Beta TUI (Text User Interface) Mode
+## 🎉 NEW: Interactive TUI Modes
 
-The audiobook organizer now includes a **BETA** interactive TUI mode! Launch it with:
+The audiobook organizer now includes **interactive TUI (Text User Interface) modes** for both organizing and renaming!
+
+### Organization TUI
+
+Launch the interactive organization interface:
 
 ```bash
-audiobook-organizer gui
+audiobook-organizer tui
 ```
 
 Features:
@@ -21,7 +25,47 @@ Features:
 - **Visual Settings Editor**: Configure all options through an interactive interface
 - **Progress Tracking**: Watch files being processed in real-time
 
-The GUI mode is in active development. Feedback and bug reports are welcome!
+### Rename TUI (NEW!)
+
+Launch the interactive rename interface to rename audiobook files based on metadata:
+
+```bash
+audiobook-organizer rename-tui --dir=/path/to/audiobooks
+```
+
+Features:
+- **Hybrid Metadata Display**: See both metadata.json fields (📁) and embedded audio fields (🎵) with visual indicators
+- **Interactive Field Mapping**: Configure which metadata fields to use for title, author, series, track numbers
+- **Live Template Builder**: Design custom filename templates with real-time preview
+- **Conflict Detection**: Automatically detects and resolves duplicate filenames
+- **Before/After Preview**: See proposed renames before executing
+- **Undo Support**: All renames are logged and can be undone
+
+The rename-tui workflow includes 6 interactive screens:
+1. **Scan** - Discover audiobook files and extract metadata
+2. **Field Mapping** - Configure metadata field mappings with hybrid display
+3. **Command** - Generate CLI commands (optional exit point)
+4. **Template** - Design filename template with preview
+5. **Preview** - Review all proposed renames
+6. **Process** - Execute renames with progress tracking
+
+### Metadata Viewer (NEW!)
+
+Explore metadata for your audiobook files:
+
+```bash
+audiobook-organizer metadata --dir=/path/to/audiobooks
+```
+
+This interactive viewer shows all available metadata fields from both metadata.json and embedded audio tags, making it easy to design field mappings and templates.
+
+### Hybrid Metadata Extraction (NEW!)
+
+When metadata.json files exist alongside audio files (MP3, M4B), the tool automatically merges:
+- **Book-level metadata** from metadata.json (title, authors, series, description, etc.)
+- **File-level metadata** from embedded audio tags (track numbers, disc numbers)
+
+This ensures you get the complete picture with proper track numbering for multi-file audiobooks!
 
 
 ## Features
@@ -243,19 +287,19 @@ docker pull jeffsui/audiobook-organizer:latest
 
 ## Usage
 
-### GUI Mode (Recommended for Beginners)
+### Organization TUI Mode (Recommended for Beginners)
 
-Launch the interactive TUI for a visual, guided experience:
+Launch the interactive TUI for a visual, guided organization experience:
 
 ```bash
-# Launch GUI without arguments - use directory picker
-audiobook-organizer gui
+# Launch TUI without arguments - use directory picker
+audiobook-organizer tui
 
-# Launch GUI with pre-selected directories
-audiobook-organizer gui --input=/path/to/audiobooks --output=/path/to/organized
+# Launch TUI with pre-selected directories
+audiobook-organizer tui --input=/path/to/audiobooks --output=/path/to/organized
 ```
 
-**GUI Keyboard Shortcuts:**
+**TUI Keyboard Shortcuts:**
 - **Directory Picker:**
   - `↑/↓` or `j/k`: Navigate directories
   - `Enter`: Open/navigate into directory
@@ -267,7 +311,26 @@ audiobook-organizer gui --input=/path/to/audiobooks --output=/path/to/organized
   - `Ctrl+R`: Jump to root directory
   - `Ctrl+Q`: Quit
 
-### CLI Mode
+### Rename TUI Mode (NEW!)
+
+Launch the interactive rename TUI:
+
+```bash
+# Launch rename TUI
+audiobook-organizer rename-tui --dir=/path/to/audiobooks
+
+# Or use the metadata viewer first to explore fields
+audiobook-organizer metadata --dir=/path/to/audiobooks
+```
+
+**Rename TUI Navigation:**
+- **Tab** - Switch between widgets
+- **Enter/Space** - Confirm/Select
+- **Arrow Keys** - Navigate lists/tables
+- **q** - Back to previous screen
+- **Ctrl+C** - Quit anytime
+
+### Organization CLI Mode
 
 Basic organization:
 
@@ -297,6 +360,61 @@ Options:
 - `--series-field`: Field to use as series (e.g., 'series', 'album')
 - `--title-field`: Field to use as title (e.g., 'album', 'title', 'track_title')
 - `--track-field`: Field to use for track number (e.g., 'track', 'track_number')
+
+### Rename CLI Mode (NEW!)
+
+Rename audiobook files based on metadata templates:
+
+```bash
+# Preview renames with default template
+audiobook-organizer rename --dir=/path/to/audiobooks --dry-run
+
+# Rename with custom template
+audiobook-organizer rename --dir=/path/to/audiobooks --template="{author} - {series} {series_number} - {title}"
+
+# Use Last, First author format
+audiobook-organizer rename --dir=/path/to/audiobooks --author-format=last-first
+
+# Undo previous rename operation
+audiobook-organizer rename --dir=/path/to/audiobooks --undo
+```
+
+**Rename Options:**
+- `--template`: Filename template with placeholders (default: `{author} - {series} {series_number} - {title}`)
+- `--author-format`: Author name format: `first-last` (default), `last-first`, `preserve`
+- `--recursive`: Recursively process subdirectories (default: true)
+- `--preserve-path`: Only rename filename, keep directory structure (default: true)
+- `--prompt`: Prompt before renaming each file
+- `--strict`: Error on missing template fields
+- `--undo`: Undo previous rename operations
+
+**Template Fields:**
+- `{author}` - First author (formatted)
+- `{authors}` - All authors (comma-separated)
+- `{title}` - Book title
+- `{series}` - Series name (without number)
+- `{series_number}` - Series number only
+- `{track}` - Track number (zero-padded)
+- `{album}` - Album field
+- `{year}` - Publication year
+- `{narrator}` - Narrator (if available)
+
+**Examples:**
+```bash
+# Rename all files in directory
+audiobook-organizer rename --dir=./audiobooks --template="{author} - {track} - {title}"
+
+# Preview changes first
+audiobook-organizer rename --dir=./audiobooks --template="{series} {series_number} - {track}" --dry-run
+
+# Use with field mapping
+audiobook-organizer rename \
+  --dir=./audiobooks \
+  --template="{author} - {title}" \
+  --author-fields="narrators,authors" \
+  --title-field="album"
+```
+
 ### Directory Layout Options
 
 #### `--layout` Flag

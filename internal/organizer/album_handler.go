@@ -186,7 +186,7 @@ func normalizeString(s string) string {
 		"%":  "percent",
 		"$":  "dollar",
 		"*":  "",
-		"\\":"",
+		"\\": "",
 		"/":  "",
 		":":  "",
 		"_":  " ",

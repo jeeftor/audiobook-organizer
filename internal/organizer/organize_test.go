@@ -9,11 +9,11 @@ import (
 
 func TestProcessDirectory(t *testing.T) {
 	tests := []struct {
-		name           string
-		flat           bool
-		setupFunc      func(t *testing.T, tempDir string) string // Returns path to test
-		expectError    bool
-		skipIfWindows  bool
+		name          string
+		flat          bool
+		setupFunc     func(t *testing.T, tempDir string) string // Returns path to test
+		expectError   bool
+		skipIfWindows bool
 	}{
 		{
 			name: "flat mode with audio file",
@@ -84,7 +84,10 @@ func TestProcessDirectory(t *testing.T) {
 				FieldMapping: DefaultFieldMapping(),
 			}
 
-			org := NewOrganizer(&config)
+			org, err := NewOrganizer(&config)
+			if err != nil {
+				t.Fatalf("NewOrganizer() error = %v", err)
+			}
 			testPath := tt.setupFunc(t, tempDir)
 
 			// Get file info (might not exist for error testing)
@@ -121,7 +124,10 @@ func TestHandleDirectoryError(t *testing.T) {
 		FieldMapping: DefaultFieldMapping(),
 	}
 
-	org := NewOrganizer(&config)
+	org, err := NewOrganizer(&config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
 
 	tests := []struct {
 		name        string
@@ -246,7 +252,10 @@ func TestMoveFile(t *testing.T) {
 				FieldMapping: DefaultFieldMapping(),
 			}
 
-			org := NewOrganizer(&config)
+			org, err := NewOrganizer(&config)
+			if err != nil {
+				t.Fatalf("NewOrganizer() error = %v", err)
+			}
 			source, target := tt.setupFunc(t, tempDir)
 
 			err = org.moveFile(source, target)
@@ -327,7 +336,10 @@ func TestCopyAndDeleteFile(t *testing.T) {
 				FieldMapping: DefaultFieldMapping(),
 			}
 
-			org := NewOrganizer(&config)
+			org, err := NewOrganizer(&config)
+			if err != nil {
+				t.Fatalf("NewOrganizer() error = %v", err)
+			}
 			source, target, targetDir := tt.setupFunc(t, tempDir)
 
 			err = org.copyAndDeleteFile(source, target, targetDir)
@@ -353,8 +365,8 @@ func TestCopyAndDeleteFile(t *testing.T) {
 
 func TestRemoveEmptyDirs(t *testing.T) {
 	tests := []struct {
-		name      string
-		setupFunc func(t *testing.T, tempDir string) string // Returns directory to test
+		name         string
+		setupFunc    func(t *testing.T, tempDir string) string // Returns directory to test
 		shouldRemove bool
 	}{
 		{
@@ -414,7 +426,10 @@ func TestRemoveEmptyDirs(t *testing.T) {
 				FieldMapping: DefaultFieldMapping(),
 			}
 
-			org := NewOrganizer(&config)
+			org, err := NewOrganizer(&config)
+			if err != nil {
+				t.Fatalf("NewOrganizer() error = %v", err)
+			}
 			testDir := tt.setupFunc(t, tempDir)
 
 			err = org.removeEmptyDirs(testDir)

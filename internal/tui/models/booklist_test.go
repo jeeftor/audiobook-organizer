@@ -11,8 +11,8 @@ import (
 
 func TestBookItem(t *testing.T) {
 	tests := []struct {
-		name         string
-		item         BookItem
+		name          string
+		item          BookItem
 		expectedTitle string
 		expectedDesc  string
 	}{
@@ -361,7 +361,7 @@ func TestBookListModelGetSelectedBooks(t *testing.T) {
 
 	// Manually set some selections for testing (override defaults)
 	model.selected[0] = true
-	model.selected[1] = false  // Explicitly unselect
+	model.selected[1] = false // Explicitly unselect
 	model.selected[2] = true
 
 	// Test getting selected books (if such method exists)

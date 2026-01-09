@@ -949,7 +949,7 @@ func (o *Organizer) syncTargetDirectory(targetDir string) error {
 func (o *Organizer) moveFiles(sourcePath, targetPath string, dirMetadata *Metadata) ([]string, error) {
 	if o.config.Verbose {
 		message := o.formatDirectoryMoveHeader(sourcePath, targetPath)
-		PrintCyan(message)
+		PrintCyan("%s", message)
 	}
 
 	entries, err := os.ReadDir(sourcePath)

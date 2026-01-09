@@ -119,7 +119,19 @@ func (m *ProcessModel) startProcessing() tea.Cmd {
 		}
 
 		// Process each item individually using OrganizeSingleFile
-		org := organizer.NewOrganizer(config)
+		org, err := organizer.NewOrganizer(config)
+		if err != nil {
+			// Mark all items as failed with the configuration error
+			for i := range m.items {
+				m.items[i].Status = StatusError
+				m.items[i].Error = fmt.Errorf("configuration error: %v", err)
+			}
+			m.failed = len(m.items)
+			m.complete = true
+			m.processing = false
+			m.elapsedTime = time.Since(m.startTime)
+			return ProcessCompleteMsg{Success: 0, Failed: m.failed}
+		}
 
 		for i := range m.items {
 			// Update status to processing

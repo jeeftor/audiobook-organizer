@@ -224,11 +224,11 @@ func TestVersionComparison(t *testing.T) {
 func TestGitHubReleaseAssetMatching(t *testing.T) {
 	// Test the asset name matching logic
 	tests := []struct {
-		name         string
-		assetName    string
-		goos         string
-		goarch       string
-		shouldMatch  bool
+		name        string
+		assetName   string
+		goos        string
+		goarch      string
+		shouldMatch bool
 	}{
 		{
 			name:        "Darwin x86_64 match",

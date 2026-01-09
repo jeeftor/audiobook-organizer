@@ -6,9 +6,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jeeftor/audiobook-organizer/internal/organizer"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/jeeftor/audiobook-organizer/internal/organizer"
 )
 
 // Setting represents a configurable setting
@@ -31,16 +31,16 @@ type FieldMappingSetting struct {
 
 // SettingsModel represents the settings screen
 type SettingsModel struct {
-	settings     []Setting
-	cursor       int
-	width        int
-	height       int
-	selectedBooks []AudioBook // Selected books from the book list
-	showAdvanced bool         // Whether to show advanced field mapping options
+	settings      []Setting
+	cursor        int
+	width         int
+	height        int
+	selectedBooks []AudioBook           // Selected books from the book list
+	showAdvanced  bool                  // Whether to show advanced field mapping options
 	fieldMappings []FieldMappingSetting // Advanced field mapping settings
-	fieldCursor   int          // Cursor for field mapping settings
-	filterString string        // Filter string for searching settings
-	filtering    bool          // Whether we're currently in filtering mode
+	fieldCursor   int                   // Cursor for field mapping settings
+	filterString  string                // Filter string for searching settings
+	filtering     bool                  // Whether we're currently in filtering mode
 }
 
 // NewSettingsModel creates a new settings model
@@ -206,7 +206,7 @@ func formatFullMetadata(metadata *organizer.Metadata) string {
 		for _, key := range keys {
 			// Skip fields we've already displayed
 			if key == "title" || key == "album" || key == "series" ||
-			   key == "track" || key == "track_number" || key == "track_title" {
+				key == "track" || key == "track_number" || key == "track_title" {
 				continue
 			}
 
@@ -267,7 +267,7 @@ func (m *SettingsModel) applyFilter() {
 	// Find the first setting that matches the filter string
 	for i, setting := range m.settings {
 		if strings.Contains(strings.ToLower(setting.Name), strings.ToLower(m.filterString)) ||
-		   strings.Contains(strings.ToLower(setting.Description), strings.ToLower(m.filterString)) {
+			strings.Contains(strings.ToLower(setting.Description), strings.ToLower(m.filterString)) {
 			// Move cursor to this setting
 			m.cursor = i
 			return
@@ -402,7 +402,7 @@ func (m *SettingsModel) View() string {
 
 	// Show filter if active
 	if m.filtering {
-		content.WriteString(filterStyle.Render("Filter: " + m.filterString + "_") + "\n\n")
+		content.WriteString(filterStyle.Render("Filter: "+m.filterString+"_") + "\n\n")
 	}
 
 	// If showing advanced settings, display field mappings
@@ -578,7 +578,7 @@ func (m *SettingsModel) View() string {
 			layoutSetting := m.settings[0].Options[m.settings[0].Value]
 			// Whether to use embedded metadata (affects display only)
 			embeddedMetadataEnabled := m.settings[1].Value == 1 // Yes is index 1
-			flatMode := m.settings[2].Value == 1 // Yes is index 1
+			flatMode := m.settings[2].Value == 1                // Yes is index 1
 
 			// Show preview for up to 3 books
 			previewCount := 3

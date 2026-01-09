@@ -13,14 +13,40 @@ LDFLAGS := -ldflags "-s -w \
 UNIT_TEST_PKGS = ./...
 INTEGRATION_TEST_PKGS = $(shell go list ./... | grep -v '/integration$$')
 
-.PHONY: all build clean dev release test test-unit test-integration coverage coverage-html
+.PHONY: all build clean dev gui-dev gui-dev1 gui-dev2 gui-build gui-install release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet
 
 # Default target
 all: build
 
-# Development build with version info
+# Development build with version info (CLI)
 dev:
 	go build $(LDFLAGS) -o bin/audiobook-organizer
+
+# Start GUI in development mode
+gui-dev:
+	@echo "Starting GUI in development mode..."
+	@rm -rf gui-books
+	@rm -rf output
+	@mkdir -p output
+	@cp -r books gui-books
+	cd audiobook-organizer-gui && wails dev -appargs "--dir=../gui-books --out=../output"
+
+
+# Start GUI with ./books as input and . as output
+gui-dev1:
+	cd audiobook-organizer-gui && wails dev -appargs "--dir=../books --out=.."
+
+# Start GUI with books-meta as input
+gui-dev2:
+	cd audiobook-organizer-gui && wails dev -appargs "--dir=../books-meta"
+
+# Build GUI for production
+gui-build:
+	cd audiobook-organizer-gui && wails build
+
+# Install GUI dependencies
+gui-install:
+	cd audiobook-organizer-gui/frontend && npm install
 
 # Build using goreleaser for distribution
 build:
@@ -73,3 +99,31 @@ ensure-gotestsum:
 # Create a release (requires GITHUB_TOKEN)
 release:
 	goreleaser release --clean
+
+# Run go vet to check for suspicious code
+vet:
+	@echo "Running go vet..."
+	go vet ./...
+
+# Format all Go code
+fmt:
+	@echo "Formatting Go code..."
+	gofmt -s -w .
+
+# Check if code is properly formatted (non-destructive)
+fmt-check:
+	@echo "Checking code formatting..."
+	@UNFORMATTED=$$(gofmt -l .); \
+	if [ -n "$$UNFORMATTED" ]; then \
+		echo "The following files are not properly formatted:"; \
+		echo "$$UNFORMATTED"; \
+		echo ""; \
+		echo "Run 'make fmt' to format them."; \
+		exit 1; \
+	else \
+		echo "All files are properly formatted."; \
+	fi
+
+# Run all linting checks (vet + fmt-check)
+lint: vet fmt-check
+	@echo "All linting checks passed!"

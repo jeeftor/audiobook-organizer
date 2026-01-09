@@ -3,8 +3,8 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
 	"os"
+	"path/filepath"
 
 	"github.com/jeeftor/audiobook-organizer/internal/organizer"
 	"github.com/jeeftor/audiobook-organizer/internal/tui/models"

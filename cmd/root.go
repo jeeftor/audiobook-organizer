@@ -17,6 +17,7 @@ const ( // This makes sonar pass
 	seriesFieldKey     = "series-field"
 	authorFieldsKey    = "author-fields"
 	trackFieldKey      = "track-field"
+	discFieldKey       = "disc-field"
 	useEmbeddedMetaKey = "use-embedded-metadata"
 	removeEmptyKey     = "remove-empty"
 	dryRunKey          = "dry-run"
@@ -40,6 +41,7 @@ var (
 	seriesField  string
 	authorFields string // Comma-separated list
 	trackField   string
+	discField    string
 
 	cfgFile string
 )
@@ -65,6 +67,15 @@ var envAliases = map[string][]string{
 	seriesFieldKey:  {"AO_SERIES_FIELD", "AUDIOBOOK_ORGANIZER_SERIES_FIELD"},
 	authorFieldsKey: {"AO_AUTHOR_FIELDS", "AUDIOBOOK_ORGANIZER_AUTHOR_FIELDS"},
 	trackFieldKey:   {"AO_TRACK_FIELD", "AUDIOBOOK_ORGANIZER_TRACK_FIELD"},
+	discFieldKey:    {"AO_DISC_FIELD", "AUDIOBOOK_ORGANIZER_DISC_FIELD"},
+
+	// Rename command environment variables
+	"rename-template":      {"AO_RENAME_TEMPLATE", "AUDIOBOOK_ORGANIZER_RENAME_TEMPLATE"},
+	"rename-author-format": {"AO_RENAME_AUTHOR_FORMAT", "AUDIOBOOK_ORGANIZER_RENAME_AUTHOR_FORMAT"},
+	"rename-recursive":     {"AO_RENAME_RECURSIVE", "AUDIOBOOK_ORGANIZER_RENAME_RECURSIVE"},
+	"rename-strict":        {"AO_RENAME_STRICT", "AUDIOBOOK_ORGANIZER_RENAME_STRICT"},
+	"rename-preserve-path": {"AO_RENAME_PRESERVE_PATH", "AUDIOBOOK_ORGANIZER_RENAME_PRESERVE_PATH"},
+	"rename-prompt":        {"AO_RENAME_PROMPT", "AUDIOBOOK_ORGANIZER_RENAME_PROMPT"},
 }
 
 var rootCmd = &cobra.Command{
@@ -114,7 +125,7 @@ var rootCmd = &cobra.Command{
 			authorFieldsList = strings.Split(af, ",")
 		}
 
-		org := organizer.NewOrganizer(
+		org, err := organizer.NewOrganizer(
 			&organizer.OrganizerConfig{
 				BaseDir:             inputDir,
 				OutputDir:           outputDir,
@@ -132,9 +143,14 @@ var rootCmd = &cobra.Command{
 					SeriesField:  viper.GetString(seriesFieldKey),
 					AuthorFields: authorFieldsList,
 					TrackField:   viper.GetString(trackFieldKey),
+					DiscField:    viper.GetString(discFieldKey),
 				},
 			},
 		)
+		if err != nil {
+			organizer.PrintRed("Configuration error: %v", err)
+			os.Exit(1)
+		}
 
 		if err := org.Execute(); err != nil {
 			color.Red("❌ Error: %v", err)
@@ -196,53 +212,66 @@ func init() {
 	// Config file flag
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.audiobook-organizer.yaml)")
 
-	// Command line flags with aliases
-	rootCmd.Flags().StringVar(&inputDir, "dir", "", "Base directory to scan (alias for --input)")
-	rootCmd.Flags().StringVar(&inputDir, "input", "", "Base directory to scan (alias for --dir)")
-	rootCmd.Flags().StringVar(&outputDir, "out", "", "Output directory (alias for --output)")
-	rootCmd.Flags().StringVar(&outputDir, "output", "", "Output directory (alias for --out)")
+	// Persistent flags (available to all subcommands)
+	rootCmd.PersistentFlags().StringVar(&inputDir, "dir", "", "Base directory to scan (alias for --input)")
+	rootCmd.PersistentFlags().StringVar(&inputDir, "input", "", "Base directory to scan (alias for --dir)")
+	rootCmd.PersistentFlags().StringVar(&outputDir, "out", "", "Output directory (alias for --output)")
+	rootCmd.PersistentFlags().StringVar(&outputDir, "output", "", "Output directory (alias for --out)")
+	rootCmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Verbose output")
+	rootCmd.PersistentFlags().BoolVar(&dryRun, dryRunKey, false, "Show what would happen without making changes")
+	rootCmd.PersistentFlags().BoolVar(&useEmbeddedMetadata, useEmbeddedMetaKey, false, "Use metadata embedded in EPUB files if metadata.json is not found")
+	rootCmd.PersistentFlags().BoolVar(&flat, "flat", false, "Process files in a flat directory structure (automatically enables --use-embedded-metadata)")
+
+	// Local flags (only for root command)
 	rootCmd.Flags().StringVar(&replaceSpace, "replace_space", "", "Character to replace spaces")
-	rootCmd.Flags().BoolVar(&verbose, "verbose", false, "Verbose output")
-	rootCmd.Flags().BoolVar(&dryRun, dryRunKey, false, "Show what would happen without making changes")
 	rootCmd.Flags().BoolVar(&undo, "undo", false, "Restore files to their original locations")
 	rootCmd.Flags().BoolVar(&prompt, "prompt", false, "Prompt for confirmation before moving each book")
 	rootCmd.Flags().BoolVar(&removeEmpty, removeEmptyKey, false, "Remove empty directories after moving files")
-	rootCmd.Flags().BoolVar(&useEmbeddedMetadata, useEmbeddedMetaKey, false, "Use metadata embedded in EPUB files if metadata.json is not found")
-	rootCmd.Flags().BoolVar(&flat, "flat", false, "Process files in a flat directory structure (automatically enables --use-embedded-metadata)")
 	rootCmd.Flags().StringVarP(&layout, "layout", "l", "author-series-title", "Directory structure layout:\n  - author-series-title:        Author/Series/Title/ (default)\n  - author-series-title-number: Author/Series/#1 - Title/ (include series number in title)\n  - author-title:               Author/Title/ (ignore series)\n  - author-only:                Author/ (flatten all books)")
-	// Field mapping flags
-	rootCmd.Flags().StringVar(&titleField, titleFieldKey, "", "Field to use as title (e.g., 'album', 'title', 'track_title')")
-	rootCmd.Flags().StringVar(&seriesField, seriesFieldKey, "", "Field to use as series (e.g., 'series', 'album')")
-	rootCmd.Flags().StringVar(&authorFields, authorFieldsKey, "", "Comma-separated list of fields to try for author (e.g., 'authors,narrators,album_artist,artist')")
-	rootCmd.Flags().StringVar(&trackField, trackFieldKey, "", "Field to use for track number (e.g., 'track', 'track_number')")
 
-	// Bind flags to viper
-	viper.BindPFlag("dir", rootCmd.Flags().Lookup("dir"))
-	viper.BindPFlag("input", rootCmd.Flags().Lookup("input"))
-	viper.BindPFlag("out", rootCmd.Flags().Lookup("out"))
-	viper.BindPFlag("output", rootCmd.Flags().Lookup("output"))
+	// Field mapping flags (persistent for all commands)
+	rootCmd.PersistentFlags().StringVar(&titleField, titleFieldKey, "", "Field to use as title (e.g., 'album', 'title', 'track_title')")
+	rootCmd.PersistentFlags().StringVar(&seriesField, seriesFieldKey, "", "Field to use as series (e.g., 'series', 'album')")
+	rootCmd.PersistentFlags().StringVar(&authorFields, authorFieldsKey, "", "Comma-separated list of fields to try for author (e.g., 'authors,narrators,album_artist,artist')")
+	rootCmd.PersistentFlags().StringVar(&trackField, trackFieldKey, "", "Field to use for track number (e.g., 'track', 'track_number', 'trck', 'trk')")
+	rootCmd.PersistentFlags().StringVar(&discField, discFieldKey, "", "Field to use for disc number (e.g., 'disc', 'discnumber', 'disk', 'tpos')")
+
+	// Bind persistent flags to viper
+	viper.BindPFlag("dir", rootCmd.PersistentFlags().Lookup("dir"))
+	viper.BindPFlag("input", rootCmd.PersistentFlags().Lookup("input"))
+	viper.BindPFlag("out", rootCmd.PersistentFlags().Lookup("out"))
+	viper.BindPFlag("output", rootCmd.PersistentFlags().Lookup("output"))
+	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
+	viper.BindPFlag(dryRunKey, rootCmd.PersistentFlags().Lookup(dryRunKey))
+	viper.BindPFlag(useEmbeddedMetaKey, rootCmd.PersistentFlags().Lookup(useEmbeddedMetaKey))
+	viper.BindPFlag("flat", rootCmd.PersistentFlags().Lookup("flat"))
+	viper.BindPFlag(titleFieldKey, rootCmd.PersistentFlags().Lookup(titleFieldKey))
+	viper.BindPFlag(seriesFieldKey, rootCmd.PersistentFlags().Lookup(seriesFieldKey))
+	viper.BindPFlag(authorFieldsKey, rootCmd.PersistentFlags().Lookup(authorFieldsKey))
+	viper.BindPFlag(trackFieldKey, rootCmd.PersistentFlags().Lookup(trackFieldKey))
+	viper.BindPFlag(discFieldKey, rootCmd.PersistentFlags().Lookup(discFieldKey))
+
+	// Bind local flags to viper
 	viper.BindPFlag("replace_space", rootCmd.Flags().Lookup("replace_space"))
-	viper.BindPFlag("verbose", rootCmd.Flags().Lookup("verbose"))
-	viper.BindPFlag(dryRunKey, rootCmd.Flags().Lookup(dryRunKey))
 	viper.BindPFlag("undo", rootCmd.Flags().Lookup("undo"))
 	viper.BindPFlag("prompt", rootCmd.Flags().Lookup("prompt"))
 	viper.BindPFlag(removeEmptyKey, rootCmd.Flags().Lookup(removeEmptyKey))
-	viper.BindPFlag(useEmbeddedMetaKey, rootCmd.Flags().Lookup(useEmbeddedMetaKey))
-	viper.BindPFlag("flat", rootCmd.Flags().Lookup("flat"))
 	viper.BindPFlag("layout", rootCmd.Flags().Lookup("layout"))
-
-	// Bind field mapping flags to viper
-	viper.BindPFlag(titleFieldKey, rootCmd.Flags().Lookup(titleFieldKey))
-	viper.BindPFlag(seriesFieldKey, rootCmd.Flags().Lookup(seriesFieldKey))
-	viper.BindPFlag(authorFieldsKey, rootCmd.Flags().Lookup(authorFieldsKey))
-	viper.BindPFlag(trackFieldKey, rootCmd.Flags().Lookup(trackFieldKey))
 
 	// Set up environment variable handling
 	viper.SetEnvPrefix("AUDIOBOOK_ORGANIZER") // This will still be used for unmapped variables
 	viper.AutomaticEnv()
 
 	// Custom validation instead of using MarkFlagRequired
+	// Only validate when running the root command itself, not subcommands
 	rootCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		// Skip validation if a subcommand is being called
+		// Check if we have any subcommands and if args indicate a subcommand
+		if cmd.Name() != "audiobook-organizer" {
+			// This is a subcommand, skip root validation
+			return nil
+		}
+
 		// First run the existing PreRun function
 		if cmd.PreRun != nil {
 			cmd.PreRun(cmd, args)

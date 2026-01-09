@@ -66,8 +66,9 @@ func TestSanitizePath(t *testing.T) {
 				t.Skipf("Skipping %s test on %s", tt.os, runtime.GOOS)
 			}
 
+			tmpDir := t.TempDir()
 			config := &OrganizerConfig{
-				BaseDir:      "",
+				BaseDir:      tmpDir,
 				OutputDir:    "",
 				ReplaceSpace: tt.replaceSpace,
 				Verbose:      false,
@@ -76,7 +77,10 @@ func TestSanitizePath(t *testing.T) {
 				Prompt:       false,
 				RemoveEmpty:  false,
 			}
-			org := NewOrganizer(config)
+			org, err := NewOrganizer(config)
+			if err != nil {
+				t.Fatalf("NewOrganizer() error = %v", err)
+			}
 
 			got := org.SanitizePath(tt.input)
 			if got != tt.want {
@@ -223,8 +227,14 @@ func TestSanitizePathTrimming(t *testing.T) {
 		},
 	}
 
-	config := &OrganizerConfig{}
-	org := NewOrganizer(config)
+	tmpDir := t.TempDir()
+	config := &OrganizerConfig{
+		BaseDir: tmpDir,
+	}
+	org, err := NewOrganizer(config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -238,8 +248,14 @@ func TestSanitizePathTrimming(t *testing.T) {
 }
 
 func TestSanitizePathWithProblematicMetadata(t *testing.T) {
-	config := &OrganizerConfig{}
-	org := NewOrganizer(config)
+	tmpDir := t.TempDir()
+	config := &OrganizerConfig{
+		BaseDir: tmpDir,
+	}
+	org, err := NewOrganizer(config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
 	tests := []struct {
 		name  string
 		input string

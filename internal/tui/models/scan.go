@@ -24,25 +24,25 @@ type ScanCompleteMsg struct {
 
 // AudioBook represents an audiobook with its metadata
 type AudioBook struct {
-	Path        string
-	Metadata    organizer.Metadata
-	Selected    bool
-	IsPartOfAlbum bool  // Indicates if this file is part of a multi-file album
-	AlbumName   string   // Name of the album this file belongs to
-	TrackNumber int      // Track number within the album
-	TotalTracks int      // Total number of tracks in the album
+	Path          string
+	Metadata      organizer.Metadata
+	Selected      bool
+	IsPartOfAlbum bool   // Indicates if this file is part of a multi-file album
+	AlbumName     string // Name of the album this file belongs to
+	TrackNumber   int    // Track number within the album
+	TotalTracks   int    // Total number of tracks in the album
 }
 
 // ScanModel represents the scanning screen
 type ScanModel struct {
-	inputDir    string
-	scanning    bool
-	complete    bool
-	books       []AudioBook
-	scannedDirs int
+	inputDir     string
+	scanning     bool
+	complete     bool
+	books        []AudioBook
+	scannedDirs  int
 	scannedFiles int
-	startTime   time.Time
-	elapsedTime time.Duration
+	startTime    time.Time
+	elapsedTime  time.Duration
 }
 
 // NewScanModel creates a new scan model
@@ -123,23 +123,15 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 		for _, validExt := range extensions {
 			if ext == validExt {
 
-				// First, check if there's a metadata.json in the same directory
-				dirPath := filepath.Dir(path)
-				metadataJsonPath := filepath.Join(dirPath, "metadata.json")
-
-				var metadata organizer.Metadata
-				var err error
-
-				// Try to use metadata.json if it exists
-				if _, statErr := os.Stat(metadataJsonPath); statErr == nil {
-					// metadata.json exists, use it
-					provider := organizer.NewJSONMetadataProvider(metadataJsonPath)
-					metadata, err = provider.GetMetadata()
-				} else {
-					// No metadata.json, extract from the file itself
-					provider := organizer.NewMetadataProvider(path)
-					metadata, err = provider.GetMetadata()
-				}
+				// ALWAYS use NewMetadataProvider which auto-detects and does hybrid extraction
+				// It will automatically:
+				// - Detect file type (audio, epub, json)
+				// - For audio files, check for metadata.json in parent dir
+				// - Do hybrid extraction (JSON + embedded) if metadata.json exists
+				// - Use only embedded metadata if no metadata.json
+				// Pass false for useEmbeddedOnly to allow hybrid mode (JSON + embedded)
+				provider := organizer.NewMetadataProvider(path, false)
+				metadata, err := provider.GetMetadata()
 
 				if err != nil {
 					// If metadata extraction fails, create basic metadata from filename
@@ -150,15 +142,18 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 					}
 				}
 
+				// Get the directory path for this file
+				fileDir := filepath.Dir(path)
+
 				// Store file info for later processing
 				fileInfos = append(fileInfos, fileInfo{
 					path:     path,
 					metadata: metadata,
-					dir:      dirPath,
+					dir:      fileDir,
 				})
 
 				// Count files per directory for album detection
-				dirFileCount[dirPath]++
+				dirFileCount[fileDir]++
 				break
 			}
 		}
@@ -240,13 +235,13 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 					}
 
 					book := AudioBook{
-						Path:         file.path,
-						Metadata:     file.metadata,
-						Selected:     true,
+						Path:          file.path,
+						Metadata:      file.metadata,
+						Selected:      true,
 						IsPartOfAlbum: true,
-						AlbumName:    albumName,
-						TrackNumber:  trackNumber,
-						TotalTracks:  totalTracks,
+						AlbumName:     albumName,
+						TrackNumber:   trackNumber,
+						TotalTracks:   totalTracks,
 					}
 					books = append(books, book)
 				}
@@ -261,9 +256,9 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 		for _, file := range files {
 			if !processedDirs[dir] {
 				book := AudioBook{
-					Path:         file.path,
-					Metadata:     file.metadata,
-					Selected:     true,
+					Path:          file.path,
+					Metadata:      file.metadata,
+					Selected:      true,
 					IsPartOfAlbum: false,
 				}
 				books = append(books, book)

@@ -28,9 +28,9 @@ func main() {
 		{
 			Path: filepath.Join(testDataDir, "strange_audiobook_14_Tales_of__ngstr_m___Caf__Chronicles_Mar_a_L_pez_Tr1.m4b"),
 			Metadata: organizer.Metadata{
-				Title:   "Tales of Ångström & Café Chronicles",
-				Authors: []string{"María López"},
-				Series:  []string{"Café Chronicles"},
+				Title:       "Tales of Ångström & Café Chronicles",
+				Authors:     []string{"María López"},
+				Series:      []string{"Café Chronicles"},
 				TrackNumber: 1,
 			},
 		},

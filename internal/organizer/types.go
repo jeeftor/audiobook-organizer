@@ -14,12 +14,13 @@ type FieldMapping struct {
 	TitleField   string   `json:"title_field,omitempty"`   // "title", "album", "series"
 	SeriesField  string   `json:"series_field,omitempty"`  // "series", "album"
 	AuthorFields []string `json:"author_fields,omitempty"` // ["artist", "album_artist"] or ["authors"]
-	TrackField   string   `json:"track_field,omitempty"`   // "track", "track_number"
+	TrackField   string   `json:"track_field,omitempty"`   // "track", "track_number", "trck", "trk"
+	DiscField    string   `json:"disc_field,omitempty"`    // "disc", "discnumber", "disk", "tpos"
 }
 
 // IsEmpty returns true if the field mapping is empty
 func (fm FieldMapping) IsEmpty() bool {
-	return fm.TitleField == "" && fm.SeriesField == "" && len(fm.AuthorFields) == 0 && fm.TrackField == ""
+	return fm.TitleField == "" && fm.SeriesField == "" && len(fm.AuthorFields) == 0 && fm.TrackField == "" && fm.DiscField == ""
 }
 
 // DefaultFieldMapping returns the default field mapping

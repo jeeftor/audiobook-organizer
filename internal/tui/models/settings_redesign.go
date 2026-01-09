@@ -57,11 +57,11 @@ type SettingsTableModel struct {
 	focusArea        FocusArea
 
 	// Popup state
-	showPopup        bool
-	popupOptions     []string
-	popupSelection   int
-	popupSettingIdx  int
-	justClosedPopup  bool
+	showPopup       bool
+	popupOptions    []string
+	popupSelection  int
+	popupSettingIdx int
+	justClosedPopup bool
 
 	// Metadata navigation
 	metadataBookIndex int
@@ -205,7 +205,7 @@ func (m *SettingsTableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// - Metadata title bar: 1 line
 		// - Output preview: 5 lines
 		// - Footer: 2 lines (newline + text)
-		usedLines := 3 + 12 + 2 + 1 + 5 + 2  // = 25
+		usedLines := 3 + 12 + 2 + 1 + 5 + 2 // = 25
 
 		// Give all remaining space to metadata viewport
 		// The viewport's border/padding is handled by its own Style, not counted here
@@ -221,7 +221,7 @@ func (m *SettingsTableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			metadataHeight = 10
 		}
 
-		vpWidth := msg.Width - 4  // Account for viewport borders
+		vpWidth := msg.Width - 4 // Account for viewport borders
 
 		m.metadataViewport.Width = vpWidth
 		m.metadataViewport.Height = metadataHeight
@@ -407,11 +407,11 @@ func (m *SettingsTableModel) colorizeOutputPath(path string, layout string) stri
 	parts := strings.Split(path, string(filepath.Separator))
 
 	// Color scheme for different components
-	authorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF9500"))      // Orange for author
-	seriesStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00D9FF"))      // Cyan for series
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))       // Green for title
-	fileStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#AAAAAA"))        // Gray for filename
-	separatorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))   // Gray for /
+	authorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF9500"))    // Orange for author
+	seriesStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00D9FF"))    // Cyan for series
+	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))     // Green for title
+	fileStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#AAAAAA"))      // Gray for filename
+	separatorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")) // Gray for /
 
 	// Skip the output directory (first part) and work with the rest
 	if len(parts) > 0 {
@@ -792,7 +792,7 @@ func (m *SettingsTableModel) renderPopup() string {
 		Background(lipgloss.Color("#7D56F4")).
 		Padding(0, 1)
 
-	content.WriteString(titleStyle.Render("Select " + settingName) + "\n\n")
+	content.WriteString(titleStyle.Render("Select "+settingName) + "\n\n")
 
 	// Options list
 	selectedStyle := lipgloss.NewStyle().

@@ -27,7 +27,7 @@ func TestNewMetadataFormatter(t *testing.T) {
 				Title:       "Advanced Test Book",
 				Authors:     []string{"Author One", "Author Two"},
 				Series:      []string{"Test Series"},
-				SourcePath:    "complex_test.m4a",
+				SourcePath:  "complex_test.m4a",
 				TrackNumber: 5,
 				Album:       "Test Album",
 			},
@@ -72,10 +72,10 @@ func TestNewMetadataFormatter(t *testing.T) {
 
 func TestFormatMetadataWithMapping(t *testing.T) {
 	tests := []struct {
-		name           string
-		metadata       Metadata
-		fieldMapping   FieldMapping
-		expectedParts  []string // Parts that should appear in the formatted output
+		name            string
+		metadata        Metadata
+		fieldMapping    FieldMapping
+		expectedParts   []string // Parts that should appear in the formatted output
 		unexpectedParts []string // Parts that should NOT appear
 	}{
 		{
@@ -100,8 +100,8 @@ func TestFormatMetadataWithMapping(t *testing.T) {
 		{
 			name: "metadata with multiple authors",
 			metadata: Metadata{
-				Title:    "Multi Author Book",
-				Authors:  []string{"Author One", "Author Two", "Author Three"},
+				Title:      "Multi Author Book",
+				Authors:    []string{"Author One", "Author Two", "Author Three"},
 				SourcePath: "multi_author.mp3",
 			},
 			fieldMapping: DefaultFieldMapping(),
@@ -116,9 +116,9 @@ func TestFormatMetadataWithMapping(t *testing.T) {
 		{
 			name: "metadata with multiple series",
 			metadata: Metadata{
-				Title:    "Series Book",
-				Authors:  []string{"Series Author"},
-				Series:   []string{"Series One", "Series Two"},
+				Title:      "Series Book",
+				Authors:    []string{"Series Author"},
+				Series:     []string{"Series One", "Series Two"},
 				SourcePath: "series_book.mp3",
 			},
 			fieldMapping: DefaultFieldMapping(),
@@ -146,8 +146,8 @@ func TestFormatMetadataWithMapping(t *testing.T) {
 		{
 			name: "special characters in metadata",
 			metadata: Metadata{
-				Title:    "Special & Characters: Book",
-				Authors:  []string{"Author with $pecial Ch@racters"},
+				Title:      "Special & Characters: Book",
+				Authors:    []string{"Author with $pecial Ch@racters"},
 				SourcePath: "special_chars.mp3",
 			},
 			fieldMapping: DefaultFieldMapping(),
@@ -266,7 +266,7 @@ func TestFormatMetadataWithDifferentFieldMappings(t *testing.T) {
 		Title:       "Test Book",
 		Authors:     []string{"Test Author"},
 		Series:      []string{"Test Series"},
-		SourcePath:    "test.mp3",
+		SourcePath:  "test.mp3",
 		TrackNumber: 1,
 	}
 
@@ -325,7 +325,7 @@ func TestFormatMetadataFieldMappingDisplay(t *testing.T) {
 		Title:       "Test Book",
 		Authors:     []string{"Test Author"},
 		Series:      []string{"Test Series"},
-		SourcePath:    "test.mp3",
+		SourcePath:  "test.mp3",
 		TrackNumber: 1,
 	}
 
@@ -363,34 +363,34 @@ func TestFormatMetadataWithEmptyValues(t *testing.T) {
 		{
 			name: "empty title",
 			metadata: Metadata{
-				Title:    "",
-				Authors:  []string{"Test Author"},
+				Title:      "",
+				Authors:    []string{"Test Author"},
 				SourcePath: "test.mp3",
 			},
 		},
 		{
 			name: "empty authors",
 			metadata: Metadata{
-				Title:    "Test Book",
-				Authors:  []string{},
+				Title:      "Test Book",
+				Authors:    []string{},
 				SourcePath: "test.mp3",
 			},
 		},
 		{
 			name: "empty series",
 			metadata: Metadata{
-				Title:    "Test Book",
-				Authors:  []string{"Test Author"},
-				Series:   []string{},
+				Title:      "Test Book",
+				Authors:    []string{"Test Author"},
+				Series:     []string{},
 				SourcePath: "test.mp3",
 			},
 		},
 		{
 			name: "all empty except filename",
 			metadata: Metadata{
-				Title:    "",
-				Authors:  []string{},
-				Series:   []string{},
+				Title:      "",
+				Authors:    []string{},
+				Series:     []string{},
 				SourcePath: "test.mp3",
 			},
 		},
@@ -419,7 +419,7 @@ func TestFormatMetadataStructure(t *testing.T) {
 		Title:       "Test Book",
 		Authors:     []string{"Test Author"},
 		Series:      []string{"Test Series"},
-		SourcePath:    "test.mp3",
+		SourcePath:  "test.mp3",
 		TrackNumber: 1,
 		Album:       "Test Album",
 	}

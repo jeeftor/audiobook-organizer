@@ -110,7 +110,6 @@ func (o *Organizer) shouldProcessAsAlbum(dirPath string) bool {
 	return audioFiles > 1 && firstMetadata != nil
 }
 
-
 // hasCommonPrefix checks if two strings have a common prefix that suggests they belong to the same album
 // For example: "Album Name - Track 01" and "Album Name - Track 02"
 func hasCommonPrefix(str1, str2 string) bool {
@@ -142,8 +141,8 @@ func hasCommonPrefix(str1, str2 string) bool {
 		if strings.HasPrefix(str2, prefix) {
 			// Check if the prefix ends with a common separator
 			if strings.HasSuffix(prefix, " - ") ||
-			   strings.HasSuffix(prefix, ": ") ||
-			   strings.HasSuffix(prefix, ", ") {
+				strings.HasSuffix(prefix, ": ") ||
+				strings.HasSuffix(prefix, ", ") {
 				return true
 			}
 		}

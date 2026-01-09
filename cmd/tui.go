@@ -8,14 +8,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// guiCmd represents the gui command for the TUI interface
-var guiCmd = &cobra.Command{
-	Use:   "gui",
-	Short: "Start the TUI interface for audiobook organization",
-	Long: `Launch a Text User Interface (TUI) for organizing audiobooks.
-This mode provides an interactive way to scan, select, and organize your audiobooks.`,
+// tuiCmd represents the tui command for the TUI interface
+var tuiCmd = &cobra.Command{
+	Use:   "tui",
+	Short: "Start the Terminal User Interface (TUI) for audiobook organization",
+	Long: `Launch a Terminal User Interface (TUI) for organizing audiobooks.
+This mode provides an interactive terminal-based way to scan, select, and organize your audiobooks.`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		// For GUI mode, directories are optional - we'll use the file picker if not provided
+		// For TUI mode, directories are optional - we'll use the file picker if not provided
 		// No validation needed
 		return nil
 	},
@@ -41,11 +41,11 @@ This mode provides an interactive way to scan, select, and organize your audiobo
 }
 
 func init() {
-	rootCmd.AddCommand(guiCmd)
+	rootCmd.AddCommand(tuiCmd)
 
 	// Define flags with aliases matching the root command
-	guiCmd.Flags().String("dir", "", "Base directory to scan (alias for --input)")
-	guiCmd.Flags().StringP("input", "i", "", "Base directory to scan (alias for --dir)")
-	guiCmd.Flags().String("out", "", "Output directory (alias for --output)")
-	guiCmd.Flags().StringP("output", "o", "", "Output directory (alias for --out)")
+	tuiCmd.Flags().String("dir", "", "Base directory to scan (alias for --input)")
+	tuiCmd.Flags().StringP("input", "i", "", "Base directory to scan (alias for --dir)")
+	tuiCmd.Flags().String("out", "", "Output directory (alias for --output)")
+	tuiCmd.Flags().StringP("output", "o", "", "Output directory (alias for --out)")
 }

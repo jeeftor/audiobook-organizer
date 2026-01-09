@@ -29,14 +29,14 @@ type MainModel struct {
 	height    int
 
 	// Sub-models for different screens
-	dirPickerModel         *DirPickerModel
-	scanModel              *ScanModel
-	bookListModel          *BookListModel
-	settingsModel          *SettingsTableModel
-	advancedSettingsModel  *SettingsTableModel
-	previewModel           *PreviewModel
-	processModel           *ProcessModel
-	commandOutputModel     *CommandOutputModel
+	dirPickerModel        *DirPickerModel
+	scanModel             *ScanModel
+	bookListModel         *BookListModel
+	settingsModel         *SettingsTableModel
+	advancedSettingsModel *SettingsTableModel
+	previewModel          *PreviewModel
+	processModel          *ProcessModel
+	commandOutputModel    *CommandOutputModel
 
 	// Application state
 	quitting bool

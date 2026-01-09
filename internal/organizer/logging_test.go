@@ -44,7 +44,10 @@ func TestLogFileCreation(t *testing.T) {
 		RemoveEmpty:         false,
 		UseEmbeddedMetadata: false,
 	}
-	org := NewOrganizer(config)
+	org, err := NewOrganizer(config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
 
 	// Create the metadata provider
 	provider := NewJSONMetadataProvider(filepath.Join(sourceDir, "metadata.json"))
@@ -118,7 +121,10 @@ func TestUndoMoves(t *testing.T) {
 		RemoveEmpty:         false,
 		UseEmbeddedMetadata: false,
 	}
-	org := NewOrganizer(config)
+	org, err := NewOrganizer(config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
 
 	provider := NewJSONMetadataProvider(filepath.Join(sourceDir, "metadata.json"))
 
@@ -144,9 +150,12 @@ func TestUndoMoves(t *testing.T) {
 		Prompt:       false,
 		RemoveEmpty:  false,
 	}
-	undoOrg := NewOrganizer(undoConfig)
+	undoOrg, err := NewOrganizer(undoConfig)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
 
-	if err := undoOrg.Execute(); err != nil {
+	if err = undoOrg.Execute(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -220,7 +229,10 @@ func TestLogFileInOutputDirectory(t *testing.T) {
 		Prompt:       false,
 		RemoveEmpty:  false,
 	}
-	org := NewOrganizer(config)
+	org, err := NewOrganizer(config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
 
 	provider := NewJSONMetadataProvider(filepath.Join(sourceDir, "metadata.json"))
 

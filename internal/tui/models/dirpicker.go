@@ -21,20 +21,20 @@ const (
 
 // DirPickerModel represents the directory picker screen
 type DirPickerModel struct {
-	filepicker     filepicker.Model
-	mode           PickerMode
-	inputDir       string
-	outputDir      string
-	err            error
-	width          int
-	height         int
-	filterText     string
-	filterActive   bool
-	filteredDirs   []string
-	filterCursor   int
-	scrollOffset   int
-	allDirs        []string // All directories in current location
-	cursor         int      // Cursor for non-filtered navigation
+	filepicker   filepicker.Model
+	mode         PickerMode
+	inputDir     string
+	outputDir    string
+	err          error
+	width        int
+	height       int
+	filterText   string
+	filterActive bool
+	filteredDirs []string
+	filterCursor int
+	scrollOffset int
+	allDirs      []string // All directories in current location
+	cursor       int      // Cursor for non-filtered navigation
 }
 
 // NewDirPickerModel creates a new directory picker model

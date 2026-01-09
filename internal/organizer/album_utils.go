@@ -37,8 +37,8 @@ func HasCommonPrefix(str1, str2 string) bool {
 		if strings.HasPrefix(str2, prefix) {
 			// Check if the prefix ends with a common separator
 			if strings.HasSuffix(prefix, " - ") ||
-			   strings.HasSuffix(prefix, ": ") ||
-			   strings.HasSuffix(prefix, ", ") {
+				strings.HasSuffix(prefix, ": ") ||
+				strings.HasSuffix(prefix, ", ") {
 				return true
 			}
 		}

@@ -48,12 +48,12 @@ func main() {
 
 	// Create config
 	config := map[string]string{
-		"Layout":              "author-series-title",
-		"Output Directory":    "./test_output",
+		"Layout":                "author-series-title",
+		"Output Directory":      "./test_output",
 		"Use Embedded Metadata": "Yes",
-		"Flat Mode":           "No",
-		"Dry Run":             "Yes",
-		"Verbose":             "Yes",
+		"Flat Mode":             "No",
+		"Dry Run":               "Yes",
+		"Verbose":               "Yes",
 	}
 
 	// Test with default mapping

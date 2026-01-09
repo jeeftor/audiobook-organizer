@@ -107,10 +107,10 @@ func TestGetDisplayVersion(t *testing.T) {
 	}()
 
 	tests := []struct {
-		name               string
-		buildVersion       string
+		name                string
+		buildVersion        string
 		gitCommandAvailable bool
-		expectedContains   string
+		expectedContains    string
 	}{
 		{
 			name:             "release version",
@@ -223,7 +223,6 @@ func TestVersionCommandFlags(t *testing.T) {
 		t.Errorf("short flag type = %q, want %q", shortFlag.Value.Type(), "bool")
 	}
 }
-
 
 func TestVersionCommandIntegration(t *testing.T) {
 	// This test verifies the version command can be executed without panicking
