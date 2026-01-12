@@ -86,6 +86,15 @@ func TestPromptConfirmation(t *testing.T) {
 			os.Stdin = inputFile
 			defer func() { os.Stdin = oldStdin }()
 
+			// Capture and discard stdout to prevent test runner confusion
+			oldStdout := os.Stdout
+			_, w, _ := os.Pipe()
+			os.Stdout = w
+			defer func() {
+				w.Close()
+				os.Stdout = oldStdout
+			}()
+
 			metadata := Metadata{
 				Authors: []string{"Test Author"},
 				Title:   "Test Book",

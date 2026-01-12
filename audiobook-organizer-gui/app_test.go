@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/jeeftor/audiobook-organizer/pkg/organizer"
@@ -278,7 +280,33 @@ func TestApp_PreviewChanges_SetsConfig(t *testing.T) {
 	inputDir := t.TempDir()
 	outputDir := t.TempDir()
 
-	_, err := app.PreviewChanges(inputDir, outputDir, []int{})
+	// Create a test audio file with metadata
+	testFile := filepath.Join(inputDir, "test.mp3")
+	if err := os.WriteFile(testFile, []byte("fake mp3"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Scan to populate cache (required by PreviewChanges)
+	_, err := app.ScanDirectory(inputDir)
+	if err != nil {
+		// Scanning might fail if no valid metadata, but we still want to test PreviewChanges
+		// with empty cache, so continue
+	}
+
+	// If scan found no books, manually populate cache for testing
+	if len(lastScanResults) == 0 {
+		lastScanResults = []organizer.Metadata{
+			{
+				Title:      "Test Book",
+				Authors:    []string{"Test Author"},
+				Series:     []string{"Test Series"},
+				SourcePath: testFile,
+				SourceType: "audio",
+			},
+		}
+	}
+
+	_, err = app.PreviewChanges(inputDir, outputDir, []int{})
 	if err != nil {
 		t.Fatalf("PreviewChanges() unexpected error: %v", err)
 	}

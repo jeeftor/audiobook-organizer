@@ -7,7 +7,11 @@ before:
     - go mod tidy
 
 builds:
-  - env:
+  # CLI Binary (existing behavior)
+  - id: cli
+    main: ./main.go
+    binary: audiobook-organizer
+    env:
       - CGO_ENABLED=0
     flags:
       - -trimpath
@@ -37,12 +41,59 @@ builds:
         -X github.com/jeeftor/audiobook-organizer/cmd.buildVersion={{.Version}}
         -X github.com/jeeftor/audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
         -X github.com/jeeftor/audiobook-organizer/cmd.buildTime={{.Date}}
-    binary: audiobook-organizer
+
+  # GUI Binary (Wails)
+  - id: gui
+    dir: ./audiobook-organizer-gui
+    main: .
+    binary: audiobook-organizer-gui
+    env:
+      - CGO_ENABLED=1
+    flags:
+      - -trimpath
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    hooks:
+      pre:
+        - cd audiobook-organizer-gui/frontend && npm install
+        - cd audiobook-organizer-gui/frontend && npm run build
+    ldflags:
+      - >
+        -s -w
+        -X github.com/jeeftor/audiobook-organizer/cmd.buildVersion={{.Version}}
+        -X github.com/jeeftor/audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
+        -X github.com/jeeftor/audiobook-organizer/cmd.buildTime={{.Date}}
 
 archives:
-  - formats:
+  # CLI Archives
+  - id: cli-archive
+    builds:
+      - cli
+    formats:
       - tar.gz
     name_template: '{{ .ProjectName }}_{{- title .Os }}_{{- if eq .Arch "amd64" }}x86_64{{- else if eq .Arch "386" }}i386{{- else if eq .Arch "arm" }}armv{{ .Arm }}{{- else }}{{ .Arch }}{{ end }}'
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - README.md
+      - LICENSE*
+      - CHANGELOG*
+
+  # GUI Archives
+  - id: gui-archive
+    builds:
+      - gui
+    formats:
+      - tar.gz
+    name_template: '{{ .ProjectName }}-gui_{{- title .Os }}_{{- if eq .Arch "amd64" }}x86_64{{- else }}{{ .Arch }}{{ end }}'
     format_overrides:
       - goos: windows
         formats:
@@ -70,11 +121,14 @@ sboms:
       - SYFT_PACKAGE_CATALOGER_ENABLED=true
 
 nfpms:
-  - package_name: audiobook-organizer
+  - id: cli-packages
+    builds:
+      - cli
+    package_name: audiobook-organizer
     vendor: jeeftor
     homepage: https://github.com/jeeftor/audiobook-organizer
     maintainer: Jeff Stein <jeffstein@gmail.com>
-    description: Audiobook Organizer Tool
+    description: Audiobook Organizer Tool (CLI/TUI)
     license: MIT
     formats:
       - deb
@@ -91,12 +145,14 @@ nfpms:
 
 brews:
   - name: audiobook-organizer
+    ids:
+      - cli-archive
     repository:
       owner: jeeftor
       name: homebrew-tap
     directory: Formula
     homepage: https://github.com/jeeftor/audiobook-organizer
-    description: Audiobook Organizer Tool
+    description: Audiobook Organizer Tool (CLI/TUI)
     license: MIT
     test: |
       system "#{bin}/audiobook-organizer version -s"

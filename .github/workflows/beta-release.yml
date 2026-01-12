@@ -1,0 +1,205 @@
+name: Beta Release
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'develop'
+permissions:
+  contents: write
+
+jobs:
+  # Build on each platform (CLI + GUI native compilation)
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+          - os: macos-14  # ARM64 runner
+            goos: darwin
+          - os: windows-latest
+            goos: windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: true
+          cache-dependency-path: |
+            go.sum
+            audiobook-organizer-gui/go.sum
+
+      - name: Set up Node.js (for GUI)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install npm dependencies (for GUI)
+        working-directory: audiobook-organizer-gui/frontend
+        run: npm install
+
+      - name: Build with goreleaser (single platform, snapshot)
+        run: |
+          go run github.com/goreleaser/goreleaser/v2@latest build --single-target --snapshot --clean
+        env:
+          CGO_ENABLED: 1
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.goos }}
+          path: dist/
+          retention-days: 7
+
+  # Create pre-release with all platform artifacts
+  pre-release:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Download all platform artifacts
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-linux
+          path: dist/
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-darwin
+          path: dist/
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-windows
+          path: dist/
+
+      - name: List dist contents
+        run: ls -R dist/
+
+      # Install frontend dependencies (needed for goreleaser)
+      - name: Install frontend dependencies
+        working-directory: audiobook-organizer-gui/frontend
+        run: npm install
+
+      # Generate version for pre-release
+      - name: Generate version info
+        id: version
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
+          VERSION="${LAST_TAG}-beta.${SHORT_SHA}"
+          RELEASE_NAME="${LAST_TAG}-beta (${BRANCH_NAME})"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "release_name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
+          echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+
+      # Create archives manually (since we're not using goreleaser release)
+      - name: Create archives
+        run: |
+          mkdir -p archives
+
+          # CLI archives
+          for dir in dist/cli_*/; do
+            if [ -d "$dir" ]; then
+              platform=$(basename "$dir" | sed 's/cli_//')
+              cd "$dir"
+              if [[ "$platform" == *"windows"* ]]; then
+                zip "../../archives/audiobook-organizer_${platform}.zip" audiobook-organizer.exe
+              else
+                tar czf "../../archives/audiobook-organizer_${platform}.tar.gz" audiobook-organizer
+              fi
+              cd ../..
+            fi
+          done
+
+          # GUI archives
+          for dir in dist/gui_*/; do
+            if [ -d "$dir" ]; then
+              platform=$(basename "$dir" | sed 's/gui_//')
+              cd "$dir"
+              if [[ "$platform" == *"windows"* ]]; then
+                zip "../../archives/audiobook-organizer-gui_${platform}.zip" audiobook-organizer-gui.exe
+              else
+                tar czf "../../archives/audiobook-organizer-gui_${platform}.tar.gz" audiobook-organizer-gui
+              fi
+              cd ../..
+            fi
+          done
+
+          ls -lh archives/
+
+      # Create or update pre-release
+      - name: Create/Update Pre-Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.release_name }}
+          body: |
+            ## Beta Release from `${{ steps.version.outputs.branch }}`
+
+            **⚠️ This is a pre-release build from a feature branch. Use at your own risk!**
+
+            ### What's Changed
+            - Built from commit: ${{ github.sha }}
+            - Branch: `${{ github.ref_name }}`
+
+            ### Installation
+
+            Download the appropriate archive for your platform:
+            - **CLI**: `audiobook-organizer_<platform>.tar.gz` or `.zip`
+            - **GUI**: `audiobook-organizer-gui_<platform>.tar.gz` or `.zip`
+
+            Extract and run the binary directly.
+
+            ### Available Binaries
+            - Linux (amd64, arm64)
+            - macOS (amd64, arm64)
+            - Windows (amd64, arm64)
+
+            ---
+
+            [View Changes](https://github.com/${{ github.repository }}/compare/${{ steps.version.outputs.version }}...${{ github.sha }})
+          files: archives/*
+          draft: false
+          prerelease: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifacts (backup)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: beta-build-failed
+          path: |
+            dist/*
+            archives/*
+          retention-days: 7
+
+      - name: Print Release Info
+        run: |
+          echo "Release Tag: ${{ steps.version.outputs.version }}"
+          echo "Release Name: ${{ steps.version.outputs.release_name }}"
+          echo "Branch: ${{ steps.version.outputs.branch }}"
