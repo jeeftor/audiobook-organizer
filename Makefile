@@ -13,10 +13,41 @@ LDFLAGS := -ldflags "-s -w \
 UNIT_TEST_PKGS = ./...
 INTEGRATION_TEST_PKGS = $(shell go list ./... | grep -v '/integration$$')
 
-.PHONY: all build clean dev gui-dev gui-dev1 gui-dev2 gui-build gui-install release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet
+.PHONY: all build clean dev gui-dev gui-dev1 gui-dev2 gui-build gui-install release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help
 
-# Default target
-all: build
+# Default target - show help
+all: help
+
+# Show available targets
+help:
+	@echo "Available targets:"
+	@echo ""
+	@echo "  Development:"
+	@echo "    dev              Build CLI binary with version info"
+	@echo "    gui-dev          Start GUI in dev mode (copies books to gui-books)"
+	@echo "    gui-dev1         Start GUI with ./books as input"
+	@echo "    gui-dev2         Start GUI with ./books-meta as input"
+	@echo "    gui-install      Install GUI frontend dependencies"
+	@echo ""
+	@echo "  Build:"
+	@echo "    build            Build for distribution (goreleaser)"
+	@echo "    gui-build        Build GUI for production"
+	@echo "    release          Create a release (requires GITHUB_TOKEN)"
+	@echo "    clean            Remove build artifacts"
+	@echo ""
+	@echo "  Testing:"
+	@echo "    test             Run unit tests (default)"
+	@echo "    test-unit        Run unit tests only"
+	@echo "    test-integration Run integration tests"
+	@echo "    test-all         Run all tests"
+	@echo "    coverage         Run tests with coverage"
+	@echo "    coverage-html    Generate HTML coverage report"
+	@echo ""
+	@echo "  Code Quality:"
+	@echo "    lint             Run all linting (vet + fmt-check)"
+	@echo "    vet              Run go vet"
+	@echo "    fmt              Format Go code"
+	@echo "    fmt-check        Check code formatting"
 
 # Development build with version info (CLI)
 dev:
