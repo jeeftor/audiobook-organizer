@@ -1,4 +1,31 @@
-
-.DS_Store
+# Build artifacts
+bin/
 dist/
+*.exe
+*.test
+*.out
+
+# Test data
+books/
+books-meta/
+gui-books/
+devbooks/
+output/
+
+# IDE
 .idea/
+.vscode/
+.DS_Store
+
+# Temporary files
+*.log
+*.tmp
+coverage.out
+test-picker
+
+# Wails build
+audiobook-organizer-gui/audiobook-organizer-gui
+
+# Development
+.claude/
+.windsurf/

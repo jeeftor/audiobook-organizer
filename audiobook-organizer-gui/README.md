@@ -1,38 +1,19 @@
-# Audiobook Organizer GUI
+# README
 
-Desktop application for organizing audiobooks with a visual interface.
+## About
 
-**Full documentation:** See [docs/GUI.md](../docs/GUI.md) in the main project.
+This is the official Wails React-TS template.
 
-## Quick Start
+You can configure the project by editing `wails.json`. More information about the project settings can be found
+here: https://wails.io/docs/reference/project-config
 
-```bash
-# Development mode with hot reload
-wails dev
+## Live Development
 
-# Build production binary
-wails build
-```
+To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
+server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
+and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
+to this in your browser, and you can call your Go code from devtools.
 
-## Project Structure
+## Building
 
-```
-audiobook-organizer-gui/
-├── app.go          # Go backend (Wails bindings)
-├── main.go         # Application entry point
-├── wails.json      # Wails configuration
-├── frontend/       # React + TypeScript UI
-│   ├── src/
-│   │   ├── App.tsx
-│   │   └── components/
-│   └── wailsjs/    # Auto-generated TypeScript bindings
-└── build/          # Build configurations and outputs
-```
-
-## Development
-
-- **Frontend:** React + TypeScript + Tailwind CSS
-- **Backend:** Go with Wails v2 bindings
-- **Build:** `wails build` creates platform-specific binaries
-
-For detailed development instructions, see [CLAUDE.md](../CLAUDE.md).
+To build a redistributable, production mode package, use `wails build`.

@@ -9,6 +9,10 @@ export function GetAvailableLayouts():Promise<Array<main.LayoutOption>>;
 
 export function GetAvailableScanModes():Promise<Array<main.ScanMode>>;
 
+export function GetAvailableTemplateFields():Promise<Array<Record<string, string>>>;
+
+export function GetCurrentAuthorFormat():Promise<string>;
+
 export function GetCurrentFieldMapping():Promise<organizer.FieldMapping>;
 
 export function GetCurrentLayout():Promise<string>;
@@ -25,23 +29,43 @@ export function GetLogPath():Promise<string>;
 
 export function GetProgress():Promise<main.ProgressUpdate>;
 
+export function GetRenameConfig():Promise<main.RenameConfig>;
+
+export function GetRenamePresets():Promise<Array<Record<string, string>>>;
+
 export function GetSampleMetadataPreviews(arg1:string):Promise<Array<main.MetadataPreview>>;
+
+export function GetScanStatistics():Promise<main.ScanStatistics>;
 
 export function GetSettings():Promise<organizer.OrganizerConfig>;
 
+export function GetUndoInfo():Promise<Record<string, any>>;
+
 export function Greet(arg1:string):Promise<string>;
 
+export function OrganizeFiles(arg1:Array<string>,arg2:string,arg3:boolean):Promise<Record<string, any>>;
+
 export function PreviewChanges(arg1:string,arg2:string,arg3:Array<number>):Promise<Array<main.PreviewItem>>;
+
+export function PreviewRename(arg1:organizer.Metadata):Promise<string>;
 
 export function ScanDirectory(arg1:string):Promise<Array<organizer.Metadata>>;
 
 export function SelectDirectory(arg1:string):Promise<string>;
+
+export function SetLogLevel(arg1:string):Promise<void>;
+
+export function UndoLastOperation():Promise<Record<string, any>>;
+
+export function UpdateAuthorFormat(arg1:string):Promise<void>;
 
 export function UpdateFieldMapping(arg1:organizer.FieldMapping):Promise<void>;
 
 export function UpdateFieldMappingField(arg1:string,arg2:string):Promise<void>;
 
 export function UpdateLayout(arg1:string):Promise<void>;
+
+export function UpdateRenameConfig(arg1:main.RenameConfig):Promise<void>;
 
 export function UpdateScanMode(arg1:string):Promise<void>;
 

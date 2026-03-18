@@ -54,8 +54,8 @@ func (o *Organizer) undoMoves() error {
 		}
 
 		for _, file := range entry.Files {
-			oldPath := filepath.Join(entry.TargetPath, file)
-			newPath := filepath.Join(entry.SourcePath, file)
+			oldPath := filepath.Join(entry.TargetPath, file.To)
+			newPath := filepath.Join(entry.SourcePath, file.From)
 			if o.config.Verbose {
 				PrintBlue("📦 Moving %s to %s", oldPath, newPath)
 			}

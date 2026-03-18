@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -13,12 +14,26 @@ import (
 
 // App struct
 type App struct {
-	ctx         context.Context
-	config      *organizer.OrganizerConfig
-	organizer   *organizer.Organizer
-	scanning    bool
-	progress    ProgressUpdate
-	initialDirs InitialDirectories
+	ctx          context.Context
+	config       *organizer.OrganizerConfig
+	organizer    *organizer.Organizer
+	scanning     bool
+	progress     ProgressUpdate
+	initialDirs  InitialDirectories
+	logLevel     string
+	verbose      bool
+	renameConfig RenameConfig
+}
+
+// RenameConfig holds file rename template configuration
+type RenameConfig struct {
+	Enabled       bool   `json:"enabled"`
+	Template      string `json:"template"`
+	Preset        string `json:"preset"`
+	Separator     string `json:"separator"`
+	AuthorFormat  string `json:"author_format"`
+	ReplaceSpaces bool   `json:"replace_spaces"`
+	SpaceChar     string `json:"space_char"`
 }
 
 // InitialDirectories holds pre-set directories from CLI args
@@ -74,7 +89,7 @@ func (a *App) UpdateScanMode(modeName string) error {
 				a.config.FieldMapping = organizer.DefaultFieldMapping()
 			}
 
-			fmt.Printf("DEBUG: Updated scan mode to %s (UseEmbedded=%v, Flat=%v)\n",
+			a.log("Updated scan mode to %s (UseEmbedded=%v, Flat=%v)",
 				modeName, mode.UseEmbeddedMetadata, mode.Flat)
 			return nil
 		}
@@ -136,7 +151,22 @@ func (a *App) GetCurrentLayout() string {
 // UpdateLayout updates the layout configuration
 func (a *App) UpdateLayout(layout string) error {
 	a.config.Layout = layout
-	fmt.Printf("DEBUG: Updated layout to %s\n", layout)
+	a.log("Updated layout to %s", layout)
+	return nil
+}
+
+// GetCurrentAuthorFormat returns the current author format setting
+func (a *App) GetCurrentAuthorFormat() string {
+	if a.config.AuthorFormat == "" {
+		return "preserve"
+	}
+	return a.config.AuthorFormat
+}
+
+// UpdateAuthorFormat updates the author format configuration
+func (a *App) UpdateAuthorFormat(format string) error {
+	a.config.AuthorFormat = format
+	a.log("Updated author format to %s", format)
 	return nil
 }
 
@@ -171,7 +201,7 @@ func (a *App) GetFieldMappingPresets() []FieldMappingPreset {
 // UpdateFieldMapping updates the field mapping configuration
 func (a *App) UpdateFieldMapping(mapping organizer.FieldMapping) error {
 	a.config.FieldMapping = mapping
-	fmt.Printf("DEBUG: Updated field mapping: %+v\n", mapping)
+	a.log("Updated field mapping: %+v", mapping)
 	return nil
 }
 
@@ -190,51 +220,42 @@ type FieldMappingOption struct {
 }
 
 // GetFieldMappingOptions returns configurable field mapping options
-// Uses predefined common field lists
+// Uses shared field option lists from organizer package
 func (a *App) GetFieldMappingOptions() []FieldMappingOption {
-	// Predefined common text fields
-	textFieldOptions := []string{"title", "album", "series", "name", "book", "work"}
-
-	// Predefined common author fields
-	authorFieldOptions := []string{"authors", "artist", "album_artist", "narrator", "narrators", "creator", "author", "writer", "composer"}
-
-	// Predefined numeric fields for track/disc
-	numericFields := []string{"track", "track_number", "trck", "trk", "tracknumber", "disc", "discnumber", "disk", "tpos", "disc_number"}
-
 	return []FieldMappingOption{
 		{
-			Field:       "title",
+			Field:       organizer.TitleFieldKey,
 			Label:       "Title Field",
 			Description: "Select field for title (title, album, series, or any available field)",
-			Options:     textFieldOptions,
+			Options:     organizer.TextFieldOptions(),
 			Current:     a.config.FieldMapping.TitleField,
 		},
 		{
-			Field:       "series",
+			Field:       organizer.SeriesFieldKey,
 			Label:       "Series Field",
 			Description: "Select field for series (series, album, title, or any available field)",
-			Options:     textFieldOptions,
+			Options:     organizer.TextFieldOptions(),
 			Current:     a.config.FieldMapping.SeriesField,
 		},
 		{
-			Field:       "authors",
+			Field:       organizer.AuthorsFieldKey,
 			Label:       "Author Fields (Priority Order)",
 			Description: "Select fields in priority order (comma-separated: authors,artist,album_artist)",
-			Options:     authorFieldOptions,
+			Options:     organizer.AuthorFieldOptions(),
 			Current:     strings.Join(a.config.FieldMapping.AuthorFields, ","),
 		},
 		{
-			Field:       "track",
+			Field:       organizer.TrackFieldKey,
 			Label:       "Track Field",
 			Description: "Field to use for track number",
-			Options:     numericFields,
+			Options:     organizer.TrackFieldOptions(),
 			Current:     a.config.FieldMapping.TrackField,
 		},
 		{
-			Field:       "disc",
+			Field:       organizer.DiscFieldKey,
 			Label:       "Disc Field",
 			Description: "Field to use for disc number",
-			Options:     numericFields,
+			Options:     organizer.DiscFieldOptions(),
 			Current:     a.config.FieldMapping.DiscField,
 		},
 	}
@@ -313,22 +334,22 @@ func filterFields(available map[string]bool, patterns []string) []string {
 // UpdateFieldMappingField updates a single field in the field mapping
 func (a *App) UpdateFieldMappingField(field string, value string) error {
 	switch field {
-	case "title":
+	case organizer.TitleFieldKey:
 		a.config.FieldMapping.TitleField = value
-	case "series":
+	case organizer.SeriesFieldKey:
 		a.config.FieldMapping.SeriesField = value
-	case "authors":
+	case organizer.AuthorsFieldKey:
 		// Parse comma-separated list
 		a.config.FieldMapping.AuthorFields = strings.Split(value, ",")
-	case "track":
+	case organizer.TrackFieldKey:
 		a.config.FieldMapping.TrackField = value
-	case "disc":
+	case organizer.DiscFieldKey:
 		a.config.FieldMapping.DiscField = value
 	default:
 		return fmt.Errorf("unknown field: %s", field)
 	}
 
-	fmt.Printf("DEBUG: Updated field mapping field %s=%s\n", field, value)
+	a.log("Updated field mapping field %s=%s", field, value)
 	return nil
 }
 
@@ -352,24 +373,24 @@ var lastScanResults []organizer.Metadata
 
 // GetSampleMetadataPreviews returns sample metadata for up to 3 books with field indicators
 func (a *App) GetSampleMetadataPreviews(dir string) ([]MetadataPreview, error) {
-	fmt.Printf("DEBUG: GetSampleMetadataPreviews called with dir=%s\n", dir)
-	fmt.Printf("DEBUG: Current config: UseEmbedded=%v, Flat=%v\n", a.config.UseEmbeddedMetadata, a.config.Flat)
+	a.log("GetSampleMetadataPreviews called with dir=%s", dir)
+	a.log("Current config: UseEmbedded=%v, Flat=%v", a.config.UseEmbeddedMetadata, a.config.Flat)
 
 	// Use cached scan results if available
 	var audiobooks []organizer.Metadata
 	if len(lastScanResults) > 0 {
-		fmt.Printf("DEBUG: Using cached scan results (%d audiobooks)\n", len(lastScanResults))
+		a.log("Using cached scan results (%d audiobooks)", len(lastScanResults))
 		audiobooks = lastScanResults
 	} else {
 		// Scan to get audiobooks
 		var err error
 		audiobooks, err = organizer.ScanForAudiobooks(dir, a.config)
 		if err != nil {
-			fmt.Printf("DEBUG: ScanForAudiobooks error: %v\n", err)
+			a.log("ScanForAudiobooks error: %v", err)
 			return nil, fmt.Errorf("scan error: %w", err)
 		}
 		if len(audiobooks) == 0 {
-			fmt.Printf("DEBUG: No audiobooks found\n")
+			a.log("No audiobooks found")
 			return nil, fmt.Errorf("no audiobooks found")
 		}
 	}
@@ -378,8 +399,8 @@ func (a *App) GetSampleMetadataPreviews(dir string) ([]MetadataPreview, error) {
 	var previews []MetadataPreview
 	for i := 0; i < len(audiobooks); i++ {
 		sample := audiobooks[i]
-		fmt.Printf("DEBUG: Sample audiobook %d: Title=%s, Album=%s, SourceType=%s\n", i, sample.Title, sample.Album, sample.SourceType)
-		fmt.Printf("DEBUG: RawData has %d fields\n", len(sample.RawData))
+		a.log("Sample audiobook %d: Title=%s, Album=%s, SourceType=%s", i, sample.Title, sample.Album, sample.SourceType)
+		a.log("RawData has %d fields", len(sample.RawData))
 
 		// Build raw fields with indicators
 		var rawFields []RawFieldPreview
@@ -512,24 +533,24 @@ func (a *App) SelectDirectory(title string) (string, error) {
 
 // ScanDirectory scans a directory for audiobooks and returns metadata
 func (a *App) ScanDirectory(dir string) ([]organizer.Metadata, error) {
+	a.log("ScanDirectory called with dir=%s", dir)
+
 	if dir == "" {
 		return nil, fmt.Errorf("directory path is required")
 	}
 
-	// Convert to absolute path to ensure proper resolution
-	absDir, err := filepath.Abs(dir)
+	absPath, err := filepath.Abs(dir)
 	if err != nil {
-		return nil, fmt.Errorf("error resolving directory path: %w", err)
+		return nil, fmt.Errorf("error resolving path: %w", err)
 	}
 
-	fmt.Printf("DEBUG: ScanDirectory called with dir=%s\n", dir)
-	fmt.Printf("DEBUG: Absolute path: %s\n", absDir)
-	fmt.Printf("DEBUG: UseEmbeddedMetadata=%v\n", a.config.UseEmbeddedMetadata)
-	fmt.Printf("DEBUG: Flat=%v\n", a.config.Flat)
-	fmt.Printf("DEBUG: FieldMapping=%+v\n", a.config.FieldMapping)
+	a.log("Absolute path: %s", absPath)
+	a.log("UseEmbeddedMetadata=%v", a.config.UseEmbeddedMetadata)
+	a.log("Flat=%v", a.config.Flat)
+	a.log("FieldMapping=%+v", a.config.FieldMapping)
 
 	// Use absolute path for scanning
-	dir = absDir
+	dir = absPath
 
 	a.scanning = true
 	a.progress = ProgressUpdate{
@@ -542,12 +563,12 @@ func (a *App) ScanDirectory(dir string) ([]organizer.Metadata, error) {
 	scanConfig.BaseDir = dir
 	scanConfig.DryRun = true
 
-	fmt.Printf("DEBUG: Calling ScanForAudiobooks with config: UseEmbeddedMetadata=%v\n", scanConfig.UseEmbeddedMetadata)
+	a.log("Calling ScanForAudiobooks with config: UseEmbeddedMetadata=%v", scanConfig.UseEmbeddedMetadata)
 
 	// Use the public scanning API
 	audiobooks, err := organizer.ScanForAudiobooks(dir, &scanConfig)
 	if err != nil {
-		fmt.Printf("DEBUG: ScanForAudiobooks returned error: %v\n", err)
+		a.log("ScanForAudiobooks returned error: %v", err)
 		a.scanning = false
 		a.progress = ProgressUpdate{
 			Status: "error",
@@ -555,12 +576,63 @@ func (a *App) ScanDirectory(dir string) ([]organizer.Metadata, error) {
 		return nil, err
 	}
 
-	fmt.Printf("DEBUG: ScanForAudiobooks found %d audiobooks\n", len(audiobooks))
+	a.log("ScanForAudiobooks found %d audiobooks", len(audiobooks))
+
+	// FALLBACK SCANNING: If we found 0 audiobooks, try other scan modes
+	if len(audiobooks) == 0 {
+		a.log("No audiobooks found with current mode, trying fallback modes...")
+
+		// Try different scan mode combinations
+		fallbackModes := []struct {
+			name     string
+			embedded bool
+			flat     bool
+		}{
+			{"Hierarchical (embedded)", true, false},
+			{"Flat (embedded)", true, true},
+			{"Metadata.json only", false, false},
+		}
+
+		for _, mode := range fallbackModes {
+			// Skip if this is the mode we just tried
+			if mode.embedded == scanConfig.UseEmbeddedMetadata && mode.flat == scanConfig.Flat {
+				continue
+			}
+
+			a.log("Trying fallback mode: %s (UseEmbedded=%v, Flat=%v)", mode.name, mode.embedded, mode.flat)
+
+			fallbackConfig := scanConfig
+			fallbackConfig.UseEmbeddedMetadata = mode.embedded
+			fallbackConfig.Flat = mode.flat
+
+			// Update field mapping based on mode
+			if mode.embedded {
+				fallbackConfig.FieldMapping = organizer.AudioFieldMapping()
+			} else {
+				fallbackConfig.FieldMapping = organizer.DefaultFieldMapping()
+			}
+
+			audiobooks, err = organizer.ScanForAudiobooks(dir, &fallbackConfig)
+			if err != nil {
+				a.log("Fallback mode %s returned error: %v", mode.name, err)
+				continue
+			}
+
+			if len(audiobooks) > 0 {
+				a.log("SUCCESS! Fallback mode %s found %d audiobooks", mode.name, len(audiobooks))
+				// Update the app config to use this mode
+				a.config.UseEmbeddedMetadata = mode.embedded
+				a.config.Flat = mode.flat
+				a.config.FieldMapping = fallbackConfig.FieldMapping
+				break
+			}
+			a.log("Fallback mode %s found 0 audiobooks", mode.name)
+		}
+	}
+
+	a.log("Final scan result: %d audiobooks", len(audiobooks))
 	for i, ab := range audiobooks {
-		fmt.Printf("DEBUG: Audiobook %d:\n", i)
-		fmt.Printf("  Title: %s\n", ab.Title)
-		fmt.Printf("  Album: %s\n", ab.Album)
-		fmt.Printf("  Series: %v\n", ab.Series)
+		a.log("Audiobook %d: Title=%s, Album=%s, Series=%v", i, ab.Title, ab.Album, ab.Series)
 		fmt.Printf("  Authors: %v\n", ab.Authors)
 		fmt.Printf("  SourcePath: %s\n", ab.SourcePath)
 	}
@@ -593,9 +665,9 @@ func (a *App) PreviewChanges(inputDir string, outputDir string, selectedBooks []
 		return nil, fmt.Errorf("input and output directories are required")
 	}
 
-	fmt.Printf("DEBUG: PreviewChanges called with %d selected books\n", len(selectedBooks))
-	fmt.Printf("DEBUG: Selected indices: %v\n", selectedBooks)
-	fmt.Printf("DEBUG: Cached scan results: %d books\n", len(lastScanResults))
+	a.log("PreviewChanges called with %d selected books", len(selectedBooks))
+	a.log("Selected indices: %v", selectedBooks)
+	a.log("Cached scan results: %d books", len(lastScanResults))
 
 	// Check if we have cached scan results
 	if len(lastScanResults) == 0 {
@@ -609,13 +681,13 @@ func (a *App) PreviewChanges(inputDir string, outputDir string, selectedBooks []
 	// Filter the cached books by selected indices FIRST
 	var selectedMetadata []organizer.Metadata
 	if len(selectedBooks) > 0 {
-		fmt.Printf("DEBUG: Filtering by selected indices\n")
+		a.log("Filtering by selected indices")
 		for _, idx := range selectedBooks {
 			if idx >= 0 && idx < len(lastScanResults) {
 				selectedMetadata = append(selectedMetadata, lastScanResults[idx])
-				fmt.Printf("DEBUG: Including book %d: %s\n", idx, lastScanResults[idx].Title)
+				a.log("Including book %d: %s", idx, lastScanResults[idx].Title)
 			} else {
-				fmt.Printf("DEBUG: Skipping invalid index %d (out of range 0-%d)\n", idx, len(lastScanResults)-1)
+				a.log("Skipping invalid index %d (out of range 0-%d)", idx, len(lastScanResults)-1)
 			}
 		}
 	} else {
@@ -623,7 +695,29 @@ func (a *App) PreviewChanges(inputDir string, outputDir string, selectedBooks []
 		selectedMetadata = lastScanResults
 	}
 
-	fmt.Printf("DEBUG: Selected %d books for preview\n", len(selectedMetadata))
+	a.log("Selected %d books for preview", len(selectedMetadata))
+
+	// Populate AllowedSourcePaths so ExecuteOrganize only processes these books.
+	// SourcePath points to metadata.json (hierarchical) or the audio file (flat);
+	// in hierarchical mode the organizer filters by directory, so use Dir().
+	allowedPaths := make([]string, 0, len(selectedMetadata))
+	for _, meta := range selectedMetadata {
+		if meta.SourcePath == "" {
+			continue
+		}
+		absPath, err := filepath.Abs(meta.SourcePath)
+		if err != nil {
+			absPath = meta.SourcePath
+		}
+		// Use the directory when SourcePath is a file (e.g. metadata.json)
+		info, statErr := os.Stat(absPath)
+		if statErr == nil && !info.IsDir() {
+			absPath = filepath.Dir(absPath)
+		}
+		allowedPaths = append(allowedPaths, absPath)
+	}
+	a.config.AllowedSourcePaths = allowedPaths
+	a.log("Set AllowedSourcePaths: %v", allowedPaths)
 
 	// Calculate target paths for the selected books
 	moves, err := organizer.CalculateTargetPaths(selectedMetadata, a.config)
@@ -631,7 +725,7 @@ func (a *App) PreviewChanges(inputDir string, outputDir string, selectedBooks []
 		return nil, fmt.Errorf("error calculating target paths: %w", err)
 	}
 
-	fmt.Printf("DEBUG: Calculated %d moves\n", len(moves))
+	a.log("Calculated %d moves", len(moves))
 
 	// Detect conflicts
 	targetMap := make(map[string][]int)
@@ -652,7 +746,7 @@ func (a *App) PreviewChanges(inputDir string, outputDir string, selectedBooks []
 		}
 	}
 
-	fmt.Printf("DEBUG: Detected %d conflicts\n", conflictCount)
+	a.log("Detected %d conflicts", conflictCount)
 
 	// Convert PreviewMove to PreviewItem for the GUI
 	items := make([]PreviewItem, len(moves))
@@ -662,7 +756,7 @@ func (a *App) PreviewChanges(inputDir string, outputDir string, selectedBooks []
 			To:         move.TargetPath,
 			IsConflict: move.IsConflict,
 		}
-		fmt.Printf("DEBUG: Preview %d: %s → %s (conflict=%v)\n", i, move.SourcePath, move.TargetPath, move.IsConflict)
+		a.log("Preview %d: %s → %s (conflict=%v)", i, move.SourcePath, move.TargetPath, move.IsConflict)
 	}
 
 	// Create organizer for later execution
@@ -731,7 +825,239 @@ func (a *App) GetLogPath() string {
 	return ""
 }
 
+// SetLogLevel sets the logging level for the application
+func (a *App) SetLogLevel(level string) {
+	a.logLevel = level
+	a.verbose = (level == "debug")
+	if a.verbose {
+		fmt.Printf("LOG LEVEL: %s (verbose=%v)\n", level, a.verbose)
+	}
+	// Also update the config
+	if a.config != nil {
+		a.config.Verbose = a.verbose
+	}
+}
+
+// log prints a message if verbose logging is enabled
+func (a *App) log(format string, args ...interface{}) {
+	if a.verbose {
+		fmt.Printf("[DEBUG] "+format+"\n", args...)
+	}
+}
+
+// ScanStatistics provides summary information about scan results
+type ScanStatistics struct {
+	TotalFiles      int                  `json:"total_files"`
+	TotalAudiobooks int                  `json:"total_audiobooks"`
+	MissingMetadata int                  `json:"missing_metadata"`
+	AlbumGroups     []AlbumGroup         `json:"album_groups"`
+	UngroupedFiles  []organizer.Metadata `json:"ungrouped_files"`
+}
+
+// AlbumGroup represents a group of files that belong to the same audiobook/album
+type AlbumGroup struct {
+	Name        string               `json:"name"`
+	Author      string               `json:"author"`
+	Series      string               `json:"series"`
+	FileCount   int                  `json:"file_count"`
+	FileIndices []int                `json:"file_indices"`
+	Files       []organizer.Metadata `json:"files"`
+}
+
+// GetScanStatistics analyzes the last scan results and returns statistics
+func (a *App) GetScanStatistics() (*ScanStatistics, error) {
+	if len(lastScanResults) == 0 {
+		return &ScanStatistics{}, nil
+	}
+
+	stats := &ScanStatistics{
+		TotalFiles: len(lastScanResults),
+	}
+
+	// Group files by album/title combination
+	albumMap := make(map[string]*AlbumGroup)
+	var ungrouped []organizer.Metadata
+
+	for i, book := range lastScanResults {
+		// Check for missing metadata
+		if book.Title == "" && book.Album == "" {
+			stats.MissingMetadata++
+		}
+
+		// Create grouping key based on album and author
+		album := book.Album
+		if album == "" {
+			album = book.Title
+		}
+		author := ""
+		if len(book.Authors) > 0 {
+			author = book.Authors[0]
+		}
+
+		// If no album/title, add to ungrouped
+		if album == "" {
+			ungrouped = append(ungrouped, book)
+			continue
+		}
+
+		groupKey := fmt.Sprintf("%s|%s", author, album)
+
+		if group, exists := albumMap[groupKey]; exists {
+			group.FileCount++
+			group.FileIndices = append(group.FileIndices, i)
+			group.Files = append(group.Files, book)
+		} else {
+			series := ""
+			if len(book.Series) > 0 {
+				series = book.Series[0]
+			}
+			albumMap[groupKey] = &AlbumGroup{
+				Name:        album,
+				Author:      author,
+				Series:      series,
+				FileCount:   1,
+				FileIndices: []int{i},
+				Files:       []organizer.Metadata{book},
+			}
+		}
+	}
+
+	// Convert map to slice and sort by file count (largest first)
+	for _, group := range albumMap {
+		stats.AlbumGroups = append(stats.AlbumGroups, *group)
+	}
+
+	// Sort groups by file count (descending)
+	sort.Slice(stats.AlbumGroups, func(i, j int) bool {
+		return stats.AlbumGroups[i].FileCount > stats.AlbumGroups[j].FileCount
+	})
+
+	stats.TotalAudiobooks = len(stats.AlbumGroups)
+	stats.UngroupedFiles = ungrouped
+
+	a.log("Scan statistics: %d files, %d audiobooks, %d missing metadata, %d ungrouped",
+		stats.TotalFiles, stats.TotalAudiobooks, stats.MissingMetadata, len(ungrouped))
+
+	return stats, nil
+}
+
+// GetRenameConfig returns the current rename template configuration
+func (a *App) GetRenameConfig() RenameConfig {
+	return a.renameConfig
+}
+
+// UpdateRenameConfig updates the rename template configuration
+func (a *App) UpdateRenameConfig(config RenameConfig) error {
+	a.renameConfig = config
+	a.log("Updated rename config: enabled=%v, template=%s, preset=%s",
+		config.Enabled, config.Template, config.Preset)
+	return nil
+}
+
+// PreviewRename generates a preview of what a file would be renamed to
+func (a *App) PreviewRename(metadata organizer.Metadata) (string, error) {
+	if !a.renameConfig.Enabled || a.renameConfig.Template == "" {
+		return "", nil
+	}
+
+	// Parse template
+	template, err := organizer.ParseTemplate(a.renameConfig.Template)
+	if err != nil {
+		return "", fmt.Errorf("invalid template: %w", err)
+	}
+
+	// Determine author format
+	var authorFormat organizer.AuthorFormat
+	switch a.renameConfig.AuthorFormat {
+	case "first-last":
+		authorFormat = organizer.AuthorFormatFirstLast
+	case "last-first":
+		authorFormat = organizer.AuthorFormatLastFirst
+	case "preserve":
+		authorFormat = organizer.AuthorFormatPreserve
+	default:
+		authorFormat = organizer.AuthorFormatFirstLast
+	}
+
+	// Create renderer
+	formatter := organizer.NewAuthorFormatter(authorFormat)
+	renderer := organizer.NewTemplateRenderer(template, formatter)
+
+	// Render template
+	newFilename, err := renderer.Render(metadata)
+	if err != nil {
+		return "", err
+	}
+
+	// Apply space replacement if configured
+	if a.renameConfig.ReplaceSpaces && a.renameConfig.SpaceChar != "" {
+		newFilename = strings.ReplaceAll(newFilename, " ", a.renameConfig.SpaceChar)
+	}
+
+	// Add extension from original file
+	ext := filepath.Ext(metadata.SourcePath)
+	if !strings.HasSuffix(newFilename, ext) {
+		newFilename += ext
+	}
+
+	return newFilename, nil
+}
+
+// GetRenamePresets returns available rename template presets
+func (a *App) GetRenamePresets() []map[string]string {
+	return []map[string]string{
+		{"name": "Custom", "template": ""},
+		{"name": "Track - Title", "template": "{track} - {title}"},
+		{"name": "Author - Title", "template": "{author} - {title}"},
+		{"name": "Author - Series - Title", "template": "{author} - {series} - {title}"},
+		{"name": "Track - Author - Title", "template": "{track} - {author} - {title}"},
+		{"name": "Series Number - Title", "template": "{series_number} - {title}"},
+		{"name": "Author - Series #Number - Title", "template": "{author} - {series} #{series_number} - {title}"},
+	}
+}
+
+// GetAvailableTemplateFields returns available template fields with descriptions
+func (a *App) GetAvailableTemplateFields() []map[string]string {
+	fields := organizer.GetAvailableFields()
+	result := make([]map[string]string, len(fields))
+	for i, field := range fields {
+		result[i] = map[string]string{
+			"name":        field.Name,
+			"description": field.Description,
+			"example":     field.Example,
+		}
+	}
+	return result
+}
+
 // Greet returns a greeting (keeping for backwards compatibility with template)
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s! Ready to organize some audiobooks? 📚", name)
+}
+
+// OrganizeFiles executes the organization process for selected files ONLY
+func (a *App) OrganizeFiles(selectedPaths []string, outputDir string, copyMode bool) (map[string]interface{}, error) {
+	a.log("Starting organization: %d files selected, output=%s, copy=%v", len(selectedPaths), outputDir, copyMode)
+
+	if len(selectedPaths) == 0 {
+		return nil, fmt.Errorf("no files selected")
+	}
+
+	if outputDir == "" {
+		return nil, fmt.Errorf("output directory not specified")
+	}
+
+	// CRITICAL: This function is currently BROKEN and will organize ALL files
+	// regardless of selection. DO NOT USE until fixed properly.
+	// The organizer.Execute() processes all scanned files, not just selected ones.
+
+	return map[string]interface{}{
+		"success":        false,
+		"filesProcessed": 0,
+		"errors": []string{
+			"OrganizeFiles is currently disabled due to a critical bug",
+			"It was organizing ALL files instead of only selected files",
+			"This function needs to be rewritten to filter files before organizing",
+		},
+	}, fmt.Errorf("function disabled - would organize all files instead of selected ones")
 }

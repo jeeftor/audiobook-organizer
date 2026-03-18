@@ -113,6 +113,7 @@ audiobook-organizer rename --dir=/path --undo
 | `--replace_space` | - | (none) | Character to replace spaces |
 | `--use-embedded-metadata` | - | `false` | Extract metadata from audio files |
 | `--flat` | - | `false` | Process files individually (auto-enables `--use-embedded-metadata`) |
+| `--skip-errors` | - | `false` | Skip files with missing/invalid metadata instead of stopping |
 | `--layout` | - | `author-series-title` | Directory structure pattern |
 | `--author-fields` | - | `authors` | Comma-separated fields to try for author |
 | `--series-field` | - | `series` | Field to use as series |
@@ -677,6 +678,18 @@ if ($LASTEXITCODE -eq 0) {
 audiobook-organizer --dir=/books --flat
 ```
 
+**Skipping bad files** (`--skip-errors`):
+
+Use with `--flat` when your collection has mixed metadata quality. Files with missing or invalid metadata (e.g., no author tag) are skipped with a warning instead of stopping the entire run. Files with good metadata are still organized.
+
+```bash
+audiobook-organizer \
+  --dir=/books \
+  --flat \
+  --skip-errors \
+  --dry-run
+```
+
 **Non-Flat Mode** (default):
 - All files in a directory treated as one book
 - Shared metadata per directory
@@ -742,6 +755,7 @@ audiobook-organizer rename --dir=/books --undo
 ### Metadata extraction errors
 
 **Solutions:**
+- Use `--skip-errors` with `--flat` to skip files with bad metadata and organize the rest
 - Use `--author-fields` to specify correct metadata fields
 - Check file tags with metadata viewer: `audiobook-organizer metadata --dir=/path`
 - Verify audio files aren't corrupted

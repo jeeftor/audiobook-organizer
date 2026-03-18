@@ -56,7 +56,14 @@ func (o *Organizer) handleFlatMode(path string, info os.FileInfo, err error) err
 		return nil
 	}
 
-	return o.processFlatDirectory(path, info)
+	if err := o.processFlatDirectory(path, info); err != nil {
+		if o.config.SkipErrors {
+			PrintYellow("⏩ Skipping %s: %v", filepath.Base(path), err)
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 // handleHierarchicalMode processes directories in standard hierarchical mode,
@@ -68,6 +75,10 @@ func (o *Organizer) handleHierarchicalMode(path string, info os.FileInfo) error 
 
 	if o.shouldSkipOutputDirectory(path) {
 		return filepath.SkipDir
+	}
+
+	if len(o.config.AllowedSourcePaths) > 0 && !contains(o.config.AllowedSourcePaths, path) {
+		return nil
 	}
 
 	organized, err := o.tryOrganizeWithMetadata(path)
@@ -532,7 +543,9 @@ func (o *Organizer) executeSingleFileMove(filePath, targetPath string, metadata 
 	}
 
 	o.addSingleFileMoveToSummary(filePath, targetPath)
-	o.updateLogAndCleanup(filepath.Dir(filePath), filepath.Dir(targetPath), []string{filepath.Base(filePath)})
+	originalName := filepath.Base(filePath)
+	targetName := filepath.Base(targetPath)
+	o.updateLogAndCleanup(filepath.Dir(filePath), filepath.Dir(targetPath), []FilePair{{From: originalName, To: targetName}})
 
 	return nil
 }
@@ -727,7 +740,7 @@ func (o *Organizer) getMetadataProvider(filePath string) (MetadataProvider, erro
 }
 
 // updateLogAndCleanup records the move operation in logs and cleans up empty directories.
-func (o *Organizer) updateLogAndCleanup(sourcePath, targetPath string, fileNames []string) {
+func (o *Organizer) updateLogAndCleanup(sourcePath, targetPath string, fileNames []FilePair) {
 	o.logEntries = append(o.logEntries, LogEntry{
 		Timestamp:  time.Now(),
 		SourcePath: sourcePath,
@@ -946,7 +959,7 @@ func (o *Organizer) syncTargetDirectory(targetDir string) error {
 
 // moveFiles moves all files from a source directory to a target directory,
 // handling track number prefixes and maintaining a list of moved files.
-func (o *Organizer) moveFiles(sourcePath, targetPath string, dirMetadata *Metadata) ([]string, error) {
+func (o *Organizer) moveFiles(sourcePath, targetPath string, dirMetadata *Metadata) ([]FilePair, error) {
 	if o.config.Verbose {
 		message := o.formatDirectoryMoveHeader(sourcePath, targetPath)
 		PrintCyan("%s", message)
@@ -989,8 +1002,8 @@ func (o *Organizer) getDirectoryMetadata(sourcePath string) *Metadata {
 }
 
 // processDirectoryFiles processes individual files in a directory for moving.
-func (o *Organizer) processDirectoryFiles(entries []os.DirEntry, sourcePath, targetPath string, dirMetadata *Metadata) ([]string, error) {
-	var fileNames []string
+func (o *Organizer) processDirectoryFiles(entries []os.DirEntry, sourcePath, targetPath string, dirMetadata *Metadata) ([]FilePair, error) {
+	var fileNames []FilePair
 
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -1000,7 +1013,7 @@ func (o *Organizer) processDirectoryFiles(entries []os.DirEntry, sourcePath, tar
 		sourceName := filepath.Join(sourcePath, entry.Name())
 		targetName := o.calculateFileTargetName(entry.Name(), dirMetadata)
 		targetFullPath := filepath.Join(targetPath, targetName)
-		fileNames = append(fileNames, targetName)
+		fileNames = append(fileNames, FilePair{From: entry.Name(), To: targetName})
 
 		if o.config.Verbose || o.config.DryRun {
 			message := o.formatFileMove(sourceName, targetFullPath, o.config.DryRun)

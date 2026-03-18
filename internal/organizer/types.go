@@ -308,12 +308,19 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
+// FilePair records the original filename in the source directory and the
+// resulting filename in the target directory (which may differ due to renaming).
+type FilePair struct {
+	From string `json:"from"` // original filename in source directory
+	To   string `json:"to"`   // filename in target directory (may be renamed)
+}
+
 // Support types
 type LogEntry struct {
-	Timestamp  time.Time `json:"timestamp"`
-	SourcePath string    `json:"source_path"`
-	TargetPath string    `json:"target_path"`
-	Files      []string  `json:"files"`
+	Timestamp  time.Time  `json:"timestamp"`
+	SourcePath string     `json:"source_path"`
+	TargetPath string     `json:"target_path"`
+	Files      []FilePair `json:"files"`
 }
 
 type Summary struct {

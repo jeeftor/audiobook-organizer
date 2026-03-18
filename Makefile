@@ -13,7 +13,7 @@ LDFLAGS := -ldflags "-s -w \
 UNIT_TEST_PKGS = ./...
 INTEGRATION_TEST_PKGS = $(shell go list ./... | grep -v '/integration$$')
 
-.PHONY: all build clean dev gui-dev gui-dev1 gui-dev2 gui-build gui-install release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help
+.PHONY: all build clean dev gui-dev gui-dev1 gui-dev2 gui-build gui-install gui2-dev gui2-build gui2-install release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help
 
 # Default target - show help
 all: help
@@ -28,10 +28,13 @@ help:
 	@echo "    gui-dev1         Start GUI with ./books as input"
 	@echo "    gui-dev2         Start GUI with ./books-meta as input"
 	@echo "    gui-install      Install GUI frontend dependencies"
+	@echo "    gui2-dev         Start GUI2 (new three-pane layout) in dev mode"
+	@echo "    gui2-install     Install GUI2 frontend dependencies"
 	@echo ""
 	@echo "  Build:"
 	@echo "    build            Build for distribution (goreleaser)"
 	@echo "    gui-build        Build GUI for production"
+	@echo "    gui2-build       Build GUI2 for production"
 	@echo "    release          Create a release (requires GITHUB_TOKEN)"
 	@echo "    clean            Remove build artifacts"
 	@echo ""
@@ -77,6 +80,18 @@ gui-build:
 
 # Install GUI dependencies
 gui-install:
+	cd audiobook-organizer-gui/frontend && npm install
+
+# Start GUI2 in development mode (new three-pane layout)
+gui2-dev:
+	cd audiobook-organizer-gui && wails dev -appargs "--dir=../books --out=.. --log-level=debug"
+
+# Build GUI2 for production
+gui2-build:
+	cd audiobook-organizer-gui && wails build
+
+# Install GUI2 dependencies
+gui2-install:
 	cd audiobook-organizer-gui/frontend && npm install
 
 # Build using goreleaser for distribution

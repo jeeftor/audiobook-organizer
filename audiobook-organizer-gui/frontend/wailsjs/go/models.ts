@@ -1,5 +1,45 @@
 export namespace main {
 
+	export class AlbumGroup {
+	    name: string;
+	    author: string;
+	    series: string;
+	    file_count: number;
+	    file_indices: number[];
+	    files: organizer.Metadata[];
+
+	    static createFrom(source: any = {}) {
+	        return new AlbumGroup(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.author = source["author"];
+	        this.series = source["series"];
+	        this.file_count = source["file_count"];
+	        this.file_indices = source["file_indices"];
+	        this.files = this.convertValues(source["files"], organizer.Metadata);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class FieldMappingOption {
 	    field: string;
 	    label: string;
@@ -169,6 +209,30 @@ export namespace main {
 	    }
 	}
 
+	export class RenameConfig {
+	    enabled: boolean;
+	    template: string;
+	    preset: string;
+	    separator: string;
+	    author_format: string;
+	    replace_spaces: boolean;
+	    space_char: string;
+
+	    static createFrom(source: any = {}) {
+	        return new RenameConfig(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.template = source["template"];
+	        this.preset = source["preset"];
+	        this.separator = source["separator"];
+	        this.author_format = source["author_format"];
+	        this.replace_spaces = source["replace_spaces"];
+	        this.space_char = source["space_char"];
+	    }
+	}
 	export class ScanMode {
 	    name: string;
 	    use_embedded_metadata: boolean;
@@ -186,6 +250,44 @@ export namespace main {
 	        this.flat = source["flat"];
 	        this.description = source["description"];
 	    }
+	}
+	export class ScanStatistics {
+	    total_files: number;
+	    total_audiobooks: number;
+	    missing_metadata: number;
+	    album_groups: AlbumGroup[];
+	    ungrouped_files: organizer.Metadata[];
+
+	    static createFrom(source: any = {}) {
+	        return new ScanStatistics(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.total_files = source["total_files"];
+	        this.total_audiobooks = source["total_audiobooks"];
+	        this.missing_metadata = source["missing_metadata"];
+	        this.album_groups = this.convertValues(source["album_groups"], AlbumGroup);
+	        this.ungrouped_files = this.convertValues(source["ungrouped_files"], organizer.Metadata);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 
 }
@@ -265,8 +367,11 @@ export namespace organizer {
 	    RemoveEmpty: boolean;
 	    UseEmbeddedMetadata: boolean;
 	    Flat: boolean;
+	    SkipErrors: boolean;
 	    Layout: string;
+	    AuthorFormat: string;
 	    FieldMapping: FieldMapping;
+	    AllowedSourcePaths: string[];
 
 	    static createFrom(source: any = {}) {
 	        return new OrganizerConfig(source);
@@ -284,8 +389,11 @@ export namespace organizer {
 	        this.RemoveEmpty = source["RemoveEmpty"];
 	        this.UseEmbeddedMetadata = source["UseEmbeddedMetadata"];
 	        this.Flat = source["Flat"];
+	        this.SkipErrors = source["SkipErrors"];
 	        this.Layout = source["Layout"];
+	        this.AuthorFormat = source["AuthorFormat"];
 	        this.FieldMapping = this.convertValues(source["FieldMapping"], FieldMapping);
+	        this.AllowedSourcePaths = source["AllowedSourcePaths"];
 	    }
 
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

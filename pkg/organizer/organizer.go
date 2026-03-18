@@ -8,13 +8,17 @@ import (
 
 // Re-export types from internal package
 type (
-	OrganizerConfig = organizer.OrganizerConfig
-	Organizer       = organizer.Organizer
-	Metadata        = organizer.Metadata
-	FieldMapping    = organizer.FieldMapping
-	LogEntry        = organizer.LogEntry
-	Summary         = organizer.Summary
-	MoveSummary     = organizer.MoveSummary
+	OrganizerConfig  = organizer.OrganizerConfig
+	Organizer        = organizer.Organizer
+	Metadata         = organizer.Metadata
+	FieldMapping     = organizer.FieldMapping
+	LogEntry         = organizer.LogEntry
+	Summary          = organizer.Summary
+	MoveSummary      = organizer.MoveSummary
+	Template         = organizer.Template
+	TemplateRenderer = organizer.TemplateRenderer
+	AuthorFormatter  = organizer.AuthorFormatter
+	TemplateField    = organizer.TemplateField
 )
 
 // Re-export functions
@@ -24,6 +28,23 @@ var (
 	AudioFieldMapping   = organizer.AudioFieldMapping
 	EpubFieldMapping    = organizer.EpubFieldMapping
 	NewMetadata         = organizer.NewMetadata
+	TextFieldOptions    = organizer.TextFieldOptions
+	AuthorFieldOptions  = organizer.AuthorFieldOptions
+	TrackFieldOptions   = organizer.TrackFieldOptions
+	DiscFieldOptions    = organizer.DiscFieldOptions
+	ParseTemplate       = organizer.ParseTemplate
+	NewTemplateRenderer = organizer.NewTemplateRenderer
+	NewAuthorFormatter  = organizer.NewAuthorFormatter
+	GetAvailableFields  = organizer.GetAvailableFields
+)
+
+// Re-export field mapping constants
+const (
+	TitleFieldKey   = organizer.TitleFieldKey
+	SeriesFieldKey  = organizer.SeriesFieldKey
+	AuthorsFieldKey = organizer.AuthorsFieldKey
+	TrackFieldKey   = organizer.TrackFieldKey
+	DiscFieldKey    = organizer.DiscFieldKey
 )
 
 // CreateSanitizerFunc creates a path sanitizer function based on configuration.

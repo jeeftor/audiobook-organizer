@@ -34,6 +34,7 @@ var (
 	removeEmpty         bool
 	useEmbeddedMetadata bool
 	flat                bool
+	skipErrors          bool
 	layout              string // Directory structure layout
 
 	// Field mapping flags
@@ -137,6 +138,7 @@ var rootCmd = &cobra.Command{
 				RemoveEmpty:         viper.GetBool(removeEmptyKey),
 				UseEmbeddedMetadata: viper.GetBool(useEmbeddedMetaKey),
 				Flat:                viper.GetBool("flat"),
+				SkipErrors:          viper.GetBool("skip-errors"),
 				Layout:              viper.GetString("layout"),
 				FieldMapping: organizer.FieldMapping{
 					TitleField:   viper.GetString(titleFieldKey),
@@ -221,6 +223,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&dryRun, dryRunKey, false, "Show what would happen without making changes")
 	rootCmd.PersistentFlags().BoolVar(&useEmbeddedMetadata, useEmbeddedMetaKey, false, "Use metadata embedded in EPUB files if metadata.json is not found")
 	rootCmd.PersistentFlags().BoolVar(&flat, "flat", false, "Process files in a flat directory structure (automatically enables --use-embedded-metadata)")
+	rootCmd.PersistentFlags().BoolVar(&skipErrors, "skip-errors", false, "Skip files with missing/invalid metadata instead of stopping")
 
 	// Local flags (only for root command)
 	rootCmd.Flags().StringVar(&replaceSpace, "replace_space", "", "Character to replace spaces")
@@ -245,6 +248,7 @@ func init() {
 	viper.BindPFlag(dryRunKey, rootCmd.PersistentFlags().Lookup(dryRunKey))
 	viper.BindPFlag(useEmbeddedMetaKey, rootCmd.PersistentFlags().Lookup(useEmbeddedMetaKey))
 	viper.BindPFlag("flat", rootCmd.PersistentFlags().Lookup("flat"))
+	viper.BindPFlag("skip-errors", rootCmd.PersistentFlags().Lookup("skip-errors"))
 	viper.BindPFlag(titleFieldKey, rootCmd.PersistentFlags().Lookup(titleFieldKey))
 	viper.BindPFlag(seriesFieldKey, rootCmd.PersistentFlags().Lookup(seriesFieldKey))
 	viper.BindPFlag(authorFieldsKey, rootCmd.PersistentFlags().Lookup(authorFieldsKey))

@@ -14,6 +14,14 @@ export function GetAvailableScanModes() {
   return window['go']['main']['App']['GetAvailableScanModes']();
 }
 
+export function GetAvailableTemplateFields() {
+  return window['go']['main']['App']['GetAvailableTemplateFields']();
+}
+
+export function GetCurrentAuthorFormat() {
+  return window['go']['main']['App']['GetCurrentAuthorFormat']();
+}
+
 export function GetCurrentFieldMapping() {
   return window['go']['main']['App']['GetCurrentFieldMapping']();
 }
@@ -46,20 +54,44 @@ export function GetProgress() {
   return window['go']['main']['App']['GetProgress']();
 }
 
+export function GetRenameConfig() {
+  return window['go']['main']['App']['GetRenameConfig']();
+}
+
+export function GetRenamePresets() {
+  return window['go']['main']['App']['GetRenamePresets']();
+}
+
 export function GetSampleMetadataPreviews(arg1) {
   return window['go']['main']['App']['GetSampleMetadataPreviews'](arg1);
+}
+
+export function GetScanStatistics() {
+  return window['go']['main']['App']['GetScanStatistics']();
 }
 
 export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }
 
+export function GetUndoInfo() {
+  return window['go']['main']['App']['GetUndoInfo']();
+}
+
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }
 
+export function OrganizeFiles(arg1, arg2, arg3) {
+  return window['go']['main']['App']['OrganizeFiles'](arg1, arg2, arg3);
+}
+
 export function PreviewChanges(arg1, arg2, arg3) {
   return window['go']['main']['App']['PreviewChanges'](arg1, arg2, arg3);
+}
+
+export function PreviewRename(arg1) {
+  return window['go']['main']['App']['PreviewRename'](arg1);
 }
 
 export function ScanDirectory(arg1) {
@@ -68,6 +100,18 @@ export function ScanDirectory(arg1) {
 
 export function SelectDirectory(arg1) {
   return window['go']['main']['App']['SelectDirectory'](arg1);
+}
+
+export function SetLogLevel(arg1) {
+  return window['go']['main']['App']['SetLogLevel'](arg1);
+}
+
+export function UndoLastOperation() {
+  return window['go']['main']['App']['UndoLastOperation']();
+}
+
+export function UpdateAuthorFormat(arg1) {
+  return window['go']['main']['App']['UpdateAuthorFormat'](arg1);
 }
 
 export function UpdateFieldMapping(arg1) {
@@ -80,6 +124,10 @@ export function UpdateFieldMappingField(arg1, arg2) {
 
 export function UpdateLayout(arg1) {
   return window['go']['main']['App']['UpdateLayout'](arg1);
+}
+
+export function UpdateRenameConfig(arg1) {
+  return window['go']['main']['App']['UpdateRenameConfig'](arg1);
 }
 
 export function UpdateScanMode(arg1) {

@@ -34,8 +34,11 @@ type OrganizerConfig struct {
 	RemoveEmpty         bool
 	UseEmbeddedMetadata bool
 	Flat                bool
-	Layout              string       // Directory structure layout (author-series-title, author-title, author-only)
+	SkipErrors          bool     // Skip files with missing/invalid metadata instead of stopping
+	Layout              string   // Directory structure layout (author-series-title, author-title, author-only)
+	AuthorFormat        string
 	FieldMapping        FieldMapping // Configuration for mapping metadata fields
+	AllowedSourcePaths  []string     // When non-empty, only process book dirs whose path is in this list
 }
 
 // Validate checks if the configuration is valid and returns helpful error messages
@@ -273,20 +276,44 @@ func (o *Organizer) GetSummary() Summary {
 
 // Execute runs the main organization process
 func (o *Organizer) Execute() error {
-	// Clean and resolve the paths
+	// Clean and resolve the paths to absolute, symlink-free paths.
 	color.Blue("🔍 Resolving paths...")
-	resolvedBaseDir, err := filepath.EvalSymlinks(filepath.Clean(o.config.BaseDir))
+	cleanBase := filepath.Clean(o.config.BaseDir)
+	absBase, err := filepath.Abs(cleanBase)
+	if err != nil {
+		return fmt.Errorf("error resolving base directory path: %v", err)
+	}
+	resolvedBaseDir, err := filepath.EvalSymlinks(absBase)
 	if err != nil {
 		return fmt.Errorf("error resolving base directory path: %v", err)
 	}
 	o.config.BaseDir = resolvedBaseDir
 
 	if o.config.OutputDir != "" {
-		resolvedOutputDir, err := filepath.EvalSymlinks(filepath.Clean(o.config.OutputDir))
+		cleanOut := filepath.Clean(o.config.OutputDir)
+		absOut, err := filepath.Abs(cleanOut)
+		if err != nil {
+			return fmt.Errorf("error resolving output directory path: %v", err)
+		}
+		resolvedOutputDir, err := filepath.EvalSymlinks(absOut)
 		if err != nil {
 			return fmt.Errorf("error resolving output directory path: %v", err)
 		}
 		o.config.OutputDir = resolvedOutputDir
+	}
+
+	// Resolve symlinks in AllowedSourcePaths so comparisons against Walk paths work on macOS.
+	for i, p := range o.config.AllowedSourcePaths {
+		clean := filepath.Clean(p)
+		abs, err := filepath.Abs(clean)
+		if err != nil {
+			return fmt.Errorf("error resolving allowed source path %s: %v", p, err)
+		}
+		resolved, err := filepath.EvalSymlinks(abs)
+		if err != nil {
+			return fmt.Errorf("error resolving allowed source path %s: %v", p, err)
+		}
+		o.config.AllowedSourcePaths[i] = resolved
 	}
 
 	// Check if the base path is a file rather than a directory

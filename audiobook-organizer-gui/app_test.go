@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/jeeftor/audiobook-organizer/pkg/organizer"
 )
@@ -479,5 +482,153 @@ func TestPreviewItem_JSON(t *testing.T) {
 	// Verify fields are accessible
 	if !item.IsConflict {
 		t.Error("PreviewItem IsConflict should be true")
+	}
+}
+
+// TestApp_UndoLastOperation_RestoresOriginalFilename verifies that UndoLastOperation
+// reads the new FilePair log format and restores the file using the original filename
+// (file.From) rather than the renamed filename (file.To).
+func TestApp_UndoLastOperation_RestoresOriginalFilename(t *testing.T) {
+	inputDir := t.TempDir()
+	outputDir := t.TempDir()
+
+	// Create the source book directory that existed before organization
+	sourceBookDir := filepath.Join(inputDir, "BookA")
+	if err := os.MkdirAll(sourceBookDir, 0755); err != nil {
+		t.Fatalf("failed to create source book dir: %v", err)
+	}
+
+	// Create the target book directory (where the file was moved to)
+	targetBookDir := filepath.Join(outputDir, "BookA")
+	if err := os.MkdirAll(targetBookDir, 0755); err != nil {
+		t.Fatalf("failed to create target book dir: %v", err)
+	}
+
+	// Create the renamed file in the target directory (this is "file.To")
+	renamedFile := filepath.Join(targetBookDir, "01 - original.mp3")
+	if err := os.WriteFile(renamedFile, []byte("fake audio"), 0644); err != nil {
+		t.Fatalf("failed to create renamed file: %v", err)
+	}
+
+	// Write a .abook-org.log in the output dir using the new FilePair format
+	logEntries := []MoveLogEntry{
+		{
+			Timestamp:  time.Now(),
+			SourcePath: sourceBookDir,
+			TargetPath: targetBookDir,
+			Files: []FilePair{
+				{From: "original.mp3", To: "01 - original.mp3"},
+			},
+		},
+	}
+	logData, err := json.MarshalIndent(logEntries, "", "  ")
+	if err != nil {
+		t.Fatalf("failed to marshal log entries: %v", err)
+	}
+	logPath := filepath.Join(outputDir, ".abook-org.log")
+	if err := os.WriteFile(logPath, logData, 0644); err != nil {
+		t.Fatalf("failed to write log file: %v", err)
+	}
+
+	app := NewApp()
+	app.config.OutputDir = outputDir
+
+	result, err := app.UndoLastOperation()
+	if err != nil {
+		t.Fatalf("UndoLastOperation() returned unexpected error: %v", err)
+	}
+
+	if result["success"] != true {
+		t.Errorf("UndoLastOperation() success = %v, want true; errors: %v", result["success"], result["errors"])
+	}
+
+	// The file must be restored to the source dir using the ORIGINAL name (From)
+	restoredPath := filepath.Join(sourceBookDir, "original.mp3")
+	if _, err := os.Stat(restoredPath); os.IsNotExist(err) {
+		t.Errorf("UndoLastOperation() did not restore file to %s", restoredPath)
+	}
+
+	// The renamed file in the target dir must no longer exist
+	if _, err := os.Stat(renamedFile); !os.IsNotExist(err) {
+		t.Errorf("UndoLastOperation() left renamed file at %s; it should have been moved", renamedFile)
+	}
+}
+
+// TestApp_UndoLastOperation_NoLogFile verifies that UndoLastOperation returns a
+// descriptive error when no log file exists in the output directory.
+func TestApp_UndoLastOperation_NoLogFile(t *testing.T) {
+	outputDir := t.TempDir()
+
+	app := NewApp()
+	app.config.OutputDir = outputDir
+
+	_, err := app.UndoLastOperation()
+	if err == nil {
+		t.Fatal("UndoLastOperation() expected error when no log file exists, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "failed to read operation log") {
+		t.Errorf("UndoLastOperation() error = %q, want it to contain 'failed to read operation log'", err.Error())
+	}
+}
+
+// TestApp_PreviewChanges_SetsAllowedSourcePaths verifies that after calling PreviewChanges
+// with a subset of selected book indices, AllowedSourcePaths on the config contains
+// exactly the source paths of the selected books.
+func TestApp_PreviewChanges_SetsAllowedSourcePaths(t *testing.T) {
+	inputDir := t.TempDir()
+	outputDir := t.TempDir()
+
+	// Create three book subdirs each with a metadata.json
+	bookNames := []string{"BookA", "BookB", "BookC"}
+	for _, name := range bookNames {
+		bookDir := filepath.Join(inputDir, name)
+		if err := os.MkdirAll(bookDir, 0755); err != nil {
+			t.Fatalf("failed to create book dir %s: %v", name, err)
+		}
+		meta := map[string]interface{}{
+			"title":   name,
+			"authors": []string{"Test Author"},
+		}
+		metaData, _ := json.Marshal(meta)
+		if err := os.WriteFile(filepath.Join(bookDir, "metadata.json"), metaData, 0644); err != nil {
+			t.Fatalf("failed to write metadata.json for %s: %v", name, err)
+		}
+	}
+
+	app := NewApp()
+
+	// Scan to populate lastScanResults
+	results, err := app.ScanDirectory(inputDir)
+	if err != nil {
+		t.Fatalf("ScanDirectory() error: %v", err)
+	}
+	if len(results) < 2 {
+		t.Fatalf("ScanDirectory() found %d books, need at least 2 to test selection", len(results))
+	}
+
+	// Select only the book at index 1
+	selectedIndices := []int{1}
+	_, err = app.PreviewChanges(inputDir, outputDir, selectedIndices)
+	if err != nil {
+		t.Fatalf("PreviewChanges() error: %v", err)
+	}
+
+	// AllowedSourcePaths must contain exactly one entry matching the selected book's SourcePath
+	if len(app.config.AllowedSourcePaths) != 1 {
+		t.Fatalf("AllowedSourcePaths has %d entries, want 1", len(app.config.AllowedSourcePaths))
+	}
+
+	wantSourcePath, err := filepath.Abs(lastScanResults[1].SourcePath)
+	if err != nil {
+		t.Fatalf("failed to resolve expected source path: %v", err)
+	}
+	// SourcePath on Metadata points to the metadata.json file; the allowed path
+	// should be its directory (the book directory).
+	wantDir := filepath.Dir(wantSourcePath)
+
+	gotPath := app.config.AllowedSourcePaths[0]
+	if gotPath != wantDir {
+		t.Errorf("AllowedSourcePaths[0] = %q, want %q", gotPath, wantDir)
 	}
 }
