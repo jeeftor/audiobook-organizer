@@ -32,7 +32,11 @@ func ExtractMetadata(path string, useEmbeddedOnly bool) (Metadata, error) {
 }
 
 // ExtractMetadataWithMapping extracts metadata and applies field mapping
-func ExtractMetadataWithMapping(path string, useEmbeddedOnly bool, mapping FieldMapping) (Metadata, error) {
+func ExtractMetadataWithMapping(
+	path string,
+	useEmbeddedOnly bool,
+	mapping FieldMapping,
+) (Metadata, error) {
 	metadata, err := ExtractMetadata(path, useEmbeddedOnly)
 	if err != nil {
 		return metadata, err

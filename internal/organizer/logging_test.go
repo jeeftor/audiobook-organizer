@@ -11,7 +11,7 @@ import (
 func TestLogFileCreation(t *testing.T) {
 	tempDir := t.TempDir()
 	sourceDir := filepath.Join(tempDir, "source")
-	if err := os.MkdirAll(sourceDir, 0755); err != nil {
+	if err := os.MkdirAll(sourceDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -24,12 +24,12 @@ func TestLogFileCreation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(sourceDir, "metadata.json"), metadataBytes, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(sourceDir, "metadata.json"), metadataBytes, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	testFile := filepath.Join(sourceDir, "test.mp3")
-	if err := os.WriteFile(testFile, []byte("test data"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("test data"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -85,7 +85,7 @@ func TestLogFileCreation(t *testing.T) {
 func TestUndoMoves(t *testing.T) {
 	tempDir := t.TempDir()
 	sourceDir := filepath.Join(tempDir, "source")
-	if err := os.MkdirAll(sourceDir, 0755); err != nil {
+	if err := os.MkdirAll(sourceDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -99,13 +99,13 @@ func TestUndoMoves(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(sourceDir, "metadata.json"), metadataBytes, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(sourceDir, "metadata.json"), metadataBytes, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	testFile := filepath.Join(sourceDir, "test.mp3")
 	testData := []byte("test data")
-	if err := os.WriteFile(testFile, testData, 0644); err != nil {
+	if err := os.WriteFile(testFile, testData, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -194,10 +194,10 @@ func TestLogFileInOutputDirectory(t *testing.T) {
 	sourceDir := filepath.Join(tempDir, "source")
 	outputDir := filepath.Join(tempDir, "output")
 
-	if err := os.MkdirAll(sourceDir, 0755); err != nil {
+	if err := os.MkdirAll(sourceDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -210,12 +210,12 @@ func TestLogFileInOutputDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(sourceDir, "metadata.json"), metadataBytes, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(sourceDir, "metadata.json"), metadataBytes, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	testFile := filepath.Join(sourceDir, "test.mp3")
-	if err := os.WriteFile(testFile, []byte("test data"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("test data"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

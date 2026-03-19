@@ -89,7 +89,9 @@ func (i BookItem) Description() string {
 	if i.book.IsPartOfAlbum {
 		desc.WriteString("\nAlbum: " + i.book.AlbumName)
 		if i.book.TrackNumber > 0 {
-			desc.WriteString(fmt.Sprintf(" (Track %d of %d)", i.book.TrackNumber, i.book.TotalTracks))
+			desc.WriteString(
+				fmt.Sprintf(" (Track %d of %d)", i.book.TrackNumber, i.book.TotalTracks),
+			)
 		}
 	}
 
@@ -145,13 +147,18 @@ func NewCustomDelegate() list.ItemDelegate {
 
 	// Initialize styles struct
 	d.Styles.NormalTitle = lipgloss.NewStyle().Foreground(lipgloss.Color("#2BFFB5")).Bold(true)
-	d.Styles.SelectedTitle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")).Background(lipgloss.Color("#7D56F4")).Bold(true)
+	d.Styles.SelectedTitle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FFFFFF")).
+		Background(lipgloss.Color("#7D56F4")).
+		Bold(true)
 	d.Styles.NormalDesc = lipgloss.NewStyle().Foreground(lipgloss.Color("#CCCCCC"))
 	d.Styles.SelectedDesc = lipgloss.NewStyle().Foreground(lipgloss.Color("#DDDDDD"))
 	d.Styles.DimmedDesc = lipgloss.NewStyle().Foreground(lipgloss.Color("#666666"))
 
 	d.Styles.NormalItemStyle = lipgloss.NewStyle().PaddingLeft(2)
-	d.Styles.SelectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Background(lipgloss.Color("#333333"))
+	d.Styles.SelectedItemStyle = lipgloss.NewStyle().
+		PaddingLeft(2).
+		Background(lipgloss.Color("#333333"))
 
 	// Set other properties - make items very compact to show more books
 	d.ItemHeight = 1
@@ -164,9 +171,7 @@ func NewCustomDelegate() list.ItemDelegate {
 
 // Render renders a list item
 func (d CustomDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
-	var (
-		titleStyle, descStyle lipgloss.Style
-	)
+	var titleStyle, descStyle lipgloss.Style
 
 	// Get the book item
 	bookItem, ok := item.(BookItem)
@@ -246,7 +251,10 @@ func NewBookListModel(books []AudioBook) *BookListModel {
 	l.SetFilteringEnabled(true)
 	l.SetShowStatusBar(true)
 	l.SetShowPagination(true)
-	l.Styles.Title = l.Styles.Title.Background(lipgloss.Color("#7D56F4")).Foreground(lipgloss.Color("#FFFFFF")).Bold(true).Padding(0, 1)
+	l.Styles.Title = l.Styles.Title.Background(lipgloss.Color("#7D56F4")).
+		Foreground(lipgloss.Color("#FFFFFF")).
+		Bold(true).
+		Padding(0, 1)
 
 	// Initialize selected map with all books selected by default
 	selected := make(map[int]bool)

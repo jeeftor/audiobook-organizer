@@ -183,7 +183,13 @@ func TestAuthorFormatter_FormatAuthor(t *testing.T) {
 			formatter := NewAuthorFormatter(tt.format)
 			got := formatter.FormatAuthor(tt.input)
 			if got != tt.want {
-				t.Errorf("FormatAuthor(%q) with format %v = %q, want %q", tt.input, tt.format, got, tt.want)
+				t.Errorf(
+					"FormatAuthor(%q) with format %v = %q, want %q",
+					tt.input,
+					tt.format,
+					got,
+					tt.want,
+				)
 			}
 		})
 	}

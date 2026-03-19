@@ -75,37 +75,163 @@ type SettingsTableModel struct {
 func NewSettingsTableModel(selectedBooks []AudioBook, showAdvanced bool) *SettingsTableModel {
 	// Create settings (same as before)
 	settings := []Setting{
-		{Name: "Layout", Description: "Directory structure", Options: []string{"author-only", "author-title", "author-series-title", "author-series-title-number", "series-title", "series-title-number"}, Value: 2},
-		{Name: "Use Embedded Metadata", Description: "Use file metadata", Options: []string{"No", "Yes"}, Value: 1},
-		{Name: "Flat Mode", Description: "Process files individually", Options: []string{"No", "Yes"}, Value: 0},
-		{Name: "Dry Run", Description: "Preview without moving", Options: []string{"No", "Yes"}, Value: 0},
+		{
+			Name:        "Layout",
+			Description: "Directory structure",
+			Options: []string{
+				"author-only",
+				"author-title",
+				"author-series-title",
+				"author-series-title-number",
+				"series-title",
+				"series-title-number",
+			},
+			Value: 2,
+		},
+		{
+			Name:        "Use Embedded Metadata",
+			Description: "Use file metadata",
+			Options:     []string{"No", "Yes"},
+			Value:       1,
+		},
+		{
+			Name:        "Flat Mode",
+			Description: "Process files individually",
+			Options:     []string{"No", "Yes"},
+			Value:       0,
+		},
+		{
+			Name:        "Dry Run",
+			Description: "Preview without moving",
+			Options:     []string{"No", "Yes"},
+			Value:       0,
+		},
 		{Name: "Verbose", Description: "Detailed output", Options: []string{"No", "Yes"}, Value: 1},
 	}
 
 	fieldMappings := []FieldMappingSetting{
-		{Name: "Layout", Description: "Directory structure", Options: []string{"author-only", "author-title", "author-series-title", "author-series-title-number", "series-title", "series-title-number"}, Value: 2},
-		{Name: "Flat Mode", Description: "Process individually", Options: []string{"No", "Yes"}, Value: 0},
-		{Name: "Title Field", Description: "Field for title", Options: []string{"title", "album", "series", "track_title"}, Value: 0},
-		{Name: "Series Field", Description: "Field for series", Options: []string{"series", "album", "title"}, Value: 0},
-		{Name: "Author Fields", Description: "Author priority", Options: []string{"authors→artist→album_artist", "authors→narrators→artist", "artist→album_artist→composer", "authors only"}, Value: 0},
-		{Name: "Track Field", Description: "Field for track", Options: []string{"track", "track_number", "disc"}, Value: 0},
+		{
+			Name:        "Layout",
+			Description: "Directory structure",
+			Options: []string{
+				"author-only",
+				"author-title",
+				"author-series-title",
+				"author-series-title-number",
+				"series-title",
+				"series-title-number",
+			},
+			Value: 2,
+		},
+		{
+			Name:        "Flat Mode",
+			Description: "Process individually",
+			Options:     []string{"No", "Yes"},
+			Value:       0,
+		},
+		{
+			Name:        "Title Field",
+			Description: "Field for title",
+			Options:     []string{"title", "album", "series", "track_title"},
+			Value:       0,
+		},
+		{
+			Name:        "Series Field",
+			Description: "Field for series",
+			Options:     []string{"series", "album", "title"},
+			Value:       0,
+		},
+		{
+			Name:        "Author Fields",
+			Description: "Author priority",
+			Options: []string{
+				"authors→artist→album_artist",
+				"authors→narrators→artist",
+				"artist→album_artist→composer",
+				"authors only",
+			},
+			Value: 0,
+		},
+		{
+			Name:        "Track Field",
+			Description: "Field for track",
+			Options:     []string{"track", "track_number", "disc"},
+			Value:       0,
+		},
 	}
 
 	// Combine ALL settings into one unified view
 	// Always show all settings (basic + advanced field mappings)
 	allSettings := []FieldMappingSetting{
 		// Basic settings converted to FieldMappingSetting format
-		{Name: "Use Embedded Metadata", Description: "Use file metadata", Options: []string{"No", "Yes"}, Value: 1},
-		{Name: "Dry Run", Description: "Preview without moving", Options: []string{"No", "Yes"}, Value: 0},
+		{
+			Name:        "Use Embedded Metadata",
+			Description: "Use file metadata",
+			Options:     []string{"No", "Yes"},
+			Value:       1,
+		},
+		{
+			Name:        "Dry Run",
+			Description: "Preview without moving",
+			Options:     []string{"No", "Yes"},
+			Value:       0,
+		},
 		{Name: "Verbose", Description: "Detailed output", Options: []string{"No", "Yes"}, Value: 1},
-		{Name: "───────────────────", Description: "separator", Options: []string{""}, Value: 0}, // Visual separator
+		{
+			Name:        "───────────────────",
+			Description: "separator",
+			Options:     []string{""},
+			Value:       0,
+		}, // Visual separator
 		// Advanced field mapping settings
-		{Name: "Layout", Description: "Directory structure", Options: []string{"author-only", "author-title", "author-series-title", "author-series-title-number", "series-title", "series-title-number"}, Value: 2},
-		{Name: "Flat Mode", Description: "Process individually", Options: []string{"No", "Yes"}, Value: 0},
-		{Name: "Title Field", Description: "Field for title", Options: []string{"title", "album", "series", "track_title"}, Value: 0},
-		{Name: "Series Field", Description: "Field for series", Options: []string{"series", "album", "title"}, Value: 0},
-		{Name: "Author Fields", Description: "Author priority", Options: []string{"authors→artist→album_artist", "authors→narrators→artist", "artist→album_artist→composer", "authors only"}, Value: 0},
-		{Name: "Track Field", Description: "Field for track", Options: []string{"track", "track_number", "disc"}, Value: 0},
+		{
+			Name:        "Layout",
+			Description: "Directory structure",
+			Options: []string{
+				"author-only",
+				"author-title",
+				"author-series-title",
+				"author-series-title-number",
+				"series-title",
+				"series-title-number",
+			},
+			Value: 2,
+		},
+		{
+			Name:        "Flat Mode",
+			Description: "Process individually",
+			Options:     []string{"No", "Yes"},
+			Value:       0,
+		},
+		{
+			Name:        "Title Field",
+			Description: "Field for title",
+			Options:     []string{"title", "album", "series", "track_title"},
+			Value:       0,
+		},
+		{
+			Name:        "Series Field",
+			Description: "Field for series",
+			Options:     []string{"series", "album", "title"},
+			Value:       0,
+		},
+		{
+			Name:        "Author Fields",
+			Description: "Author priority",
+			Options: []string{
+				"authors→artist→album_artist",
+				"authors→narrators→artist",
+				"artist→album_artist→composer",
+				"authors only",
+			},
+			Value: 0,
+		},
+		{
+			Name:        "Track Field",
+			Description: "Field for track",
+			Options:     []string{"track", "track_number", "disc"},
+			Value:       0,
+		},
 	}
 
 	// Calculate max width needed for "Current" column
@@ -516,7 +642,11 @@ func (m *SettingsTableModel) generateOutputPreview() string {
 
 	if len(m.selectedBooks) > previewCount {
 		moreStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Italic(true)
-		content.WriteString(moreStyle.Render(fmt.Sprintf("  ... and %d more", len(m.selectedBooks)-previewCount)) + "\n")
+		content.WriteString(
+			moreStyle.Render(
+				fmt.Sprintf("  ... and %d more", len(m.selectedBooks)-previewCount),
+			) + "\n",
+		)
 	}
 
 	return content.String()
@@ -544,16 +674,32 @@ func (m *SettingsTableModel) updateMetadata() {
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFAAFF"))
 
 	// Color styles matching the output path components
-	authorLabelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF9500"))  // Orange for author
-	seriesLabelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00D9FF"))  // Cyan for series
-	titleLabelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))   // Green for title
-	defaultLabelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#AAAAFF")) // Default for other fields
+	authorLabelStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FF9500"))
+		// Orange for author
+	seriesLabelStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#00D9FF"))
+		// Cyan for series
+	titleLabelStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#00FF00"))
+		// Green for title
+	defaultLabelStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#AAAAFF"))
+		// Default for other fields
 
 	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
 	usedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00"))
 	checkmark := usedStyle.Render("✓ ")
 
-	content.WriteString(titleStyle.Render(fmt.Sprintf("Metadata Preview (Book %d/%d):", m.metadataBookIndex+1, len(m.selectedBooks))) + "\n\n")
+	content.WriteString(
+		titleStyle.Render(
+			fmt.Sprintf(
+				"Metadata Preview (Book %d/%d):",
+				m.metadataBookIndex+1,
+				len(m.selectedBooks),
+			),
+		) + "\n\n",
+	)
 
 	// Show key metadata fields with checkmarks for fields being used
 	// Title field - use title color (green)
@@ -561,7 +707,13 @@ func (m *SettingsTableModel) updateMetadata() {
 	if fieldMapping.TitleField == "title" {
 		titleCheck = checkmark
 	}
-	content.WriteString(titleCheck + titleLabelStyle.Render("Title: ") + valueStyle.Render(book.Metadata.Title) + "\n")
+	content.WriteString(
+		titleCheck + titleLabelStyle.Render(
+			"Title: ",
+		) + valueStyle.Render(
+			book.Metadata.Title,
+		) + "\n",
+	)
 
 	// Authors - use author color (orange)
 	authorCheck := ""
@@ -572,7 +724,13 @@ func (m *SettingsTableModel) updateMetadata() {
 		}
 	}
 	if len(book.Metadata.Authors) > 0 {
-		content.WriteString(authorCheck + authorLabelStyle.Render("Authors: ") + valueStyle.Render(strings.Join(book.Metadata.Authors, ", ")) + "\n")
+		content.WriteString(
+			authorCheck + authorLabelStyle.Render(
+				"Authors: ",
+			) + valueStyle.Render(
+				strings.Join(book.Metadata.Authors, ", "),
+			) + "\n",
+		)
 	}
 
 	// Series - use series color (cyan)
@@ -581,7 +739,9 @@ func (m *SettingsTableModel) updateMetadata() {
 		seriesCheck = checkmark
 	}
 	if series := book.Metadata.GetValidSeries(); series != "" {
-		content.WriteString(seriesCheck + seriesLabelStyle.Render("Series: ") + valueStyle.Render(series) + "\n")
+		content.WriteString(
+			seriesCheck + seriesLabelStyle.Render("Series: ") + valueStyle.Render(series) + "\n",
+		)
 	}
 
 	// Album - could be title or series, determine color based on mapping
@@ -595,7 +755,13 @@ func (m *SettingsTableModel) updateMetadata() {
 		albumLabelStyle = seriesLabelStyle
 	}
 	if book.Metadata.Album != "" {
-		content.WriteString(albumCheck + albumLabelStyle.Render("Album: ") + valueStyle.Render(book.Metadata.Album) + "\n")
+		content.WriteString(
+			albumCheck + albumLabelStyle.Render(
+				"Album: ",
+			) + valueStyle.Render(
+				book.Metadata.Album,
+			) + "\n",
+		)
 	}
 
 	// Track title - could be used as title field
@@ -606,7 +772,13 @@ func (m *SettingsTableModel) updateMetadata() {
 		trackTitleLabelStyle = titleLabelStyle
 	}
 	if book.Metadata.TrackTitle != "" {
-		content.WriteString(trackTitleCheck + trackTitleLabelStyle.Render("Track Title: ") + valueStyle.Render(book.Metadata.TrackTitle) + "\n")
+		content.WriteString(
+			trackTitleCheck + trackTitleLabelStyle.Render(
+				"Track Title: ",
+			) + valueStyle.Render(
+				book.Metadata.TrackTitle,
+			) + "\n",
+		)
 	}
 
 	// Track number
@@ -615,7 +787,13 @@ func (m *SettingsTableModel) updateMetadata() {
 		trackCheck = checkmark
 	}
 	if book.Metadata.TrackNumber != 0 {
-		content.WriteString(trackCheck + defaultLabelStyle.Render("Track Number: ") + valueStyle.Render(fmt.Sprintf("%d", book.Metadata.TrackNumber)) + "\n")
+		content.WriteString(
+			trackCheck + defaultLabelStyle.Render(
+				"Track Number: ",
+			) + valueStyle.Render(
+				fmt.Sprintf("%d", book.Metadata.TrackNumber),
+			) + "\n",
+		)
 	}
 
 	// Show file path (shortened to last 3 components)
@@ -624,8 +802,16 @@ func (m *SettingsTableModel) updateMetadata() {
 	if len(pathParts) > 3 {
 		displayPath = ".../" + strings.Join(pathParts[len(pathParts)-3:], "/")
 	}
-	content.WriteString("\n" + defaultLabelStyle.Render("Source: ") + valueStyle.Render(displayPath) + "\n")
-	content.WriteString(defaultLabelStyle.Render("Source Type: ") + valueStyle.Render(book.Metadata.SourceType) + "\n")
+	content.WriteString(
+		"\n" + defaultLabelStyle.Render("Source: ") + valueStyle.Render(displayPath) + "\n",
+	)
+	content.WriteString(
+		defaultLabelStyle.Render(
+			"Source Type: ",
+		) + valueStyle.Render(
+			book.Metadata.SourceType,
+		) + "\n",
+	)
 
 	// Show raw metadata fields if available
 	if len(book.Metadata.RawData) > 0 {
@@ -659,7 +845,9 @@ func (m *SettingsTableModel) updateMetadata() {
 				// Track field doesn't have a special color
 			}
 
-			content.WriteString(fmt.Sprintf("  %s%s: %v\n", rawCheck, rawLabelStyle.Render(key), val))
+			content.WriteString(
+				fmt.Sprintf("  %s%s: %v\n", rawCheck, rawLabelStyle.Render(key), val),
+			)
 		}
 	}
 
@@ -876,7 +1064,12 @@ func (m *SettingsTableModel) renderPopup() string {
 // View renders the UI
 func (m *SettingsTableModel) View() string {
 	// Header with debug info
-	debugInfo := fmt.Sprintf(" [Terminal: %dx%d, Viewport: %d lines]", m.width, m.height, m.metadataViewport.Height)
+	debugInfo := fmt.Sprintf(
+		" [Terminal: %dx%d, Viewport: %d lines]",
+		m.width,
+		m.height,
+		m.metadataViewport.Height,
+	)
 	header := headerStyle.Render("⚙️ All Settings (Basic + Advanced)"+debugInfo) + "\n\n"
 
 	// Table with border

@@ -27,7 +27,7 @@ func TestOrganizerExecute(t *testing.T) {
 			setupFunc: func(t *testing.T, baseDir string) {
 				// Create a simple audiobook structure
 				bookDir := filepath.Join(baseDir, "test_book")
-				if err := os.MkdirAll(bookDir, 0755); err != nil {
+				if err := os.MkdirAll(bookDir, 0o755); err != nil {
 					t.Fatalf("Failed to create book directory: %v", err)
 				}
 
@@ -38,13 +38,13 @@ func TestOrganizerExecute(t *testing.T) {
 					"series": ["Test Series"]
 				}`
 				metadataPath := filepath.Join(bookDir, "metadata.json")
-				if err := os.WriteFile(metadataPath, []byte(metadataContent), 0644); err != nil {
+				if err := os.WriteFile(metadataPath, []byte(metadataContent), 0o644); err != nil {
 					t.Fatalf("Failed to create metadata file: %v", err)
 				}
 
 				// Create a test audio file
 				audioPath := filepath.Join(bookDir, "audio.mp3")
-				if err := os.WriteFile(audioPath, []byte("fake audio data"), 0644); err != nil {
+				if err := os.WriteFile(audioPath, []byte("fake audio data"), 0o644); err != nil {
 					t.Fatalf("Failed to create audio file: %v", err)
 				}
 			},
@@ -70,7 +70,7 @@ func TestOrganizerExecute(t *testing.T) {
 			setupFunc: func(t *testing.T, baseDir string) {
 				// Create an empty directory structure
 				emptyDir := filepath.Join(baseDir, "empty")
-				if err := os.MkdirAll(emptyDir, 0755); err != nil {
+				if err := os.MkdirAll(emptyDir, 0o755); err != nil {
 					t.Fatalf("Failed to create empty directory: %v", err)
 				}
 			},
@@ -95,7 +95,7 @@ func TestOrganizerExecute(t *testing.T) {
 				tt.config.OutputDir = filepath.Join(tempDir, "output")
 				// Create output directory only if BaseDir exists
 				if tt.config.BaseDir != "/nonexistent/directory/that/should/not/exist" {
-					if err := os.MkdirAll(tt.config.OutputDir, 0755); err != nil {
+					if err := os.MkdirAll(tt.config.OutputDir, 0o755); err != nil {
 						t.Fatalf("Failed to create output directory: %v", err)
 					}
 				}
@@ -151,12 +151,12 @@ func TestOrganizerExecuteWithOutput(t *testing.T) {
 	outputDir := filepath.Join(tempDir, "output")
 
 	// Create input structure
-	if err := os.MkdirAll(inputDir, 0755); err != nil {
+	if err := os.MkdirAll(inputDir, 0o755); err != nil {
 		t.Fatalf("Failed to create input directory: %v", err)
 	}
 
 	bookDir := filepath.Join(inputDir, "test_book")
-	if err := os.MkdirAll(bookDir, 0755); err != nil {
+	if err := os.MkdirAll(bookDir, 0o755); err != nil {
 		t.Fatalf("Failed to create book directory: %v", err)
 	}
 
@@ -166,17 +166,17 @@ func TestOrganizerExecuteWithOutput(t *testing.T) {
 		"authors": ["Test Author"]
 	}`
 	metadataPath := filepath.Join(bookDir, "metadata.json")
-	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0644); err != nil {
+	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0o644); err != nil {
 		t.Fatalf("Failed to create metadata file: %v", err)
 	}
 
 	audioPath := filepath.Join(bookDir, "audio.mp3")
-	if err := os.WriteFile(audioPath, []byte("fake audio data"), 0644); err != nil {
+	if err := os.WriteFile(audioPath, []byte("fake audio data"), 0o644); err != nil {
 		t.Fatalf("Failed to create audio file: %v", err)
 	}
 
 	// Create output directory
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		t.Fatalf("Failed to create output directory: %v", err)
 	}
 
@@ -226,7 +226,7 @@ func TestOrganizerExecuteUndo(t *testing.T) {
 	// Create a fake log file for undo (using the correct format)
 	logPath := filepath.Join(tempDir, LogFileName)
 	logContent := `[]` // Empty array of log entries
-	if err := os.WriteFile(logPath, []byte(logContent), 0644); err != nil {
+	if err := os.WriteFile(logPath, []byte(logContent), 0o644); err != nil {
 		t.Fatalf("Failed to create log file: %v", err)
 	}
 
@@ -258,20 +258,20 @@ func TestOrganizerExecuteRemoveEmpty(t *testing.T) {
 
 	// Create a simple test structure to avoid infinite loops
 	bookDir := filepath.Join(tempDir, "test_book")
-	if err := os.MkdirAll(bookDir, 0755); err != nil {
+	if err := os.MkdirAll(bookDir, 0o755); err != nil {
 		t.Fatalf("Failed to create book directory: %v", err)
 	}
 
 	// Create metadata.json to give the organizer something to process
 	metadataContent := `{"title": "Test", "authors": ["Author"]}`
 	metadataPath := filepath.Join(bookDir, "metadata.json")
-	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0644); err != nil {
+	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0o644); err != nil {
 		t.Fatalf("Failed to create metadata file: %v", err)
 	}
 
 	// Create output directory
 	outputDir := filepath.Join(tempDir, "output")
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		t.Fatalf("Failed to create output directory: %v", err)
 	}
 
@@ -304,7 +304,7 @@ func TestOrganizerExecutePathResolution(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	realDir := filepath.Join(tempDir, "real")
-	if err := os.MkdirAll(realDir, 0755); err != nil {
+	if err := os.MkdirAll(realDir, 0o755); err != nil {
 		t.Fatalf("Failed to create real directory: %v", err)
 	}
 
@@ -402,13 +402,13 @@ func TestOrganizerExecuteVerboseMode(t *testing.T) {
 
 	// Create a simple structure
 	bookDir := filepath.Join(tempDir, "test_book")
-	if err := os.MkdirAll(bookDir, 0755); err != nil {
+	if err := os.MkdirAll(bookDir, 0o755); err != nil {
 		t.Fatalf("Failed to create book directory: %v", err)
 	}
 
 	metadataPath := filepath.Join(bookDir, "metadata.json")
 	metadataContent := `{"title": "Test", "authors": ["Author"]}`
-	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0644); err != nil {
+	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0o644); err != nil {
 		t.Fatalf("Failed to create metadata file: %v", err)
 	}
 
@@ -466,7 +466,7 @@ func TestOrganizerExecuteErrorScenarios(t *testing.T) {
 
 				// Try to make it unreadable (this might not work on all systems)
 				restrictedDir := filepath.Join(tempDir, "restricted")
-				if err := os.MkdirAll(restrictedDir, 0000); err != nil {
+				if err := os.MkdirAll(restrictedDir, 0o000); err != nil {
 					t.Fatalf("Failed to create restricted directory: %v", err)
 				}
 

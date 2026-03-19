@@ -25,7 +25,10 @@ type RenameTemplateModel struct {
 }
 
 // NewRenameTemplateModel creates a new template model
-func NewRenameTemplateModel(candidates []organizer.RenameCandidate, config *organizer.RenamerConfig) *RenameTemplateModel {
+func NewRenameTemplateModel(
+	candidates []organizer.RenameCandidate,
+	config *organizer.RenamerConfig,
+) *RenameTemplateModel {
 	ti := textinput.New()
 	ti.Placeholder = "Enter template..."
 	ti.Focus()
@@ -201,7 +204,9 @@ func (m *RenameTemplateModel) View() string {
 	}
 
 	// Controls
-	sb.WriteString(helpStyle.Render("Enter: Continue | Tab: Change format | ?: Help | m: Metadata | Q: Back"))
+	sb.WriteString(
+		helpStyle.Render("Enter: Continue | Tab: Change format | ?: Help | m: Metadata | Q: Back"),
+	)
 
 	return sb.String()
 }

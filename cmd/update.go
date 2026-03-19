@@ -38,9 +38,7 @@ const (
 	InstallMethodGoInstall
 )
 
-var (
-	checkOnly bool
-)
+var checkOnly bool
 
 // updateCmd represents the update command
 var updateCmd = &cobra.Command{
@@ -228,8 +226,13 @@ func findAssetForPlatform(release *GitHubRelease) (string, error) {
 		assetNames = append(assetNames, asset.Name)
 	}
 
-	return "", fmt.Errorf("no compatible asset found for %s/%s (expected: %s)\nAvailable assets: %v",
-		osName, arch, expectedName, assetNames)
+	return "", fmt.Errorf(
+		"no compatible asset found for %s/%s (expected: %s)\nAvailable assets: %v",
+		osName,
+		arch,
+		expectedName,
+		assetNames,
+	)
 }
 
 // detectInstallMethod determines how the binary was installed

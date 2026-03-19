@@ -374,10 +374,18 @@ func TestBookListModelGetSelectedBooks(t *testing.T) {
 	}
 
 	if selectedCount != 2 {
-		t.Logf("Initial selected count was %d, after manual selection got %d", initialSelectedCount, selectedCount)
+		t.Logf(
+			"Initial selected count was %d, after manual selection got %d",
+			initialSelectedCount,
+			selectedCount,
+		)
 		// Don't fail if the default behavior is different - just verify structure works
 		if selectedCount < 0 || selectedCount > len(books) {
-			t.Errorf("Invalid selected count %d, should be between 0 and %d", selectedCount, len(books))
+			t.Errorf(
+				"Invalid selected count %d, should be between 0 and %d",
+				selectedCount,
+				len(books),
+			)
 		}
 	}
 }

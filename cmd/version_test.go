@@ -130,7 +130,11 @@ func TestGetDisplayVersion(t *testing.T) {
 			result := GetDisplayVersion()
 
 			if !strings.Contains(result, tt.expectedContains) {
-				t.Errorf("GetDisplayVersion() = %q, want to contain %q", result, tt.expectedContains)
+				t.Errorf(
+					"GetDisplayVersion() = %q, want to contain %q",
+					result,
+					tt.expectedContains,
+				)
 			}
 		})
 	}

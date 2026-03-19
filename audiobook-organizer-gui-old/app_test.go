@@ -108,11 +108,17 @@ func TestApp_UpdateSettings(t *testing.T) {
 
 	// Verify settings were updated
 	if app.config.Layout != "author-only" {
-		t.Errorf("UpdateSettings() did not update Layout: got %s, want 'author-only'", app.config.Layout)
+		t.Errorf(
+			"UpdateSettings() did not update Layout: got %s, want 'author-only'",
+			app.config.Layout,
+		)
 	}
 
 	if app.config.ReplaceSpace != "_" {
-		t.Errorf("UpdateSettings() did not update ReplaceSpace: got %s, want '_'", app.config.ReplaceSpace)
+		t.Errorf(
+			"UpdateSettings() did not update ReplaceSpace: got %s, want '_'",
+			app.config.ReplaceSpace,
+		)
 	}
 
 	if !app.config.Verbose {
@@ -282,7 +288,7 @@ func TestApp_PreviewChanges_SetsConfig(t *testing.T) {
 
 	// Create a test audio file with metadata
 	testFile := filepath.Join(inputDir, "test.mp3")
-	if err := os.WriteFile(testFile, []byte("fake mp3"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("fake mp3"), 0o644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 

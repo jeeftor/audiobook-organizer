@@ -92,7 +92,10 @@ type RenameFieldMappingModel struct {
 }
 
 // NewRenameFieldMappingModel creates a new field mapping model
-func NewRenameFieldMappingModel(candidates []organizer.RenameCandidate, config *organizer.RenamerConfig) *RenameFieldMappingModel {
+func NewRenameFieldMappingModel(
+	candidates []organizer.RenameCandidate,
+	config *organizer.RenamerConfig,
+) *RenameFieldMappingModel {
 	// Get sample metadata from first candidate
 	var sampleMetadata *organizer.Metadata
 	if len(candidates) > 0 {
@@ -139,20 +142,31 @@ func NewRenameFieldMappingModel(candidates []organizer.RenameCandidate, config *
 		{
 			Name:        "Author Fields",
 			Description: "Author field priority",
-			Options:     []string{"authors→artist→album_artist", "authors→narrators→artist", "artist→album_artist", "authors only"},
-			Value:       0,
+			Options: []string{
+				"authors→artist→album_artist",
+				"authors→narrators→artist",
+				"artist→album_artist",
+				"authors only",
+			},
+			Value: 0,
 		},
 		{
 			Name:        "Track Field",
 			Description: "Field to use for track number",
-			Options:     getFieldOptions(availableFields, []string{"track", "track_number", "trck", "trk"}),
-			Value:       0,
+			Options: getFieldOptions(
+				availableFields,
+				[]string{"track", "track_number", "trck", "trk"},
+			),
+			Value: 0,
 		},
 		{
 			Name:        "Disc Field",
 			Description: "Field to use for disc number",
-			Options:     getFieldOptions(availableFields, []string{"disc", "discnumber", "disk", "tpos"}),
-			Value:       0,
+			Options: getFieldOptions(
+				availableFields,
+				[]string{"disc", "discnumber", "disk", "tpos"},
+			),
+			Value: 0,
 		},
 	}
 
@@ -311,7 +325,10 @@ func (m *RenameFieldMappingModel) Init() tea.Cmd {
 }
 
 // renderDetailedMetadataContent renders the detailed metadata preview content (like GUI mode)
-func (m *RenameFieldMappingModel) renderDetailedMetadataContent(sampleIndices []int, bookIndex int) string {
+func (m *RenameFieldMappingModel) renderDetailedMetadataContent(
+	sampleIndices []int,
+	bookIndex int,
+) string {
 	if bookIndex >= len(sampleIndices) {
 		bookIndex = 0
 	}
@@ -332,7 +349,9 @@ func (m *RenameFieldMappingModel) renderDetailedMetadataContent(sampleIndices []
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FFFF"))
 	// Show the actual sample number (1-based index in the full list)
 	sampleNum := bookIndex + 1
-	content.WriteString(titleStyle.Render(fmt.Sprintf("Metadata Preview (#%d):", sampleNum)) + "\n\n")
+	content.WriteString(
+		titleStyle.Render(fmt.Sprintf("Metadata Preview (#%d):", sampleNum)) + "\n\n",
+	)
 
 	// File info - truncate filename if too long
 	filename := filepath.Base(candidate.CurrentPath)
@@ -340,7 +359,9 @@ func (m *RenameFieldMappingModel) renderDetailedMetadataContent(sampleIndices []
 		filename = filename[:42] + "..."
 	}
 	content.WriteString(defaultLabelStyle.Render("File: ") + valueStyle.Render(filename) + "\n")
-	content.WriteString(defaultLabelStyle.Render("Source Type: ") + valueStyle.Render(metadata.SourceType) + "\n\n")
+	content.WriteString(
+		defaultLabelStyle.Render("Source Type: ") + valueStyle.Render(metadata.SourceType) + "\n\n",
+	)
 
 	// Check if we're in hybrid mode (metadata.json + embedded)
 	isHybridMode := false
@@ -352,8 +373,12 @@ func (m *RenameFieldMappingModel) renderDetailedMetadataContent(sampleIndices []
 
 	// Raw metadata fields with inline indicators (sorted alphabetically)
 	rawLabelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#AAAAAA"))
-	jsonFieldStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700"))     // Gold for JSON fields
-	embeddedFieldStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00CED1")) // Turquoise for embedded
+	jsonFieldStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FFD700"))
+		// Gold for JSON fields
+	embeddedFieldStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#00CED1"))
+		// Turquoise for embedded
 
 	// Show header with hybrid mode indicator if applicable
 	if isHybridMode {
@@ -477,7 +502,15 @@ func (m *RenameFieldMappingModel) renderDetailedMetadataContent(sampleIndices []
 			}
 		}
 
-		content.WriteString(fmt.Sprintf("  %s: %v%s%s\n", fieldLabelStyle.Render(key), val, sourceIndicator, fieldIndicator))
+		content.WriteString(
+			fmt.Sprintf(
+				"  %s: %v%s%s\n",
+				fieldLabelStyle.Render(key),
+				val,
+				sourceIndicator,
+				fieldIndicator,
+			),
+		)
 	}
 
 	return content.String()
@@ -918,7 +951,13 @@ func (m *RenameFieldMappingModel) buildCommandString(forceDryRun bool, outDir st
 		parts = append(parts, fmt.Sprintf("--disc-field %s", m.config.FieldMapping.DiscField))
 	}
 	if len(m.config.FieldMapping.AuthorFields) > 0 {
-		parts = append(parts, fmt.Sprintf("--author-fields %s", strings.Join(m.config.FieldMapping.AuthorFields, ",")))
+		parts = append(
+			parts,
+			fmt.Sprintf(
+				"--author-fields %s",
+				strings.Join(m.config.FieldMapping.AuthorFields, ","),
+			),
+		)
 	}
 
 	// Add author format if configured (default is first-last)
@@ -1037,7 +1076,10 @@ func (m *RenameFieldMappingModel) metadataBookIndexTableRow(idx int) int {
 }
 
 // getOptionsWithMetadata enriches options with actual metadata values from files
-func (m *RenameFieldMappingModel) getOptionsWithMetadata(settingName string, baseOptions []string) []string {
+func (m *RenameFieldMappingModel) getOptionsWithMetadata(
+	settingName string,
+	baseOptions []string,
+) []string {
 	// Collect unique values from candidates
 	valueMap := make(map[string][]string) // field -> sample values
 
@@ -1170,10 +1212,26 @@ func (m *RenameFieldMappingModel) renderFieldMappingSummary() string {
 
 	// Show current mappings inline
 	mappings := []string{
-		fmt.Sprintf("%s=%s", keyStyle.Render("t:Title"), valueStyle.Render(m.settings[0].Options[m.settings[0].Value])),
-		fmt.Sprintf("%s=%s", keyStyle.Render("s:Series"), valueStyle.Render(m.settings[1].Options[m.settings[1].Value])),
-		fmt.Sprintf("%s=%s", keyStyle.Render("a:Author"), valueStyle.Render(m.settings[2].Options[m.settings[2].Value])),
-		fmt.Sprintf("%s=%s", keyStyle.Render("o:Track"), valueStyle.Render(m.settings[3].Options[m.settings[3].Value])),
+		fmt.Sprintf(
+			"%s=%s",
+			keyStyle.Render("t:Title"),
+			valueStyle.Render(m.settings[0].Options[m.settings[0].Value]),
+		),
+		fmt.Sprintf(
+			"%s=%s",
+			keyStyle.Render("s:Series"),
+			valueStyle.Render(m.settings[1].Options[m.settings[1].Value]),
+		),
+		fmt.Sprintf(
+			"%s=%s",
+			keyStyle.Render("a:Author"),
+			valueStyle.Render(m.settings[2].Options[m.settings[2].Value]),
+		),
+		fmt.Sprintf(
+			"%s=%s",
+			keyStyle.Render("o:Track"),
+			valueStyle.Render(m.settings[3].Options[m.settings[3].Value]),
+		),
 	}
 
 	sb.WriteString(strings.Join(mappings, " | "))
@@ -1210,8 +1268,14 @@ func (m *RenameFieldMappingModel) View() string {
 	var sb strings.Builder
 
 	// Title and metadata mode - PROMINENT
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FFFF")).Background(lipgloss.Color("#333333"))
-	modeStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFF00")).Background(lipgloss.Color("#333333"))
+	titleStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#00FFFF")).
+		Background(lipgloss.Color("#333333"))
+	modeStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FFFF00")).
+		Background(lipgloss.Color("#333333"))
 
 	var modeText, modeIcon string
 	switch m.metadataMode {
@@ -1257,8 +1321,16 @@ func (m *RenameFieldMappingModel) View() string {
 	}
 
 	// Prominent mode indicator with debug resolution
-	debugInfo := lipgloss.NewStyle().Foreground(lipgloss.Color("#666666")).Render(fmt.Sprintf(" [%dx%d]", m.width, m.height))
-	modeHeader := titleStyle.Render(" Metadata Mode: ") + modeStyle.Render(modeIcon+" "+modeText+" ") + statusStyle.Render(statusText) + debugInfo
+	debugInfo := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#666666")).
+		Render(fmt.Sprintf(" [%dx%d]", m.width, m.height))
+	modeHeader := titleStyle.Render(
+		" Metadata Mode: ",
+	) + modeStyle.Render(
+		modeIcon+" "+modeText+" ",
+	) + statusStyle.Render(
+		statusText,
+	) + debugInfo
 	sb.WriteString(modeHeader + "\n\n")
 
 	// Show popup if active
@@ -1361,7 +1433,13 @@ func (m *RenameFieldMappingModel) View() string {
 	if m.focusedWidget == focusSampleFiles {
 		focusIndicator = " ▶"
 	}
-	sb.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00AAFF")).Render("📋 Sample Files"+focusIndicator) + "\n")
+	sb.WriteString(
+		lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#00AAFF")).
+			Render("📋 Sample Files"+focusIndicator) +
+			"\n",
+	)
 
 	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#888888"))
 	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00"))
@@ -1410,8 +1488,16 @@ func (m *RenameFieldMappingModel) View() string {
 	if templateDisplay == "" {
 		templateDisplay = "{author} - {series} - {track} - {title}"
 	}
-	sb.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00AAFF")).Render("👁️  Rename Preview"+focusIndicator) +
-		lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).Render(" ["+templateDisplay+"]") + "\n")
+	sb.WriteString(
+		lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#00AAFF")).
+			Render("👁️  Rename Preview"+focusIndicator) +
+			lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#888888")).
+				Render(" ["+templateDisplay+"]") +
+			"\n",
+	)
 
 	// Color styles matching field types
 	authorColor := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500")) // Orange
@@ -1430,7 +1516,13 @@ func (m *RenameFieldMappingModel) View() string {
 		meta := candidate.Metadata
 
 		// Build color-coded output using the selected template
-		coloredOutput := m.renderTemplateWithColors(meta, authorColor, seriesColor, titleColor, trackColor)
+		coloredOutput := m.renderTemplateWithColors(
+			meta,
+			authorColor,
+			seriesColor,
+			titleColor,
+			trackColor,
+		)
 
 		// Highlight number if this sample is currently visible in metadata preview
 		numberStyle := normalNumberStyle
@@ -1446,7 +1538,8 @@ func (m *RenameFieldMappingModel) View() string {
 
 	// Controls
 	sb.WriteString("\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).
-		Render("t: Title | s: Series | a: Author | o: Track | p: Template | m: Mode | ←→: Samples | c: Continue | Q: Back"))
+		Render("t: Title | s: Series | a: Author | o: Track | p: Template | m: Mode | ←→: Samples | c: Continue | Q: Back"),
+	)
 
 	return sb.String()
 }
@@ -1480,7 +1573,9 @@ func (m *RenameFieldMappingModel) renderTemplatePopup() string {
 	sb.WriteString(titleStyle.Render(" Build Output Template ") + "\n\n")
 
 	// Available fields to select from
-	sb.WriteString(labelStyle.Render("Available Fields (↑↓ to navigate, 1-4 to assign position):") + "\n")
+	sb.WriteString(
+		labelStyle.Render("Available Fields (↑↓ to navigate, 1-4 to assign position):") + "\n",
+	)
 	for i, fieldName := range m.availableFields {
 		cursor := "  "
 		style := normalStyle
@@ -1551,7 +1646,10 @@ func (m *RenameFieldMappingModel) buildTemplatePreview() string {
 }
 
 // renderTemplateWithColors renders a template with color-coded fields
-func (m *RenameFieldMappingModel) renderTemplateWithColors(meta organizer.Metadata, authorColor, seriesColor, titleColor, trackColor lipgloss.Style) string {
+func (m *RenameFieldMappingModel) renderTemplateWithColors(
+	meta organizer.Metadata,
+	authorColor, seriesColor, titleColor, trackColor lipgloss.Style,
+) string {
 	template := m.selectedTemplate
 	if template == "" {
 		// Default template
@@ -1657,7 +1755,9 @@ func (m *RenameFieldMappingModel) renderPopupWithColumns(useMultiColumn bool) st
 	normalStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#AAAAAA"))
 
-	sb.WriteString(titleStyle.Render(fmt.Sprintf("Select %s:", m.settings[m.popupSettingIdx].Name)) + "\n\n")
+	sb.WriteString(
+		titleStyle.Render(fmt.Sprintf("Select %s:", m.settings[m.popupSettingIdx].Name)) + "\n\n",
+	)
 
 	numOptions := len(m.popupOptions)
 
@@ -1724,7 +1824,9 @@ func (m *RenameFieldMappingModel) render3ColumnSelectionView() string {
 	var sb strings.Builder
 
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00AAFF"))
-	sb.WriteString(titleStyle.Render(fmt.Sprintf("Select %s:", m.settings[m.popupSettingIdx].Name)) + "\n\n")
+	sb.WriteString(
+		titleStyle.Render(fmt.Sprintf("Select %s:", m.settings[m.popupSettingIdx].Name)) + "\n\n",
+	)
 
 	// Get the same sample indices that are currently visible in the main metadata preview
 	numSamples := 3

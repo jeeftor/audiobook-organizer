@@ -32,18 +32,14 @@ var (
 // Layout calculator
 type LayoutCalculator = organizer.LayoutCalculator
 
-var (
-	// NewLayoutCalculator creates a new layout calculator
-	NewLayoutCalculator = organizer.NewLayoutCalculator
-)
+// NewLayoutCalculator creates a new layout calculator
+var NewLayoutCalculator = organizer.NewLayoutCalculator
 
 // File operations
 type FileOps = organizer.FileOps
 
-var (
-	// NewFileOps creates a new file operations handler
-	NewFileOps = organizer.NewFileOps
-)
+// NewFileOps creates a new file operations handler
+var NewFileOps = organizer.NewFileOps
 
 // Renamer types and functions
 type (
@@ -53,10 +49,8 @@ type (
 	RenameSummary   = organizer.RenameSummary
 )
 
-var (
-	// NewRenamer creates a new renamer
-	NewRenamer = organizer.NewRenamer
-)
+// NewRenamer creates a new renamer
+var NewRenamer = organizer.NewRenamer
 
 // Color printing utilities
 var (

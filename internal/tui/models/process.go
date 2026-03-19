@@ -55,7 +55,12 @@ type ProcessModel struct {
 }
 
 // NewProcessModel creates a new process model
-func NewProcessModel(books []AudioBook, config map[string]string, moves []MovePreview, fieldMapping organizer.FieldMapping) *ProcessModel {
+func NewProcessModel(
+	books []AudioBook,
+	config map[string]string,
+	moves []MovePreview,
+	fieldMapping organizer.FieldMapping,
+) *ProcessModel {
 	items := make([]ProcessItem, len(moves))
 	for i, move := range moves {
 		items[i] = ProcessItem{
@@ -328,8 +333,12 @@ func (m *ProcessModel) View() string {
 
 		// Add error message if any
 		if item.Status == StatusError && item.Error != nil {
-			content.WriteString(fmt.Sprintf("  %s\n",
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000")).Render(item.Error.Error())))
+			content.WriteString(fmt.Sprintf(
+				"  %s\n",
+				lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#FF0000")).
+					Render(item.Error.Error()),
+			))
 		}
 
 		// Add field mapping information if available

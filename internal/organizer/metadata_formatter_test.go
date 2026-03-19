@@ -51,20 +51,36 @@ func TestNewMetadataFormatter(t *testing.T) {
 			}
 
 			if formatter.metadata.Title != tt.metadata.Title {
-				t.Errorf("Expected metadata title %q, got %q", tt.metadata.Title, formatter.metadata.Title)
+				t.Errorf(
+					"Expected metadata title %q, got %q",
+					tt.metadata.Title,
+					formatter.metadata.Title,
+				)
 			}
 
 			if len(formatter.metadata.Authors) != len(tt.metadata.Authors) {
-				t.Errorf("Expected %d authors, got %d", len(tt.metadata.Authors), len(formatter.metadata.Authors))
+				t.Errorf(
+					"Expected %d authors, got %d",
+					len(tt.metadata.Authors),
+					len(formatter.metadata.Authors),
+				)
 			}
 
 			if formatter.metadata.SourcePath != tt.metadata.SourcePath {
-				t.Errorf("Expected filename %q, got %q", tt.metadata.SourcePath, formatter.metadata.SourcePath)
+				t.Errorf(
+					"Expected filename %q, got %q",
+					tt.metadata.SourcePath,
+					formatter.metadata.SourcePath,
+				)
 			}
 
 			// Test field mapping is stored
 			if formatter.fieldMapping.TitleField != tt.fieldMapping.TitleField {
-				t.Errorf("Expected TitleField %q, got %q", tt.fieldMapping.TitleField, formatter.fieldMapping.TitleField)
+				t.Errorf(
+					"Expected TitleField %q, got %q",
+					tt.fieldMapping.TitleField,
+					formatter.fieldMapping.TitleField,
+				)
 			}
 		})
 	}
@@ -172,14 +188,22 @@ func TestFormatMetadataWithMapping(t *testing.T) {
 			// Check for expected parts
 			for _, expectedPart := range tt.expectedParts {
 				if !strings.Contains(formatted, expectedPart) {
-					t.Errorf("Expected formatted output to contain %q, got:\n%s", expectedPart, formatted)
+					t.Errorf(
+						"Expected formatted output to contain %q, got:\n%s",
+						expectedPart,
+						formatted,
+					)
 				}
 			}
 
 			// Check for unexpected parts
 			for _, unexpectedPart := range tt.unexpectedParts {
 				if strings.Contains(formatted, unexpectedPart) {
-					t.Errorf("Expected formatted output NOT to contain %q, got:\n%s", unexpectedPart, formatted)
+					t.Errorf(
+						"Expected formatted output NOT to contain %q, got:\n%s",
+						unexpectedPart,
+						formatted,
+					)
 				}
 			}
 		})
@@ -255,7 +279,11 @@ func TestGetFileTypeDisplay(t *testing.T) {
 
 			// The file type should appear somewhere in the formatted output
 			if !strings.Contains(formatted, tt.expectedFileType) {
-				t.Errorf("Expected formatted output to contain file type %q, got:\n%s", tt.expectedFileType, formatted)
+				t.Errorf(
+					"Expected formatted output to contain file type %q, got:\n%s",
+					tt.expectedFileType,
+					formatted,
+				)
 			}
 		})
 	}
@@ -309,12 +337,18 @@ func TestFormatMetadataWithDifferentFieldMappings(t *testing.T) {
 			formatted := formatter.FormatMetadataWithMapping()
 
 			if formatted == "" {
-				t.Errorf("FormatMetadataWithMapping should return non-empty string for %s", tt.description)
+				t.Errorf(
+					"FormatMetadataWithMapping should return non-empty string for %s",
+					tt.description,
+				)
 			}
 
 			// Should still contain the filename regardless of field mapping
 			if !strings.Contains(formatted, "test.mp3") {
-				t.Errorf("Formatted output should contain filename regardless of field mapping: %s", formatted)
+				t.Errorf(
+					"Formatted output should contain filename regardless of field mapping: %s",
+					formatted,
+				)
 			}
 		})
 	}
@@ -343,14 +377,22 @@ func TestFormatMetadataFieldMappingDisplay(t *testing.T) {
 
 	for _, part := range expectedMappingParts {
 		if part != "" && !strings.Contains(formatted, part) {
-			t.Errorf("Expected formatted output to show field mapping %q, got:\n%s", part, formatted)
+			t.Errorf(
+				"Expected formatted output to show field mapping %q, got:\n%s",
+				part,
+				formatted,
+			)
 		}
 	}
 
 	// Should show author field mappings
 	for _, authorField := range fieldMapping.AuthorFields {
 		if authorField != "" && !strings.Contains(formatted, authorField) {
-			t.Errorf("Expected formatted output to show author field mapping %q, got:\n%s", authorField, formatted)
+			t.Errorf(
+				"Expected formatted output to show author field mapping %q, got:\n%s",
+				authorField,
+				formatted,
+			)
 		}
 	}
 }
@@ -403,12 +445,18 @@ func TestFormatMetadataWithEmptyValues(t *testing.T) {
 			formatted := formatter.FormatMetadataWithMapping()
 
 			if formatted == "" {
-				t.Error("FormatMetadataWithMapping should return non-empty string even with empty values")
+				t.Error(
+					"FormatMetadataWithMapping should return non-empty string even with empty values",
+				)
 			}
 
 			// Should always contain the filename
 			if !strings.Contains(formatted, tt.metadata.SourcePath) {
-				t.Errorf("Formatted output should contain filename %q, got:\n%s", tt.metadata.SourcePath, formatted)
+				t.Errorf(
+					"Formatted output should contain filename %q, got:\n%s",
+					tt.metadata.SourcePath,
+					formatted,
+				)
 			}
 		})
 	}

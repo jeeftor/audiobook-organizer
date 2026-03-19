@@ -237,7 +237,9 @@ func (m *RenameMainModel) View() string {
 		// Output directory command
 		sb.WriteString(labelStyle.Render("3. Copy to New Directory:") + "\n")
 		sb.WriteString(commandStyle.Render(m.outCmd) + "\n")
-		sb.WriteString(helpStyle.Render("   (Change './organized' to your desired output directory)") + "\n\n")
+		sb.WriteString(
+			helpStyle.Render("   (Change './organized' to your desired output directory)") + "\n\n",
+		)
 
 		sb.WriteString(helpStyle.Render("b: Back • q: Quit"))
 

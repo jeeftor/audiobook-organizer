@@ -164,7 +164,12 @@ func TestNewProcessModelFixed(t *testing.T) {
 
 func TestProcessModelInit(t *testing.T) {
 	moves := []MovePreview{}
-	model := NewProcessModel([]AudioBook{}, map[string]string{}, moves, organizer.DefaultFieldMapping())
+	model := NewProcessModel(
+		[]AudioBook{},
+		map[string]string{},
+		moves,
+		organizer.DefaultFieldMapping(),
+	)
 
 	cmd := model.Init()
 
@@ -264,7 +269,12 @@ func TestProcessModelErrorHandling(t *testing.T) {
 		{SourcePath: "/test/error2.mp3", TargetPath: "/output/error2.mp3"},
 	}
 
-	model := NewProcessModel([]AudioBook{}, map[string]string{}, moves, organizer.DefaultFieldMapping())
+	model := NewProcessModel(
+		[]AudioBook{},
+		map[string]string{},
+		moves,
+		organizer.DefaultFieldMapping(),
+	)
 
 	// Simulate some errors
 	model.items[0].Status = StatusSuccess
@@ -302,7 +312,12 @@ func TestProcessModelErrorHandling(t *testing.T) {
 
 func TestProcessModelWindowSizeHandling(t *testing.T) {
 	moves := []MovePreview{}
-	model := NewProcessModel([]AudioBook{}, map[string]string{}, moves, organizer.DefaultFieldMapping())
+	model := NewProcessModel(
+		[]AudioBook{},
+		map[string]string{},
+		moves,
+		organizer.DefaultFieldMapping(),
+	)
 
 	// Test window size message
 	msg := tea.WindowSizeMsg{Width: 100, Height: 30}
@@ -327,7 +342,12 @@ func TestProcessModelWindowSizeHandling(t *testing.T) {
 
 func TestProcessModelTimeTracking(t *testing.T) {
 	moves := []MovePreview{}
-	model := NewProcessModel([]AudioBook{}, map[string]string{}, moves, organizer.DefaultFieldMapping())
+	model := NewProcessModel(
+		[]AudioBook{},
+		map[string]string{},
+		moves,
+		organizer.DefaultFieldMapping(),
+	)
 
 	// Test initial time state
 	if !model.startTime.IsZero() {
@@ -353,7 +373,12 @@ func TestProcessModelTimeTracking(t *testing.T) {
 
 func TestProcessModelKeyHandling(t *testing.T) {
 	moves := []MovePreview{}
-	model := NewProcessModel([]AudioBook{}, map[string]string{}, moves, organizer.DefaultFieldMapping())
+	model := NewProcessModel(
+		[]AudioBook{},
+		map[string]string{},
+		moves,
+		organizer.DefaultFieldMapping(),
+	)
 
 	tests := []struct {
 		name   string

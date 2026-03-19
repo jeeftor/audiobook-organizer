@@ -134,7 +134,11 @@ func TestAudioBook(t *testing.T) {
 			}
 
 			if tt.book.IsPartOfAlbum != tt.expected.IsPartOfAlbum {
-				t.Errorf("Expected IsPartOfAlbum %v, got %v", tt.expected.IsPartOfAlbum, tt.book.IsPartOfAlbum)
+				t.Errorf(
+					"Expected IsPartOfAlbum %v, got %v",
+					tt.expected.IsPartOfAlbum,
+					tt.book.IsPartOfAlbum,
+				)
 			}
 
 			if tt.book.AlbumName != tt.expected.AlbumName {
@@ -142,11 +146,19 @@ func TestAudioBook(t *testing.T) {
 			}
 
 			if tt.book.TrackNumber != tt.expected.TrackNumber {
-				t.Errorf("Expected TrackNumber %d, got %d", tt.expected.TrackNumber, tt.book.TrackNumber)
+				t.Errorf(
+					"Expected TrackNumber %d, got %d",
+					tt.expected.TrackNumber,
+					tt.book.TrackNumber,
+				)
 			}
 
 			if tt.book.TotalTracks != tt.expected.TotalTracks {
-				t.Errorf("Expected TotalTracks %d, got %d", tt.expected.TotalTracks, tt.book.TotalTracks)
+				t.Errorf(
+					"Expected TotalTracks %d, got %d",
+					tt.expected.TotalTracks,
+					tt.book.TotalTracks,
+				)
 			}
 		})
 	}
@@ -358,7 +370,7 @@ func TestScanDirectoryWithMetadataJson(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	bookDir := filepath.Join(tmpDir, "Author Name", "Book Title")
-	if err := os.MkdirAll(bookDir, 0755); err != nil {
+	if err := os.MkdirAll(bookDir, 0o755); err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
 
@@ -371,13 +383,13 @@ func TestScanDirectoryWithMetadataJson(t *testing.T) {
 	}`
 
 	metadataPath := filepath.Join(bookDir, "metadata.json")
-	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0644); err != nil {
+	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0o644); err != nil {
 		t.Fatalf("Failed to write metadata.json: %v", err)
 	}
 
 	// Create a dummy audio file (can't be parsed, tests error fallback)
 	audioPath := filepath.Join(bookDir, "audiobook.m4b")
-	if err := os.WriteFile(audioPath, []byte("dummy audio content"), 0644); err != nil {
+	if err := os.WriteFile(audioPath, []byte("dummy audio content"), 0o644); err != nil {
 		t.Fatalf("Failed to write audio file: %v", err)
 	}
 
@@ -396,7 +408,10 @@ func TestScanDirectoryWithMetadataJson(t *testing.T) {
 
 	// Verify fallback behavior - uses filename when audio can't be parsed
 	if book.Metadata.Title != "audiobook.m4b" {
-		t.Errorf("Expected fallback title 'audiobook.m4b' (from filename), got '%s'", book.Metadata.Title)
+		t.Errorf(
+			"Expected fallback title 'audiobook.m4b' (from filename), got '%s'",
+			book.Metadata.Title,
+		)
 	}
 
 	if len(book.Metadata.Authors) == 0 || book.Metadata.Authors[0] != "Unknown Author" {

@@ -20,7 +20,11 @@ type CommandOutputModel struct {
 }
 
 // NewCommandOutputModel creates a new command output model
-func NewCommandOutputModel(books []AudioBook, config map[string]string, fieldMapping organizer.FieldMapping) *CommandOutputModel {
+func NewCommandOutputModel(
+	books []AudioBook,
+	config map[string]string,
+	fieldMapping organizer.FieldMapping,
+) *CommandOutputModel {
 	m := &CommandOutputModel{
 		books:        books,
 		config:       config,
@@ -87,7 +91,13 @@ func (m *CommandOutputModel) generateCommand() string {
 			// Check if it's not the default
 			defaultAuthors := []string{"authors", "artist", "album_artist"}
 			if !equalStringSlices(m.fieldMapping.AuthorFields, defaultAuthors) {
-				parts = append(parts, fmt.Sprintf("--author-fields=\"%s\"", strings.Join(m.fieldMapping.AuthorFields, ",")))
+				parts = append(
+					parts,
+					fmt.Sprintf(
+						"--author-fields=\"%s\"",
+						strings.Join(m.fieldMapping.AuthorFields, ","),
+					),
+				)
 			}
 		}
 		if m.fieldMapping.TrackField != "" && m.fieldMapping.TrackField != "track" {
@@ -154,11 +164,17 @@ func (m *CommandOutputModel) View() string {
 
 	// Description
 	descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00"))
-	content.WriteString(descStyle.Render("Copy and paste this command to run with the same settings:") + "\n")
+	content.WriteString(
+		descStyle.Render("Copy and paste this command to run with the same settings:") + "\n",
+	)
 
 	// Safety note
 	noteStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF8800")).Italic(true)
-	content.WriteString(noteStyle.Render("Note: --dry-run is always included for safety. Remove it to actually move files.") + "\n\n")
+	content.WriteString(
+		noteStyle.Render(
+			"Note: --dry-run is always included for safety. Remove it to actually move files.",
+		) + "\n\n",
+	)
 
 	// Separator line
 	content.WriteString(strings.Repeat("─", 80) + "\n")
@@ -182,13 +198,55 @@ func (m *CommandOutputModel) View() string {
 	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#AAAAFF"))
 
 	// Show key settings with proper alignment
-	content.WriteString(fmt.Sprintf("  %s %s\n", labelStyle.Render("Input Directory:"), summaryStyle.Render(m.config["Input Directory"])))
-	content.WriteString(fmt.Sprintf("  %s %s\n", labelStyle.Render("Output Directory:"), summaryStyle.Render(m.config["Output Directory"])))
-	content.WriteString(fmt.Sprintf("  %s %s\n", labelStyle.Render("Layout:"), summaryStyle.Render(m.config["Layout"])))
-	content.WriteString(fmt.Sprintf("  %s %s\n", labelStyle.Render("Embedded Metadata:"), summaryStyle.Render(m.config["Use Embedded Metadata"])))
-	content.WriteString(fmt.Sprintf("  %s %s\n", labelStyle.Render("Flat Mode:"), summaryStyle.Render(m.config["Flat Mode"])))
-	content.WriteString(fmt.Sprintf("  %s %s\n", labelStyle.Render("Dry Run:"), summaryStyle.Render(m.config["Dry Run"])))
-	content.WriteString(fmt.Sprintf("  %s %s\n", labelStyle.Render("Verbose:"), summaryStyle.Render(m.config["Verbose"])))
+	content.WriteString(
+		fmt.Sprintf(
+			"  %s %s\n",
+			labelStyle.Render("Input Directory:"),
+			summaryStyle.Render(m.config["Input Directory"]),
+		),
+	)
+	content.WriteString(
+		fmt.Sprintf(
+			"  %s %s\n",
+			labelStyle.Render("Output Directory:"),
+			summaryStyle.Render(m.config["Output Directory"]),
+		),
+	)
+	content.WriteString(
+		fmt.Sprintf(
+			"  %s %s\n",
+			labelStyle.Render("Layout:"),
+			summaryStyle.Render(m.config["Layout"]),
+		),
+	)
+	content.WriteString(
+		fmt.Sprintf(
+			"  %s %s\n",
+			labelStyle.Render("Embedded Metadata:"),
+			summaryStyle.Render(m.config["Use Embedded Metadata"]),
+		),
+	)
+	content.WriteString(
+		fmt.Sprintf(
+			"  %s %s\n",
+			labelStyle.Render("Flat Mode:"),
+			summaryStyle.Render(m.config["Flat Mode"]),
+		),
+	)
+	content.WriteString(
+		fmt.Sprintf(
+			"  %s %s\n",
+			labelStyle.Render("Dry Run:"),
+			summaryStyle.Render(m.config["Dry Run"]),
+		),
+	)
+	content.WriteString(
+		fmt.Sprintf(
+			"  %s %s\n",
+			labelStyle.Render("Verbose:"),
+			summaryStyle.Render(m.config["Verbose"]),
+		),
+	)
 
 	// Show field mapping if customized
 	if !m.fieldMapping.IsEmpty() {
@@ -198,16 +256,40 @@ func (m *CommandOutputModel) View() string {
 			Render("Field Mapping:") + "\n\n")
 
 		if m.fieldMapping.TitleField != "" {
-			content.WriteString(fmt.Sprintf("  %s %s\n", labelStyle.Render("Title Field:"), summaryStyle.Render(m.fieldMapping.TitleField)))
+			content.WriteString(
+				fmt.Sprintf(
+					"  %s %s\n",
+					labelStyle.Render("Title Field:"),
+					summaryStyle.Render(m.fieldMapping.TitleField),
+				),
+			)
 		}
 		if m.fieldMapping.SeriesField != "" {
-			content.WriteString(fmt.Sprintf("  %s %s\n", labelStyle.Render("Series Field:"), summaryStyle.Render(m.fieldMapping.SeriesField)))
+			content.WriteString(
+				fmt.Sprintf(
+					"  %s %s\n",
+					labelStyle.Render("Series Field:"),
+					summaryStyle.Render(m.fieldMapping.SeriesField),
+				),
+			)
 		}
 		if len(m.fieldMapping.AuthorFields) > 0 {
-			content.WriteString(fmt.Sprintf("  %s %s\n", labelStyle.Render("Author Fields:"), summaryStyle.Render(strings.Join(m.fieldMapping.AuthorFields, ", "))))
+			content.WriteString(
+				fmt.Sprintf(
+					"  %s %s\n",
+					labelStyle.Render("Author Fields:"),
+					summaryStyle.Render(strings.Join(m.fieldMapping.AuthorFields, ", ")),
+				),
+			)
 		}
 		if m.fieldMapping.TrackField != "" {
-			content.WriteString(fmt.Sprintf("  %s %s\n", labelStyle.Render("Track Field:"), summaryStyle.Render(m.fieldMapping.TrackField)))
+			content.WriteString(
+				fmt.Sprintf(
+					"  %s %s\n",
+					labelStyle.Render("Track Field:"),
+					summaryStyle.Render(m.fieldMapping.TrackField),
+				),
+			)
 		}
 	}
 
@@ -217,7 +299,13 @@ func (m *CommandOutputModel) View() string {
 		Foreground(lipgloss.Color("#00FFFF")).
 		Render("Statistics:") + "\n\n")
 
-	content.WriteString(fmt.Sprintf("  %s %s\n", labelStyle.Render("Books selected:"), summaryStyle.Render(fmt.Sprintf("%d", len(m.books)))))
+	content.WriteString(
+		fmt.Sprintf(
+			"  %s %s\n",
+			labelStyle.Render("Books selected:"),
+			summaryStyle.Render(fmt.Sprintf("%d", len(m.books))),
+		),
+	)
 
 	// Footer with help text
 	footer := lipgloss.NewStyle().

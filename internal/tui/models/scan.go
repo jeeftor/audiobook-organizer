@@ -132,7 +132,6 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 				// Pass false for useEmbeddedOnly to allow hybrid mode (JSON + embedded)
 				provider := organizer.NewMetadataProvider(path, false)
 				metadata, err := provider.GetMetadata()
-
 				if err != nil {
 					// If metadata extraction fails, create basic metadata from filename
 					baseName := filepath.Base(path)
@@ -203,9 +202,11 @@ func (m *ScanModel) scanDirectory(dir string) []AudioBook {
 					}
 
 					// Check if title and artist match
-					if currentTitle != albumTitle || (albumArtist != "" && currentArtist != "" && currentArtist != albumArtist) {
+					if currentTitle != albumTitle ||
+						(albumArtist != "" && currentArtist != "" && currentArtist != albumArtist) {
 						// Check for track number patterns in title
-						if !organizer.HasTrackNumberPattern(currentTitle, albumTitle) && !organizer.HasCommonPrefix(currentTitle, albumTitle) {
+						if !organizer.HasTrackNumberPattern(currentTitle, albumTitle) &&
+							!organizer.HasCommonPrefix(currentTitle, albumTitle) {
 							consistentMetadata = false
 							break
 						}
@@ -328,9 +329,13 @@ func (m *ScanModel) View() string {
 	if !m.scanning && !m.complete {
 		// Initial state
 		content.WriteString("Press Enter to start scanning directory:\n")
-		content.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00")).Render(m.inputDir))
+		content.WriteString(
+			lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFF00")).Render(m.inputDir),
+		)
 		content.WriteString("\n\n")
-		content.WriteString("This will search for audiobooks in the directory and its subdirectories.")
+		content.WriteString(
+			"This will search for audiobooks in the directory and its subdirectories.",
+		)
 	} else if m.scanning {
 		// Scanning state
 		content.WriteString("🔍 Scanning for audiobooks...\n\n")

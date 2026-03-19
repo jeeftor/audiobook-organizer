@@ -33,7 +33,9 @@ for selecting directories, previewing changes, and configuring field mappings.`,
 			fmt.Println("   2. Extract: tar -xzf audiobook-organizer-gui_Darwin_*.tar.gz")
 			fmt.Println("   3. Move to Applications or run directly")
 			fmt.Println()
-			fmt.Println("   Note: You may need to allow the app in System Settings > Privacy & Security")
+			fmt.Println(
+				"   Note: You may need to allow the app in System Settings > Privacy & Security",
+			)
 		case "windows":
 			fmt.Println("   1. Download the .zip for your architecture")
 			fmt.Println("   2. Extract the zip file")

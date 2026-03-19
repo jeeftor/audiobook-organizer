@@ -60,7 +60,11 @@ func TestGeneratePreview_ErrorCases(t *testing.T) {
 
 			if err != nil && tt.errMsg != "" {
 				if !contains(err.Error(), tt.errMsg) {
-					t.Errorf("GeneratePreview() error = %v, want error containing %s", err, tt.errMsg)
+					t.Errorf(
+						"GeneratePreview() error = %v, want error containing %s",
+						err,
+						tt.errMsg,
+					)
 				}
 			}
 		})
@@ -295,7 +299,11 @@ func TestFilterPreviewByIndices(t *testing.T) {
 			}
 
 			if filtered.ConflictCount != tt.expectedConflicts {
-				t.Errorf("ConflictCount = %d, expected %d", filtered.ConflictCount, tt.expectedConflicts)
+				t.Errorf(
+					"ConflictCount = %d, expected %d",
+					filtered.ConflictCount,
+					tt.expectedConflicts,
+				)
 			}
 		})
 	}
@@ -324,7 +332,14 @@ func TestFormatPreviewMove(t *testing.T) {
 				IsConflict:     true,
 				ConflictReason: "Multiple books targeting same path",
 			},
-			expectContains: []string{"⚠️", "/input/book1", "→", "/output/Author/Book", "Conflict:", "Multiple books"},
+			expectContains: []string{
+				"⚠️",
+				"/input/book1",
+				"→",
+				"/output/Author/Book",
+				"Conflict:",
+				"Multiple books",
+			},
 		},
 	}
 
@@ -348,7 +363,7 @@ func TestGeneratePreview_Integration(t *testing.T) {
 
 	// Create a simple metadata.json file
 	bookDir := filepath.Join(inputDir, "test-book")
-	os.MkdirAll(bookDir, 0755)
+	os.MkdirAll(bookDir, 0o755)
 
 	metadataContent := `{
 		"title": "Test Book",
@@ -356,7 +371,7 @@ func TestGeneratePreview_Integration(t *testing.T) {
 		"series": ["Test Series"]
 	}`
 	metadataPath := filepath.Join(bookDir, "metadata.json")
-	os.WriteFile(metadataPath, []byte(metadataContent), 0644)
+	os.WriteFile(metadataPath, []byte(metadataContent), 0o644)
 
 	config := &OrganizerConfig{
 		Layout:       "author-series-title",

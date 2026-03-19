@@ -20,7 +20,12 @@ func TestNewSettingsModel(t *testing.T) {
 		{
 			name: "single book",
 			selectedBooks: []AudioBook{
-				{Metadata: organizer.Metadata{Title: "Test Book", Authors: []string{"Test Author"}}},
+				{
+					Metadata: organizer.Metadata{
+						Title:   "Test Book",
+						Authors: []string{"Test Author"},
+					},
+				},
 			},
 		},
 		{
@@ -41,7 +46,11 @@ func TestNewSettingsModel(t *testing.T) {
 			}
 
 			if len(model.selectedBooks) != len(tt.selectedBooks) {
-				t.Errorf("Expected %d selected books, got %d", len(tt.selectedBooks), len(model.selectedBooks))
+				t.Errorf(
+					"Expected %d selected books, got %d",
+					len(tt.selectedBooks),
+					len(model.selectedBooks),
+				)
 			}
 
 			if model.cursor != 0 {
@@ -290,7 +299,11 @@ func TestSettingsModelNavigationKeys(t *testing.T) {
 
 			// Cursor should be within valid range
 			if settingsModel.cursor < 0 || settingsModel.cursor >= len(settingsModel.settings) {
-				t.Errorf("Cursor %d is out of range [0, %d)", settingsModel.cursor, len(settingsModel.settings))
+				t.Errorf(
+					"Cursor %d is out of range [0, %d)",
+					settingsModel.cursor,
+					len(settingsModel.settings),
+				)
 			}
 		})
 	}

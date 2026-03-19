@@ -49,9 +49,16 @@ func NewSettingsModel(selectedBooks []AudioBook) *SettingsModel {
 		{
 			Name:        "Layout",
 			Description: "How to organize the output directory structure",
-			Options:     []string{"author-only", "author-title", "author-series-title", "author-series-title-number", "series-title", "series-title-number"},
-			Value:       2, // Default to author-series-title
-			Focused:     false,
+			Options: []string{
+				"author-only",
+				"author-title",
+				"author-series-title",
+				"author-series-title-number",
+				"series-title",
+				"series-title-number",
+			},
+			Value:   2, // Default to author-series-title
+			Focused: false,
 		},
 		{
 			Name:        "Use Embedded Metadata",
@@ -88,9 +95,16 @@ func NewSettingsModel(selectedBooks []AudioBook) *SettingsModel {
 		{
 			Name:        "Layout",
 			Description: "How to organize the output directory structure",
-			Options:     []string{"author-only", "author-title", "author-series-title", "author-series-title-number", "series-title", "series-title-number"},
-			Value:       2, // Default to author-series-title
-			Focused:     false,
+			Options: []string{
+				"author-only",
+				"author-title",
+				"author-series-title",
+				"author-series-title-number",
+				"series-title",
+				"series-title-number",
+			},
+			Value:   2, // Default to author-series-title
+			Focused: false,
 		},
 		{
 			Name:        "Flat Mode",
@@ -116,9 +130,14 @@ func NewSettingsModel(selectedBooks []AudioBook) *SettingsModel {
 		{
 			Name:        "Author Fields Priority",
 			Description: "Order of fields to try for author (cycles through multiple options)",
-			Options:     []string{"authors→artist→album_artist", "authors→narrators→artist", "artist→album_artist→composer", "authors only"},
-			Value:       0, // Default to authors→artist→album_artist
-			Focused:     false,
+			Options: []string{
+				"authors→artist→album_artist",
+				"authors→narrators→artist",
+				"artist→album_artist→composer",
+				"authors only",
+			},
+			Value:   0, // Default to authors→artist→album_artist
+			Focused: false,
 		},
 		{
 			Name:        "Track Field",
@@ -267,7 +286,10 @@ func (m *SettingsModel) applyFilter() {
 	// Find the first setting that matches the filter string
 	for i, setting := range m.settings {
 		if strings.Contains(strings.ToLower(setting.Name), strings.ToLower(m.filterString)) ||
-			strings.Contains(strings.ToLower(setting.Description), strings.ToLower(m.filterString)) {
+			strings.Contains(
+				strings.ToLower(setting.Description),
+				strings.ToLower(m.filterString),
+			) {
 			// Move cursor to this setting
 			m.cursor = i
 			return
@@ -488,7 +510,13 @@ func (m *SettingsModel) View() string {
 		// Show different preview based on mode
 		if m.showAdvanced {
 			// First show the output path preview
-			content.WriteString("\n" + lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FFFF")).Render("Preview of Output Paths:") + "\n\n")
+			content.WriteString(
+				"\n" + lipgloss.NewStyle().
+					Bold(true).
+					Foreground(lipgloss.Color("#00FFFF")).
+					Render("Preview of Output Paths:") +
+					"\n\n",
+			)
 
 			// Get current layout setting
 			layoutSetting := m.settings[0].Options[m.settings[0].Value]
@@ -524,11 +552,25 @@ func (m *SettingsModel) View() string {
 				updatedBook.Metadata = updatedMetadata
 
 				// Generate output path based on current settings and field mapping
-				outputPath := GenerateOutputPathWithLayout(updatedBook, layoutSetting, embeddedMetadataEnabled)
+				outputPath := GenerateOutputPathWithLayout(
+					updatedBook,
+					layoutSetting,
+					embeddedMetadataEnabled,
+				)
 
 				// Display book info and output path
-				content.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#AAFFAA")).Render(filename) + "\n")
-				content.WriteString("  → " + lipgloss.NewStyle().Foreground(lipgloss.Color("#FFAAAA")).Render(outputPath) + "\n")
+				content.WriteString(
+					lipgloss.NewStyle().
+						Foreground(lipgloss.Color("#AAFFAA")).
+						Render(filename) +
+						"\n",
+				)
+				content.WriteString(
+					"  → " + lipgloss.NewStyle().
+						Foreground(lipgloss.Color("#FFAAAA")).
+						Render(outputPath) +
+						"\n",
+				)
 
 				// Add metadata info using updated metadata
 				authors := "Unknown"
@@ -547,7 +589,13 @@ func (m *SettingsModel) View() string {
 			}
 
 			// Then show the metadata and field mapping preview
-			content.WriteString("\n" + lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FFFF")).Render("Full Metadata Preview:") + "\n\n")
+			content.WriteString(
+				"\n" + lipgloss.NewStyle().
+					Bold(true).
+					Foreground(lipgloss.Color("#00FFFF")).
+					Render("Full Metadata Preview:") +
+					"\n\n",
+			)
 
 			// Show full metadata for the first selected book
 			if len(m.selectedBooks) > 0 {
@@ -555,18 +603,36 @@ func (m *SettingsModel) View() string {
 
 				// Get filename for display
 				filename := filepath.Base(book.Path)
-				content.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#AAFFAA")).Render(filename) + "\n\n")
+				content.WriteString(
+					lipgloss.NewStyle().
+						Bold(true).
+						Foreground(lipgloss.Color("#AAFFAA")).
+						Render(filename) +
+						"\n\n",
+				)
 
 				// Apply field mapping to show updated metadata
 				updatedMetadata := book.Metadata
 				updatedMetadata.ApplyFieldMapping(fieldMapping)
 
 				// Display all available metadata fields (after field mapping)
-				content.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF00")).Render("After Field Mapping Applied:") + "\n")
+				content.WriteString(
+					lipgloss.NewStyle().
+						Bold(true).
+						Foreground(lipgloss.Color("#00FF00")).
+						Render("After Field Mapping Applied:") +
+						"\n",
+				)
 				content.WriteString(formatFullMetadata(&updatedMetadata) + "\n")
 
 				// Show field mapping preview
-				content.WriteString("\n" + lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFF00")).Render("Current Field Mapping Configuration:") + "\n")
+				content.WriteString(
+					"\n" + lipgloss.NewStyle().
+						Bold(true).
+						Foreground(lipgloss.Color("#FFFF00")).
+						Render("Current Field Mapping Configuration:") +
+						"\n",
+				)
 
 				// Display field mapping preview
 				content.WriteString(formatFieldMapping(fieldMapping) + "\n")

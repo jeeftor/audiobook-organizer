@@ -103,7 +103,10 @@ func runRename() {
 	case "preserve":
 		authorFormat = organizer.AuthorFormatPreserve
 	default:
-		organizer.PrintRed("Invalid author format: %s. Valid options: first-last, last-first, preserve", renameAuthorFormat)
+		organizer.PrintRed(
+			"Invalid author format: %s. Valid options: first-last, last-first, preserve",
+			renameAuthorFormat,
+		)
 		os.Exit(1)
 	}
 
@@ -329,11 +332,16 @@ func init() {
 	renameCmd.AddCommand(renameHelpTemplateCmd)
 
 	// Rename-specific flags (inherit --dir, --out, --verbose, --dry-run, etc. from root)
-	renameCmd.Flags().StringVar(&renameTemplate, "template", "{author} - {series} {series_number} - {title}", "Filename template with placeholders")
-	renameCmd.Flags().StringVar(&renameAuthorFormat, "author-format", "first-last", "Author name format: first-last, last-first, preserve")
-	renameCmd.Flags().BoolVar(&renameRecursive, "recursive", true, "Recursively process subdirectories")
-	renameCmd.Flags().BoolVar(&renameStrictMode, "strict", false, "Error on missing template fields")
-	renameCmd.Flags().BoolVar(&renamePreservePath, "preserve-path", true, "Only rename filename, preserve directory structure")
+	renameCmd.Flags().
+		StringVar(&renameTemplate, "template", "{author} - {series} {series_number} - {title}", "Filename template with placeholders")
+	renameCmd.Flags().
+		StringVar(&renameAuthorFormat, "author-format", "first-last", "Author name format: first-last, last-first, preserve")
+	renameCmd.Flags().
+		BoolVar(&renameRecursive, "recursive", true, "Recursively process subdirectories")
+	renameCmd.Flags().
+		BoolVar(&renameStrictMode, "strict", false, "Error on missing template fields")
+	renameCmd.Flags().
+		BoolVar(&renamePreservePath, "preserve-path", true, "Only rename filename, preserve directory structure")
 	renameCmd.Flags().BoolVar(&renamePrompt, "prompt", false, "Prompt before renaming each file")
 	renameCmd.Flags().Bool("undo", false, "Undo previous rename operations")
 

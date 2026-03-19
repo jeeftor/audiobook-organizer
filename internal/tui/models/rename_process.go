@@ -22,7 +22,10 @@ type RenameProcessModel struct {
 }
 
 // NewRenameProcessModel creates a new process model
-func NewRenameProcessModel(candidates []organizer.RenameCandidate, config *organizer.RenamerConfig) *RenameProcessModel {
+func NewRenameProcessModel(
+	candidates []organizer.RenameCandidate,
+	config *organizer.RenamerConfig,
+) *RenameProcessModel {
 	renamer, _ := organizer.NewRenamer(config)
 
 	return &RenameProcessModel{
@@ -169,8 +172,12 @@ func (m *RenameProcessModel) generateCommand() string {
 		if m.config.FieldMapping.TitleField != "" && m.config.FieldMapping.TitleField != "title" {
 			parts = append(parts, fmt.Sprintf("--title-field=%s", m.config.FieldMapping.TitleField))
 		}
-		if m.config.FieldMapping.SeriesField != "" && m.config.FieldMapping.SeriesField != "series" {
-			parts = append(parts, fmt.Sprintf("--series-field=%s", m.config.FieldMapping.SeriesField))
+		if m.config.FieldMapping.SeriesField != "" &&
+			m.config.FieldMapping.SeriesField != "series" {
+			parts = append(
+				parts,
+				fmt.Sprintf("--series-field=%s", m.config.FieldMapping.SeriesField),
+			)
 		}
 		if len(m.config.FieldMapping.AuthorFields) > 0 {
 			// Check if it's not the default
@@ -185,7 +192,13 @@ func (m *RenameProcessModel) generateCommand() string {
 				}
 			}
 			if !isDefault {
-				parts = append(parts, fmt.Sprintf("--author-fields=\"%s\"", strings.Join(m.config.FieldMapping.AuthorFields, ",")))
+				parts = append(
+					parts,
+					fmt.Sprintf(
+						"--author-fields=\"%s\"",
+						strings.Join(m.config.FieldMapping.AuthorFields, ","),
+					),
+				)
 			}
 		}
 		if m.config.FieldMapping.TrackField != "" && m.config.FieldMapping.TrackField != "track" {

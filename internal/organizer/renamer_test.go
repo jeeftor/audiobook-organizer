@@ -90,19 +90,19 @@ func TestRenamer_ScanFiles(t *testing.T) {
 	for _, tf := range testFiles {
 		// Create book directory
 		bookDir := filepath.Join(tmpDir, strings.TrimSuffix(tf.name, filepath.Ext(tf.name)))
-		if err := os.MkdirAll(bookDir, 0755); err != nil {
+		if err := os.MkdirAll(bookDir, 0o755); err != nil {
 			t.Fatalf("Failed to create book directory: %v", err)
 		}
 
 		// Create metadata.json
 		metadataPath := filepath.Join(bookDir, "metadata.json")
-		if err := os.WriteFile(metadataPath, []byte(tf.metadataJSON), 0644); err != nil {
+		if err := os.WriteFile(metadataPath, []byte(tf.metadataJSON), 0o644); err != nil {
 			t.Fatalf("Failed to write metadata.json: %v", err)
 		}
 
 		// Create dummy audio file (can't be parsed, but tests error handling)
 		audioPath := filepath.Join(bookDir, tf.name)
-		if err := os.WriteFile(audioPath, []byte("dummy audio"), 0644); err != nil {
+		if err := os.WriteFile(audioPath, []byte("dummy audio"), 0o644); err != nil {
 			t.Fatalf("Failed to write audio file: %v", err)
 		}
 	}
@@ -210,7 +210,7 @@ func TestRenamer_Execute_DryRun(t *testing.T) {
 
 	// Create a test file
 	originalFile := filepath.Join(tmpDir, "original.m4b")
-	if err := os.WriteFile(originalFile, []byte("test content"), 0644); err != nil {
+	if err := os.WriteFile(originalFile, []byte("test content"), 0o644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -220,7 +220,7 @@ func TestRenamer_Execute_DryRun(t *testing.T) {
 		"title": "Test Title",
 		"authors": ["Test Author"]
 	}`
-	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0644); err != nil {
+	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0o644); err != nil {
 		t.Fatalf("Failed to write metadata.json: %v", err)
 	}
 
@@ -260,10 +260,10 @@ func TestRenamer_ConflictDetection(t *testing.T) {
 	file1 := filepath.Join(tmpDir, "file1.m4b")
 	file2 := filepath.Join(tmpDir, "file2.m4b")
 
-	if err := os.WriteFile(file1, []byte("content1"), 0644); err != nil {
+	if err := os.WriteFile(file1, []byte("content1"), 0o644); err != nil {
 		t.Fatalf("Failed to create file1: %v", err)
 	}
-	if err := os.WriteFile(file2, []byte("content2"), 0644); err != nil {
+	if err := os.WriteFile(file2, []byte("content2"), 0o644); err != nil {
 		t.Fatalf("Failed to create file2: %v", err)
 	}
 
@@ -276,7 +276,7 @@ func TestRenamer_ConflictDetection(t *testing.T) {
 	for _, file := range []string{file1, file2} {
 		dir := filepath.Dir(file)
 		metadataPath := filepath.Join(dir, "metadata.json")
-		if err := os.WriteFile(metadataPath, []byte(metadataContent), 0644); err != nil {
+		if err := os.WriteFile(metadataPath, []byte(metadataContent), 0o644); err != nil {
 			t.Fatalf("Failed to write metadata.json: %v", err)
 		}
 	}

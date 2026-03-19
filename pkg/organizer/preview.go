@@ -10,18 +10,18 @@ import (
 
 // PreviewMove represents a single file/directory move operation
 type PreviewMove struct {
-	SourcePath      string `json:"source_path"`
-	TargetPath      string `json:"target_path"`
-	IsConflict      bool   `json:"is_conflict"`
-	ConflictReason  string `json:"conflict_reason,omitempty"`
-	Metadata        Metadata `json:"metadata,omitempty"`
+	SourcePath     string   `json:"source_path"`
+	TargetPath     string   `json:"target_path"`
+	IsConflict     bool     `json:"is_conflict"`
+	ConflictReason string   `json:"conflict_reason,omitempty"`
+	Metadata       Metadata `json:"metadata,omitempty"`
 }
 
 // PreviewResult contains the complete preview of all operations
 type PreviewResult struct {
-	Moves          []PreviewMove `json:"moves"`
-	TotalFiles     int           `json:"total_files"`
-	ConflictCount  int           `json:"conflict_count"`
+	Moves         []PreviewMove `json:"moves"`
+	TotalFiles    int           `json:"total_files"`
+	ConflictCount int           `json:"conflict_count"`
 }
 
 // GeneratePreview scans directories and generates a preview of file operations
@@ -150,7 +150,11 @@ func detectConflicts(moves []PreviewMove) *PreviewResult {
 			// Multiple sources targeting the same destination
 			for _, idx := range indices {
 				result.Moves[idx].IsConflict = true
-				result.Moves[idx].ConflictReason = fmt.Sprintf("Multiple books (%d) would be moved to: %s", len(indices), targetPath)
+				result.Moves[idx].ConflictReason = fmt.Sprintf(
+					"Multiple books (%d) would be moved to: %s",
+					len(indices),
+					targetPath,
+				)
 				result.ConflictCount++
 			}
 		}

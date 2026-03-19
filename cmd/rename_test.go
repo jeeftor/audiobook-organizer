@@ -88,7 +88,7 @@ func TestRunRename_Integration(t *testing.T) {
 
 	// Create a test file with metadata
 	testFile := filepath.Join(tmpDir, "test-book.m4b")
-	if err := os.WriteFile(testFile, []byte("dummy content"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("dummy content"), 0o644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -98,7 +98,7 @@ func TestRunRename_Integration(t *testing.T) {
 		"authors": ["Test Author"]
 	}`
 	metadataPath := filepath.Join(tmpDir, "metadata.json")
-	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0644); err != nil {
+	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0o644); err != nil {
 		t.Fatalf("Failed to create metadata.json: %v", err)
 	}
 
@@ -124,7 +124,8 @@ func TestAuthorFormatValidation(t *testing.T) {
 
 	// Invalid format
 	invalidFormat := "invalid-format"
-	if invalidFormat == "first-last" || invalidFormat == "last-first" || invalidFormat == "preserve" {
+	if invalidFormat == "first-last" || invalidFormat == "last-first" ||
+		invalidFormat == "preserve" {
 		t.Error("invalid-format should not be a valid format")
 	}
 }

@@ -32,9 +32,18 @@ const (
 
 var (
 	// Source indicator styles
-	jsonSourceStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700")).Bold(true) // Gold
-	embeddedSourceStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00CED1")).Bold(true) // Turquoise
-	hybridSourceStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF69B4")).Bold(true) // Hot Pink
+	jsonSourceStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFD700")).
+			Bold(true)
+	// Gold
+	embeddedSourceStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#00CED1")).
+				Bold(true)
+	// Turquoise
+	hybridSourceStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#FF69B4")).
+				Bold(true)
+	// Hot Pink
 )
 
 // isHybridMode checks if we're in hybrid metadata mode (metadata.json + embedded)
@@ -108,7 +117,9 @@ func (mf *MetadataFormatter) FormatMetadataWithMapping() string {
 		sb.WriteString(embeddedSourceStyle.Render("🎵 Embedded"))
 		sb.WriteString("\n")
 		if embeddedSource, ok := mf.metadata.RawData["_embedded_source"].(string); ok {
-			sb.WriteString(fmt.Sprintf("  (File-level data from: %s)\n", filepath.Base(embeddedSource)))
+			sb.WriteString(
+				fmt.Sprintf("  (File-level data from: %s)\n", filepath.Base(embeddedSource)),
+			)
 		}
 		sb.WriteString("\n")
 	}
@@ -167,13 +178,22 @@ func (mf *MetadataFormatter) formatCoreFields(sb *strings.Builder) {
 	// Title - with source indicator
 	if mf.metadata.Title != "" {
 		sourceIndicator := mf.formatSourceIndicator("title")
-		sb.WriteString(fmt.Sprintf("%s Title: %s%s\n", IconColor("📖"), mf.metadata.Title, sourceIndicator))
+		sb.WriteString(
+			fmt.Sprintf("%s Title: %s%s\n", IconColor("📖"), mf.metadata.Title, sourceIndicator),
+		)
 	}
 
 	// Authors - with source indicator
 	if len(mf.metadata.Authors) > 0 {
 		sourceIndicator := mf.formatSourceIndicator("authors")
-		sb.WriteString(fmt.Sprintf("%s Authors: %s%s\n", IconColor("👥"), strings.Join(mf.metadata.Authors, ", "), sourceIndicator))
+		sb.WriteString(
+			fmt.Sprintf(
+				"%s Authors: %s%s\n",
+				IconColor("👥"),
+				strings.Join(mf.metadata.Authors, ", "),
+				sourceIndicator,
+			),
+		)
 	}
 
 	// Series - with source indicator and series index if available
@@ -183,7 +203,15 @@ func (mf *MetadataFormatter) formatCoreFields(sb *strings.Builder) {
 
 		// Check if we have a series index
 		if seriesIndex, ok := mf.metadata.RawData["series_index"].(float64); ok && seriesIndex > 0 {
-			sb.WriteString(fmt.Sprintf("%s Series: %s (#%.1f)%s\n", IconColor("📚"), seriesName, seriesIndex, sourceIndicator))
+			sb.WriteString(
+				fmt.Sprintf(
+					"%s Series: %s (#%.1f)%s\n",
+					IconColor("📚"),
+					seriesName,
+					seriesIndex,
+					sourceIndicator,
+				),
+			)
 		} else {
 			sb.WriteString(fmt.Sprintf("%s Series: %s%s\n", IconColor("📚"), seriesName, sourceIndicator))
 		}
@@ -192,7 +220,14 @@ func (mf *MetadataFormatter) formatCoreFields(sb *strings.Builder) {
 	// Track number - with source indicator (this comes from embedded in hybrid mode)
 	if mf.metadata.TrackNumber > 0 {
 		sourceIndicator := mf.formatSourceIndicator("track_number")
-		sb.WriteString(fmt.Sprintf("%s Track: %d%s\n", IconColor("🔢"), mf.metadata.TrackNumber, sourceIndicator))
+		sb.WriteString(
+			fmt.Sprintf(
+				"%s Track: %d%s\n",
+				IconColor("🔢"),
+				mf.metadata.TrackNumber,
+				sourceIndicator,
+			),
+		)
 	}
 
 	// Disc number - with source indicator (if present)
@@ -218,19 +253,25 @@ func (mf *MetadataFormatter) formatAudioFields(sb *strings.Builder) {
 	// Album Artist - with source indicator
 	if albumArtist, ok := mf.metadata.RawData["album_artist"].(string); ok && albumArtist != "" {
 		sourceIndicator := mf.formatSourceIndicator("album_artist")
-		sb.WriteString(fmt.Sprintf("%s Album Artist: %s%s\n", IconColor("🎭"), albumArtist, sourceIndicator))
+		sb.WriteString(
+			fmt.Sprintf("%s Album Artist: %s%s\n", IconColor("🎭"), albumArtist, sourceIndicator),
+		)
 	}
 
 	// Composer - with source indicator
 	if composer, ok := mf.metadata.RawData["composer"].(string); ok && composer != "" {
 		sourceIndicator := mf.formatSourceIndicator("composer")
-		sb.WriteString(fmt.Sprintf("%s Composer: %s%s\n", IconColor("🎼"), composer, sourceIndicator))
+		sb.WriteString(
+			fmt.Sprintf("%s Composer: %s%s\n", IconColor("🎼"), composer, sourceIndicator),
+		)
 	}
 
 	// Narrator - with source indicator
 	if narrator, ok := mf.metadata.RawData["narrator"].(string); ok && narrator != "" {
 		sourceIndicator := mf.formatSourceIndicator("narrator")
-		sb.WriteString(fmt.Sprintf("%s Narrator: %s%s\n", IconColor("🗣️"), narrator, sourceIndicator))
+		sb.WriteString(
+			fmt.Sprintf("%s Narrator: %s%s\n", IconColor("🗣️"), narrator, sourceIndicator),
+		)
 	}
 
 	// Genre - with source indicator
@@ -248,7 +289,15 @@ func (mf *MetadataFormatter) formatAudioFields(sb *strings.Builder) {
 	// Track details - with source indicator
 	if trackTotal, ok := mf.metadata.RawData["track_total"].(int); ok && trackTotal > 0 {
 		sourceIndicator := mf.formatSourceIndicator("track_total")
-		sb.WriteString(fmt.Sprintf("%s Track: %d of %d%s\n", IconColor("📊"), mf.metadata.TrackNumber, trackTotal, sourceIndicator))
+		sb.WriteString(
+			fmt.Sprintf(
+				"%s Track: %d of %d%s\n",
+				IconColor("📊"),
+				mf.metadata.TrackNumber,
+				trackTotal,
+				sourceIndicator,
+			),
+		)
 	}
 
 	// Comment - with source indicator, truncated if too long
@@ -280,7 +329,9 @@ func (mf *MetadataFormatter) formatEPUBFields(sb *strings.Builder) {
 	// Subjects/Tags - clean display
 	if subjects, ok := mf.metadata.RawData["subjects"].([]string); ok && len(subjects) > 0 {
 		if len(subjects) <= 3 {
-			sb.WriteString(fmt.Sprintf("%s Subjects: %s\n", IconColor("🏷️"), strings.Join(subjects, ", ")))
+			sb.WriteString(
+				fmt.Sprintf("%s Subjects: %s\n", IconColor("🏷️"), strings.Join(subjects, ", ")),
+			)
 		} else {
 			sb.WriteString(fmt.Sprintf("%s Subjects: %s, ... (%d total)\n",
 				IconColor("🏷️"), strings.Join(subjects[:3], ", "), len(subjects)))
@@ -365,7 +416,9 @@ func (mf *MetadataFormatter) FormatMetadata() string {
 
 	// Filename - clean display
 	if mf.metadata.SourcePath != "" {
-		sb.WriteString(fmt.Sprintf("%s Filename: %s\n", IconColor("📂"), filepath.Base(mf.metadata.SourcePath)))
+		sb.WriteString(
+			fmt.Sprintf("%s Filename: %s\n", IconColor("📂"), filepath.Base(mf.metadata.SourcePath)),
+		)
 	}
 
 	// Core fields
@@ -374,11 +427,19 @@ func (mf *MetadataFormatter) FormatMetadata() string {
 	}
 
 	if len(mf.metadata.Authors) > 0 {
-		sb.WriteString(fmt.Sprintf("%s Authors: %s\n", IconColor("👥"), strings.Join(mf.metadata.Authors, ", ")))
+		sb.WriteString(
+			fmt.Sprintf(
+				"%s Authors: %s\n",
+				IconColor("👥"),
+				strings.Join(mf.metadata.Authors, ", "),
+			),
+		)
 	}
 
 	if len(mf.metadata.Series) > 0 {
-		sb.WriteString(fmt.Sprintf("%s Series: %s\n", IconColor("📚"), strings.Join(mf.metadata.Series, ", ")))
+		sb.WriteString(
+			fmt.Sprintf("%s Series: %s\n", IconColor("📚"), strings.Join(mf.metadata.Series, ", ")),
+		)
 	}
 
 	if mf.metadata.TrackNumber > 0 {

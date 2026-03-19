@@ -20,7 +20,9 @@ type FieldMapping struct {
 
 // IsEmpty returns true if the field mapping is empty
 func (fm FieldMapping) IsEmpty() bool {
-	return fm.TitleField == "" && fm.SeriesField == "" && len(fm.AuthorFields) == 0 && fm.TrackField == "" && fm.DiscField == ""
+	return fm.TitleField == "" && fm.SeriesField == "" && len(fm.AuthorFields) == 0 &&
+		fm.TrackField == "" &&
+		fm.DiscField == ""
 }
 
 // DefaultFieldMapping returns the default field mapping

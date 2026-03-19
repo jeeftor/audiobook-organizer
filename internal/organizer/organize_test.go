@@ -21,14 +21,14 @@ func TestProcessDirectory(t *testing.T) {
 			setupFunc: func(t *testing.T, tempDir string) string {
 				// Create a directory with metadata instead of a fake audio file
 				bookDir := filepath.Join(tempDir, "testbook")
-				if err := os.MkdirAll(bookDir, 0755); err != nil {
+				if err := os.MkdirAll(bookDir, 0o755); err != nil {
 					t.Fatalf("Failed to create book directory: %v", err)
 				}
 
 				// Create metadata.json so it can be processed
 				metadataContent := `{"title": "Test Book", "authors": ["Test Author"]}`
 				metadataFile := filepath.Join(bookDir, "metadata.json")
-				if err := os.WriteFile(metadataFile, []byte(metadataContent), 0644); err != nil {
+				if err := os.WriteFile(metadataFile, []byte(metadataContent), 0o644); err != nil {
 					t.Fatalf("Failed to create metadata file: %v", err)
 				}
 
@@ -41,7 +41,7 @@ func TestProcessDirectory(t *testing.T) {
 			flat: false,
 			setupFunc: func(t *testing.T, tempDir string) string {
 				subDir := filepath.Join(tempDir, "testbook")
-				if err := os.MkdirAll(subDir, 0755); err != nil {
+				if err := os.MkdirAll(subDir, 0o755); err != nil {
 					t.Fatalf("Failed to create test directory: %v", err)
 				}
 				return subDir
@@ -71,7 +71,7 @@ func TestProcessDirectory(t *testing.T) {
 			defer os.RemoveAll(tempDir)
 
 			outputDir := filepath.Join(tempDir, "output")
-			if err := os.MkdirAll(outputDir, 0755); err != nil {
+			if err := os.MkdirAll(outputDir, 0o755); err != nil {
 				t.Fatalf("Failed to create output directory: %v", err)
 			}
 
@@ -182,7 +182,7 @@ func TestMoveFile(t *testing.T) {
 				source := filepath.Join(tempDir, "source.mp3")
 				target := filepath.Join(tempDir, "target.mp3")
 
-				if err := os.WriteFile(source, []byte("test audio"), 0644); err != nil {
+				if err := os.WriteFile(source, []byte("test audio"), 0o644); err != nil {
 					t.Fatalf("Failed to create source file: %v", err)
 				}
 
@@ -198,11 +198,11 @@ func TestMoveFile(t *testing.T) {
 				targetDir := filepath.Join(tempDir, "subdir")
 				target := filepath.Join(targetDir, "target.mp3")
 
-				if err := os.WriteFile(source, []byte("test audio"), 0644); err != nil {
+				if err := os.WriteFile(source, []byte("test audio"), 0o644); err != nil {
 					t.Fatalf("Failed to create source file: %v", err)
 				}
 
-				if err := os.MkdirAll(targetDir, 0755); err != nil {
+				if err := os.MkdirAll(targetDir, 0o755); err != nil {
 					t.Fatalf("Failed to create target directory: %v", err)
 				}
 
@@ -217,7 +217,7 @@ func TestMoveFile(t *testing.T) {
 				source := filepath.Join(tempDir, "source.mp3")
 				target := filepath.Join(tempDir, "newdir", "target.mp3")
 
-				if err := os.WriteFile(source, []byte("test audio"), 0644); err != nil {
+				if err := os.WriteFile(source, []byte("test audio"), 0o644); err != nil {
 					t.Fatalf("Failed to create source file: %v", err)
 				}
 
@@ -292,11 +292,11 @@ func TestCopyAndDeleteFile(t *testing.T) {
 				targetDir := filepath.Join(tempDir, "target_dir")
 				target := filepath.Join(targetDir, "target.mp3")
 
-				if err := os.WriteFile(source, []byte("test audio content"), 0644); err != nil {
+				if err := os.WriteFile(source, []byte("test audio content"), 0o644); err != nil {
 					t.Fatalf("Failed to create source file: %v", err)
 				}
 
-				if err := os.MkdirAll(targetDir, 0755); err != nil {
+				if err := os.MkdirAll(targetDir, 0o755); err != nil {
 					t.Fatalf("Failed to create target directory: %v", err)
 				}
 
@@ -311,7 +311,7 @@ func TestCopyAndDeleteFile(t *testing.T) {
 				targetDir := filepath.Join(tempDir, "target_dir")
 				target := filepath.Join(targetDir, "target.mp3")
 
-				if err := os.MkdirAll(targetDir, 0755); err != nil {
+				if err := os.MkdirAll(targetDir, 0o755); err != nil {
 					t.Fatalf("Failed to create target directory: %v", err)
 				}
 
@@ -373,7 +373,7 @@ func TestRemoveEmptyDirs(t *testing.T) {
 			name: "empty directory should be removed",
 			setupFunc: func(t *testing.T, tempDir string) string {
 				emptyDir := filepath.Join(tempDir, "empty")
-				if err := os.MkdirAll(emptyDir, 0755); err != nil {
+				if err := os.MkdirAll(emptyDir, 0o755); err != nil {
 					t.Fatalf("Failed to create empty directory: %v", err)
 				}
 				return emptyDir
@@ -384,12 +384,12 @@ func TestRemoveEmptyDirs(t *testing.T) {
 			name: "directory with files should not be removed",
 			setupFunc: func(t *testing.T, tempDir string) string {
 				dirWithFiles := filepath.Join(tempDir, "with_files")
-				if err := os.MkdirAll(dirWithFiles, 0755); err != nil {
+				if err := os.MkdirAll(dirWithFiles, 0o755); err != nil {
 					t.Fatalf("Failed to create directory: %v", err)
 				}
 
 				testFile := filepath.Join(dirWithFiles, "test.txt")
-				if err := os.WriteFile(testFile, []byte("content"), 0644); err != nil {
+				if err := os.WriteFile(testFile, []byte("content"), 0o644); err != nil {
 					t.Fatalf("Failed to create test file: %v", err)
 				}
 
@@ -402,7 +402,7 @@ func TestRemoveEmptyDirs(t *testing.T) {
 			setupFunc: func(t *testing.T, tempDir string) string {
 				parentDir := filepath.Join(tempDir, "parent")
 				emptySubdir := filepath.Join(parentDir, "empty_subdir")
-				if err := os.MkdirAll(emptySubdir, 0755); err != nil {
+				if err := os.MkdirAll(emptySubdir, 0o755); err != nil {
 					t.Fatalf("Failed to create directory structure: %v", err)
 				}
 				return parentDir
@@ -433,7 +433,6 @@ func TestRemoveEmptyDirs(t *testing.T) {
 			testDir := tt.setupFunc(t, tempDir)
 
 			err = org.removeEmptyDirs(testDir)
-
 			// Should not error regardless of whether directory is removed
 			if err != nil {
 				t.Errorf("removeEmptyDirs should not error: %v", err)
@@ -501,7 +500,13 @@ func TestIsSubPathOf(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := isSubPathOf(tt.parent, tt.child)
 			if result != tt.expected {
-				t.Errorf("isSubPathOf(%q, %q) = %v, want %v", tt.parent, tt.child, result, tt.expected)
+				t.Errorf(
+					"isSubPathOf(%q, %q) = %v, want %v",
+					tt.parent,
+					tt.child,
+					result,
+					tt.expected,
+				)
 			}
 		})
 	}

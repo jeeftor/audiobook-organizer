@@ -85,8 +85,14 @@ func TestNewPreviewModel(t *testing.T) {
 		{
 			name: "multiple books preview",
 			books: []AudioBook{
-				{Path: "/test/book1.mp3", Metadata: organizer.Metadata{Title: "Book 1", Authors: []string{"Author 1"}}},
-				{Path: "/test/book2.mp3", Metadata: organizer.Metadata{Title: "Book 2", Authors: []string{"Author 2"}}},
+				{
+					Path:     "/test/book1.mp3",
+					Metadata: organizer.Metadata{Title: "Book 1", Authors: []string{"Author 1"}},
+				},
+				{
+					Path:     "/test/book2.mp3",
+					Metadata: organizer.Metadata{Title: "Book 2", Authors: []string{"Author 2"}},
+				},
 			},
 			config: map[string]string{
 				"layout":      "author-series-title",
@@ -263,7 +269,11 @@ func TestPreviewModelNavigation(t *testing.T) {
 			// Cursor should be within valid range
 			if previewModel.cursor < 0 || previewModel.cursor >= len(previewModel.moves) {
 				if len(previewModel.moves) > 0 {
-					t.Errorf("Cursor %d is out of range [0, %d)", previewModel.cursor, len(previewModel.moves))
+					t.Errorf(
+						"Cursor %d is out of range [0, %d)",
+						previewModel.cursor,
+						len(previewModel.moves),
+					)
 				}
 			}
 

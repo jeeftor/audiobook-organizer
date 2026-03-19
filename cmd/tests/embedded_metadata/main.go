@@ -18,7 +18,10 @@ func main() {
 	// Create some test books with metadata
 	books := []models.AudioBook{
 		{
-			Path: filepath.Join(testDataDir, "strange_audiobook_10_Epic_Saga__Adventure__Quest___Glory__John_Smith.m4b"),
+			Path: filepath.Join(
+				testDataDir,
+				"strange_audiobook_10_Epic_Saga__Adventure__Quest___Glory__John_Smith.m4b",
+			),
 			Metadata: organizer.Metadata{
 				Title:   "Epic Saga: Adventure, Quest & Glory",
 				Authors: []string{"John Smith"},
@@ -26,7 +29,10 @@ func main() {
 			},
 		},
 		{
-			Path: filepath.Join(testDataDir, "strange_audiobook_14_Tales_of__ngstr_m___Caf__Chronicles_Mar_a_L_pez_Tr1.m4b"),
+			Path: filepath.Join(
+				testDataDir,
+				"strange_audiobook_14_Tales_of__ngstr_m___Caf__Chronicles_Mar_a_L_pez_Tr1.m4b",
+			),
 			Metadata: organizer.Metadata{
 				Title:       "Tales of Ångström & Café Chronicles",
 				Authors:     []string{"María López"},

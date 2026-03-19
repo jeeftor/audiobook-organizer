@@ -20,7 +20,10 @@ type RenamePreviewModel struct {
 }
 
 // NewRenamePreviewModel creates a new preview model
-func NewRenamePreviewModel(candidates []organizer.RenameCandidate, config *organizer.RenamerConfig) *RenamePreviewModel {
+func NewRenamePreviewModel(
+	candidates []organizer.RenameCandidate,
+	config *organizer.RenamerConfig,
+) *RenamePreviewModel {
 	renamer, _ := organizer.NewRenamer(config)
 
 	return &RenamePreviewModel{
@@ -114,7 +117,9 @@ func (m *RenamePreviewModel) View() string {
 
 	sb.WriteString(fmt.Sprintf("Total files: %d\n", totalFiles))
 	if conflicts > 0 {
-		sb.WriteString(warningStyle.Render(fmt.Sprintf("Conflicts: %d (will be auto-resolved)\n", conflicts)))
+		sb.WriteString(
+			warningStyle.Render(fmt.Sprintf("Conflicts: %d (will be auto-resolved)\n", conflicts)),
+		)
 	}
 	sb.WriteString("\n")
 
@@ -142,7 +147,16 @@ func (m *RenamePreviewModel) View() string {
 	}
 
 	if totalFiles > 15 {
-		sb.WriteString(helpStyle.Render(fmt.Sprintf("(Showing %d-%d of %d) ↑↓ to scroll\n\n", visibleStart+1, visibleEnd, totalFiles)))
+		sb.WriteString(
+			helpStyle.Render(
+				fmt.Sprintf(
+					"(Showing %d-%d of %d) ↑↓ to scroll\n\n",
+					visibleStart+1,
+					visibleEnd,
+					totalFiles,
+				),
+			),
+		)
 	}
 
 	// Controls

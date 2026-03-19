@@ -10,7 +10,9 @@ import (
 )
 
 // renderMetadataForFile renders metadata for a specific file with column-aware truncation
-func (m *RenameFieldMappingModel) renderMetadataForFile(candidateIdx, displayNum, columnWidth int) string {
+func (m *RenameFieldMappingModel) renderMetadataForFile(
+	candidateIdx, displayNum, columnWidth int,
+) string {
 	if candidateIdx >= len(m.candidates) {
 		return "No data"
 	}
@@ -28,7 +30,9 @@ func (m *RenameFieldMappingModel) renderMetadataForFile(candidateIdx, displayNum
 	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FFFF"))
 
-	content.WriteString(titleStyle.Render(fmt.Sprintf("Metadata Preview (#%d):", displayNum)) + "\n\n")
+	content.WriteString(
+		titleStyle.Render(fmt.Sprintf("Metadata Preview (#%d):", displayNum)) + "\n\n",
+	)
 
 	// File info - truncate based on column width (more generous)
 	filename := filepath.Base(candidate.CurrentPath)
@@ -40,7 +44,9 @@ func (m *RenameFieldMappingModel) renderMetadataForFile(candidateIdx, displayNum
 		filename = filename[:maxFilenameLen-3] + "..."
 	}
 	content.WriteString(defaultLabelStyle.Render("File: ") + valueStyle.Render(filename) + "\n")
-	content.WriteString(defaultLabelStyle.Render("Source Type: ") + valueStyle.Render(metadata.SourceType) + "\n\n")
+	content.WriteString(
+		defaultLabelStyle.Render("Source Type: ") + valueStyle.Render(metadata.SourceType) + "\n\n",
+	)
 
 	// Raw metadata fields (sorted, limited to fit in column)
 	rawLabelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#AAAAAA"))
@@ -123,7 +129,9 @@ func (m *RenameFieldMappingModel) renderMetadataForFile(candidateIdx, displayNum
 			valStr = valStr[:maxValLen-3] + "..."
 		}
 
-		content.WriteString(fmt.Sprintf("  %s: %s%s\n", rawLabelStyle.Render(key), valStr, fieldIndicator))
+		content.WriteString(
+			fmt.Sprintf("  %s: %s%s\n", rawLabelStyle.Render(key), valStr, fieldIndicator),
+		)
 	}
 
 	return content.String()

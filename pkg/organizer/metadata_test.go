@@ -134,7 +134,13 @@ func TestFormatAuthorName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := FormatAuthorName(tt.input, tt.format)
 			if result != tt.expected {
-				t.Errorf("FormatAuthorName(%q, %v) = %q, want %q", tt.input, tt.format, result, tt.expected)
+				t.Errorf(
+					"FormatAuthorName(%q, %v) = %q, want %q",
+					tt.input,
+					tt.format,
+					result,
+					tt.expected,
+				)
 			}
 		})
 	}
@@ -167,7 +173,12 @@ func TestConvertAuthorToFirstLast(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ConvertAuthorToFirstLast(tt.input)
 			if result != tt.expected {
-				t.Errorf("ConvertAuthorToFirstLast(%q) = %q, want %q", tt.input, result, tt.expected)
+				t.Errorf(
+					"ConvertAuthorToFirstLast(%q) = %q, want %q",
+					tt.input,
+					result,
+					tt.expected,
+				)
 			}
 		})
 	}
@@ -205,7 +216,12 @@ func TestConvertAuthorToLastFirst(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ConvertAuthorToLastFirst(tt.input)
 			if result != tt.expected {
-				t.Errorf("ConvertAuthorToLastFirst(%q) = %q, want %q", tt.input, result, tt.expected)
+				t.Errorf(
+					"ConvertAuthorToLastFirst(%q) = %q, want %q",
+					tt.input,
+					result,
+					tt.expected,
+				)
 			}
 		})
 	}
@@ -338,7 +354,7 @@ func TestExtractMetadataWithMapping(t *testing.T) {
 		"album": "Test Album"
 	}`
 
-	err := os.WriteFile(testFile, []byte(jsonContent), 0644)
+	err := os.WriteFile(testFile, []byte(jsonContent), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}

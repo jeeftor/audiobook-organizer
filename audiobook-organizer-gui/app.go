@@ -402,7 +402,13 @@ func (a *App) GetSampleMetadataPreviews(dir string) ([]MetadataPreview, error) {
 	var previews []MetadataPreview
 	for i := 0; i < len(audiobooks); i++ {
 		sample := audiobooks[i]
-		a.log("Sample audiobook %d: Title=%s, Album=%s, SourceType=%s", i, sample.Title, sample.Album, sample.SourceType)
+		a.log(
+			"Sample audiobook %d: Title=%s, Album=%s, SourceType=%s",
+			i,
+			sample.Title,
+			sample.Album,
+			sample.SourceType,
+		)
 		a.log("RawData has %d fields", len(sample.RawData))
 
 		// Build raw fields with indicators
@@ -536,7 +542,11 @@ func (a *App) enrichedPreviewItem(move organizer.PreviewMove, outputDir string) 
 // using the given outputDir (overrides a.config.OutputDir for this call).
 func (a *App) GetLivePreviewPath(bookIdx int, outputDir string) (PreviewItem, error) {
 	if bookIdx < 0 || bookIdx >= len(lastScanResults) {
-		return PreviewItem{}, fmt.Errorf("book index %d out of range (0-%d)", bookIdx, len(lastScanResults)-1)
+		return PreviewItem{}, fmt.Errorf(
+			"book index %d out of range (0-%d)",
+			bookIdx,
+			len(lastScanResults)-1,
+		)
 	}
 
 	// Clone config to avoid mutating shared state
@@ -545,7 +555,10 @@ func (a *App) GetLivePreviewPath(bookIdx int, outputDir string) (PreviewItem, er
 		cfg.OutputDir = outputDir
 	}
 
-	moves, err := organizer.CalculateTargetPaths([]organizer.Metadata{lastScanResults[bookIdx]}, &cfg)
+	moves, err := organizer.CalculateTargetPaths(
+		[]organizer.Metadata{lastScanResults[bookIdx]},
+		&cfg,
+	)
 	if err != nil {
 		return PreviewItem{}, fmt.Errorf("error calculating path: %w", err)
 	}
@@ -675,7 +688,10 @@ func (a *App) ScanDirectory(dir string) ([]organizer.Metadata, error) {
 	scanConfig.BaseDir = dir
 	scanConfig.DryRun = true
 
-	a.log("Calling ScanForAudiobooks with config: UseEmbeddedMetadata=%v", scanConfig.UseEmbeddedMetadata)
+	a.log(
+		"Calling ScanForAudiobooks with config: UseEmbeddedMetadata=%v",
+		scanConfig.UseEmbeddedMetadata,
+	)
 
 	// Use the public scanning API
 	audiobooks, err := organizer.ScanForAudiobooks(dir, &scanConfig)
@@ -711,7 +727,12 @@ func (a *App) ScanDirectory(dir string) ([]organizer.Metadata, error) {
 				continue
 			}
 
-			a.log("Trying fallback mode: %s (UseEmbedded=%v, Flat=%v)", mode.name, mode.embedded, mode.flat)
+			a.log(
+				"Trying fallback mode: %s (UseEmbedded=%v, Flat=%v)",
+				mode.name,
+				mode.embedded,
+				mode.flat,
+			)
 
 			fallbackConfig := scanConfig
 			fallbackConfig.UseEmbeddedMetadata = mode.embedded
@@ -772,7 +793,11 @@ func (a *App) UpdateSettings(config organizer.OrganizerConfig) error {
 }
 
 // PreviewChanges generates a preview of file operations for selected books
-func (a *App) PreviewChanges(inputDir string, outputDir string, selectedBooks []int) ([]PreviewItem, error) {
+func (a *App) PreviewChanges(
+	inputDir string,
+	outputDir string,
+	selectedBooks []int,
+) ([]PreviewItem, error) {
 	if inputDir == "" || outputDir == "" {
 		return nil, fmt.Errorf("input and output directories are required")
 	}
@@ -852,7 +877,11 @@ func (a *App) PreviewChanges(inputDir string, outputDir string, selectedBooks []
 		if len(indices) > 1 {
 			for _, idx := range indices {
 				moves[idx].IsConflict = true
-				moves[idx].ConflictReason = fmt.Sprintf("Multiple books (%d) would be moved to: %s", len(indices), targetPath)
+				moves[idx].ConflictReason = fmt.Sprintf(
+					"Multiple books (%d) would be moved to: %s",
+					len(indices),
+					targetPath,
+				)
 				conflictCount++
 			}
 		}
@@ -868,7 +897,13 @@ func (a *App) PreviewChanges(inputDir string, outputDir string, selectedBooks []
 			To:         move.TargetPath,
 			IsConflict: move.IsConflict,
 		}
-		a.log("Preview %d: %s → %s (conflict=%v)", i, move.SourcePath, move.TargetPath, move.IsConflict)
+		a.log(
+			"Preview %d: %s → %s (conflict=%v)",
+			i,
+			move.SourcePath,
+			move.TargetPath,
+			move.IsConflict,
+		)
 	}
 
 	// Create organizer for later execution
@@ -931,7 +966,10 @@ type FileOperation struct {
 // from/to operations. This is the preferred execution path from the GUI because it
 // uses the exact paths computed by GetBatchPreview, bypassing the AllowedSourcePaths
 // walk-based filtering that caused all-files-selected bugs.
-func (a *App) ExecuteFileOperations(operations []FileOperation, copyMode bool) (*organizer.Summary, error) {
+func (a *App) ExecuteFileOperations(
+	operations []FileOperation,
+	copyMode bool,
+) (*organizer.Summary, error) {
 	if len(operations) == 0 {
 		return &organizer.Summary{}, nil
 	}
@@ -960,7 +998,7 @@ func (a *App) ExecuteFileOperations(operations []FileOperation, copyMode bool) (
 		}
 
 		// Create parent of target
-		if err := os.MkdirAll(filepath.Dir(to), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
 			return nil, fmt.Errorf("failed to create parent directory for %s: %w", to, err)
 		}
 
@@ -1006,7 +1044,10 @@ func (a *App) ExecuteFileOperations(operations []FileOperation, copyMode bool) (
 			if entries, err := os.ReadDir(to); err == nil {
 				for _, entry := range entries {
 					if !entry.IsDir() {
-						filePairs = append(filePairs, FilePair{From: entry.Name(), To: entry.Name()})
+						filePairs = append(
+							filePairs,
+							FilePair{From: entry.Name(), To: entry.Name()},
+						)
 					}
 				}
 			}
@@ -1043,7 +1084,7 @@ func appendUndoLog(logPath string, newEntries []MoveLogEntry) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(logPath, data, 0644)
+	return os.WriteFile(logPath, data, 0o644)
 }
 
 // execCopyDir recursively copies src directory tree into dst.
@@ -1283,7 +1324,10 @@ func (a *App) GetRenamePresets() []map[string]string {
 		{"name": "Author - Series - Title", "template": "{author} - {series} - {title}"},
 		{"name": "Track - Author - Title", "template": "{track} - {author} - {title}"},
 		{"name": "Series Number - Title", "template": "{series_number} - {title}"},
-		{"name": "Author - Series #Number - Title", "template": "{author} - {series} #{series_number} - {title}"},
+		{
+			"name":     "Author - Series #Number - Title",
+			"template": "{author} - {series} #{series_number} - {title}",
+		},
 	}
 }
 
@@ -1307,8 +1351,17 @@ func (a *App) Greet(name string) string {
 }
 
 // OrganizeFiles executes the organization process for selected files ONLY
-func (a *App) OrganizeFiles(selectedPaths []string, outputDir string, copyMode bool) (map[string]interface{}, error) {
-	a.log("Starting organization: %d files selected, output=%s, copy=%v", len(selectedPaths), outputDir, copyMode)
+func (a *App) OrganizeFiles(
+	selectedPaths []string,
+	outputDir string,
+	copyMode bool,
+) (map[string]interface{}, error) {
+	a.log(
+		"Starting organization: %d files selected, output=%s, copy=%v",
+		len(selectedPaths),
+		outputDir,
+		copyMode,
+	)
 
 	if len(selectedPaths) == 0 {
 		return nil, fmt.Errorf("no files selected")

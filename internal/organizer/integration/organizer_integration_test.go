@@ -6,10 +6,10 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/jeeftor/audiobook-organizer/internal/organizer"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // testEnvironment holds the test environment setup
@@ -35,7 +35,7 @@ func setupTestEnvironment(t *testing.T, files []testFile) *testEnvironment {
 
 	// Create input and output directories
 	for _, dir := range []string{inputDir, outputDir} {
-		err = os.MkdirAll(dir, 0755)
+		err = os.MkdirAll(dir, 0o755)
 		if err != nil {
 			os.RemoveAll(tempDir)
 			t.Fatalf("Failed to create directory %s: %v", dir, err)
@@ -45,7 +45,7 @@ func setupTestEnvironment(t *testing.T, files []testFile) *testEnvironment {
 	// Create test files
 	for _, file := range files {
 		filePath := filepath.Join(inputDir, file.Name)
-		err = os.WriteFile(filePath, []byte(file.Content), 0644)
+		err = os.WriteFile(filePath, []byte(file.Content), 0o644)
 		if err != nil {
 			os.RemoveAll(tempDir)
 			t.Fatalf("Failed to create test file %s: %v", filePath, err)

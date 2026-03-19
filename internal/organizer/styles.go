@@ -2,6 +2,7 @@ package organizer
 
 import (
 	"fmt"
+
 	"github.com/charmbracelet/lipgloss"
 )
 

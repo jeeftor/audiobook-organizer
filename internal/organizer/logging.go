@@ -31,7 +31,7 @@ func (o *Organizer) saveLog() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(logPath, data, 0644)
+	return os.WriteFile(logPath, data, 0o644)
 }
 
 func (o *Organizer) undoMoves() error {
@@ -48,7 +48,7 @@ func (o *Organizer) undoMoves() error {
 
 	for _, entry := range entries {
 		PrintYellow("↩️  Restoring files from %s to %s", entry.TargetPath, entry.SourcePath)
-		if err := os.MkdirAll(entry.SourcePath, 0755); err != nil {
+		if err := os.MkdirAll(entry.SourcePath, 0o755); err != nil {
 			PrintRed("❌ Error creating source directory: %v", err)
 			continue
 		}
@@ -135,17 +135,35 @@ func (o *Organizer) printSummary(startTime time.Time) {
 // Style definitions that work both normally and in forced dark mode
 var (
 	// Path component styles - these will be updated by updateStylesForDarkMode if needed
-	AuthorStyle      = lipgloss.NewStyle().Background(lipgloss.Color("#FF0000")).Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
-	SeriesStyle      = lipgloss.NewStyle().Background(lipgloss.Color("#0000FF")).Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
-	TitleStyle       = lipgloss.NewStyle().Background(lipgloss.Color("#00FF00")).Foreground(lipgloss.Color("#000000")).Bold(true)
-	TrackNumberStyle = lipgloss.NewStyle().Background(lipgloss.Color("#FF00FF")).Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
-	FilenameStyle    = lipgloss.NewStyle().Background(lipgloss.Color("#FFFF00")).Foreground(lipgloss.Color("#000000")).Bold(true)
+	AuthorStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color("#FF0000")).
+			Foreground(lipgloss.Color("#FFFFFF")).
+			Bold(true)
+	SeriesStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color("#0000FF")).
+			Foreground(lipgloss.Color("#FFFFFF")).
+			Bold(true)
+	TitleStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color("#00FF00")).
+			Foreground(lipgloss.Color("#000000")).
+			Bold(true)
+	TrackNumberStyle = lipgloss.NewStyle().
+				Background(lipgloss.Color("#FF00FF")).
+				Foreground(lipgloss.Color("#FFFFFF")).
+				Bold(true)
+	FilenameStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color("#FFFF00")).
+			Foreground(lipgloss.Color("#000000")).
+			Bold(true)
 
 	// Metadata display styles
 	IconStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FFFF"))
 	FieldNameStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
 	NormalTextStyle = lipgloss.NewStyle() // Default terminal color
-	TargetPathStyle = lipgloss.NewStyle().Background(lipgloss.Color("#00FFFF")).Foreground(lipgloss.Color("#000000")).Bold(true)
+	TargetPathStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color("#00FFFF")).
+			Foreground(lipgloss.Color("#000000")).
+			Bold(true)
 
 	// File type styles
 	AudioFileStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00"))

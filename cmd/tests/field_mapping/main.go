@@ -73,7 +73,7 @@ func main() {
 	// Create output directory if it doesn't exist
 	outputDir := "./test_output"
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
-		os.MkdirAll(outputDir, 0755)
+		os.MkdirAll(outputDir, 0o755)
 	}
 
 	// Create process model with default mapping

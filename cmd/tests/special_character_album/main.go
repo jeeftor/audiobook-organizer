@@ -21,33 +21,45 @@ func main() {
 	os.RemoveAll(outputDir)
 
 	// Create test directories
-	os.MkdirAll(inputDir, 0755)
-	os.MkdirAll(outputDir, 0755)
+	os.MkdirAll(inputDir, 0o755)
+	os.MkdirAll(outputDir, 0o755)
 
 	// Create test album directories
 	fmt.Println("Setting up test albums with special characters...")
 
 	// Create album with accented characters
 	accentedDir := filepath.Join(inputDir, "accented_album")
-	os.MkdirAll(accentedDir, 0755)
+	os.MkdirAll(accentedDir, 0o755)
 
 	// Copy test MP3 files from testdata directory - using emoji files
 	copyTestFile(
-		filepath.Join("testdata", "mp3track", "strange_audiobook_31_Series_With_Emoji____Audiobook_With_Emoji____Author_With_Emoji_____Tr1.mp3"),
+		filepath.Join(
+			"testdata",
+			"mp3track",
+			"strange_audiobook_31_Series_With_Emoji____Audiobook_With_Emoji____Author_With_Emoji_____Tr1.mp3",
+		),
 		filepath.Join(accentedDir, "01 - Ångström & Café.mp3"),
 	)
 	copyTestFile(
-		filepath.Join("testdata", "mp3track", "strange_audiobook_32_Series_With_Emoji____Audiobook_With_Emoji____Author_With_Emoji_____Tr2.mp3"),
+		filepath.Join(
+			"testdata",
+			"mp3track",
+			"strange_audiobook_32_Series_With_Emoji____Audiobook_With_Emoji____Author_With_Emoji_____Tr2.mp3",
+		),
 		filepath.Join(accentedDir, "02 - Ångström & Café.mp3"),
 	)
 	copyTestFile(
-		filepath.Join("testdata", "mp3track", "strange_audiobook_33_Series_With_Emoji____Audiobook_With_Emoji____Author_With_Emoji_____Tr3.mp3"),
+		filepath.Join(
+			"testdata",
+			"mp3track",
+			"strange_audiobook_33_Series_With_Emoji____Audiobook_With_Emoji____Author_With_Emoji_____Tr3.mp3",
+		),
 		filepath.Join(accentedDir, "03 - Ångström & Café.mp3"),
 	)
 
 	// Create album with special symbols
 	symbolsDir := filepath.Join(inputDir, "symbols_album")
-	os.MkdirAll(symbolsDir, 0755)
+	os.MkdirAll(symbolsDir, 0o755)
 
 	copyTestFile(
 		filepath.Join("testdata", "mp3flat", "charlesdexterward_01_lovecraft_64kb.mp3"),
@@ -95,7 +107,6 @@ func main() {
 		fmt.Printf("- %s\n", rel)
 		return nil
 	})
-
 	if err != nil {
 		fmt.Printf("Error walking output directory: %v\n", err)
 	}

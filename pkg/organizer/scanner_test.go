@@ -44,7 +44,7 @@ func TestScanForAudiobooks_ErrorCases(t *testing.T) {
 			errMsg:  "path is not a directory",
 			setupFunc: func() string {
 				tmpFile := filepath.Join(t.TempDir(), "testfile.txt")
-				os.WriteFile(tmpFile, []byte("test"), 0644)
+				os.WriteFile(tmpFile, []byte("test"), 0o644)
 				return tmpFile
 			},
 		},
@@ -66,7 +66,11 @@ func TestScanForAudiobooks_ErrorCases(t *testing.T) {
 
 			if err != nil && tt.errMsg != "" {
 				if !contains(err.Error(), tt.errMsg) {
-					t.Errorf("ScanForAudiobooks() error = %v, want error containing %s", err, tt.errMsg)
+					t.Errorf(
+						"ScanForAudiobooks() error = %v, want error containing %s",
+						err,
+						tt.errMsg,
+					)
 				}
 			}
 		})
@@ -86,17 +90,24 @@ func TestScanForAudiobooks_EmptyDirectory(t *testing.T) {
 	}
 
 	if len(results) != 0 {
-		t.Errorf("ScanForAudiobooks() returned %d results, expected 0 for empty directory", len(results))
+		t.Errorf(
+			"ScanForAudiobooks() returned %d results, expected 0 for empty directory",
+			len(results),
+		)
 	}
 }
 
 func TestScanForAudiobooks_SkipsOutputDirectory(t *testing.T) {
 	tmpDir := t.TempDir()
 	outputDir := filepath.Join(tmpDir, "output")
-	os.MkdirAll(outputDir, 0755)
+	os.MkdirAll(outputDir, 0o755)
 
 	// Create a fake audiobook in the output directory (should be skipped)
-	os.WriteFile(filepath.Join(outputDir, "metadata.json"), []byte(`{"title":"Should Be Skipped"}`), 0644)
+	os.WriteFile(
+		filepath.Join(outputDir, "metadata.json"),
+		[]byte(`{"title":"Should Be Skipped"}`),
+		0o644,
+	)
 
 	config := &OrganizerConfig{
 		OutputDir:    outputDir,
@@ -110,7 +121,10 @@ func TestScanForAudiobooks_SkipsOutputDirectory(t *testing.T) {
 
 	// Should find nothing because output dir is skipped
 	if len(results) != 0 {
-		t.Errorf("ScanForAudiobooks() returned %d results, expected 0 (output dir should be skipped)", len(results))
+		t.Errorf(
+			"ScanForAudiobooks() returned %d results, expected 0 (output dir should be skipped)",
+			len(results),
+		)
 	}
 }
 
@@ -161,7 +175,7 @@ func TestScanSingleFile_ErrorCases(t *testing.T) {
 			errMsg:  "unsupported file type",
 			setupFunc: func() string {
 				tmpFile := filepath.Join(t.TempDir(), "test.txt")
-				os.WriteFile(tmpFile, []byte("test"), 0644)
+				os.WriteFile(tmpFile, []byte("test"), 0o644)
 				return tmpFile
 			},
 		},
@@ -183,7 +197,11 @@ func TestScanSingleFile_ErrorCases(t *testing.T) {
 
 			if err != nil && tt.errMsg != "" {
 				if !contains(err.Error(), tt.errMsg) {
-					t.Errorf("ScanSingleFile() error = %v, want error containing %s", err, tt.errMsg)
+					t.Errorf(
+						"ScanSingleFile() error = %v, want error containing %s",
+						err,
+						tt.errMsg,
+					)
 				}
 			}
 		})
@@ -306,7 +324,10 @@ func TestGetMetadataProviderForFile(t *testing.T) {
 			if !tt.wantErr {
 				// Just verify we got a provider (type checking is tricky with interfaces)
 				if provider == nil {
-					t.Errorf("getMetadataProviderForFile() returned nil provider, expected %s", tt.wantType)
+					t.Errorf(
+						"getMetadataProviderForFile() returned nil provider, expected %s",
+						tt.wantType,
+					)
 				}
 			}
 		})
@@ -315,7 +336,8 @@ func TestGetMetadataProviderForFile(t *testing.T) {
 
 // Helper function to check if a string contains a substring
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || (len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
+	return len(s) >= len(substr) &&
+		(s == substr || len(substr) == 0 || (len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
 }
 
 func findSubstring(s, substr string) bool {

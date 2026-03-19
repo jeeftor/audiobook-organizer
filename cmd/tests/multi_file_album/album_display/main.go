@@ -20,8 +20,8 @@ func main() {
 	singleDir := filepath.Join(testDir, "single")
 
 	// Create test directories
-	os.MkdirAll(albumDir, 0755)
-	os.MkdirAll(singleDir, 0755)
+	os.MkdirAll(albumDir, 0o755)
+	os.MkdirAll(singleDir, 0o755)
 
 	// Create test files (just creating empty files for demonstration)
 	track1 := filepath.Join(albumDir, "track01.mp3")
@@ -114,7 +114,11 @@ func main() {
 		fmt.Printf("  Title: %s\n", title)
 
 		// Simulate the Description method
-		description := fmt.Sprintf("%s by %s", book.Metadata.Title, book.Metadata.GetFirstAuthor("Unknown"))
+		description := fmt.Sprintf(
+			"%s by %s",
+			book.Metadata.Title,
+			book.Metadata.GetFirstAuthor("Unknown"),
+		)
 		if book.IsPartOfAlbum {
 			description = fmt.Sprintf("%s | Album: %s | Track %d of %d",
 				description, book.AlbumName, book.TrackNumber, book.TotalTracks)

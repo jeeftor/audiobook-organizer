@@ -108,15 +108,19 @@ func init() {
 	// Basic flags
 	metadataCmd.Flags().StringP("dir", "d", "", "Directory to scan for audiobooks (required)")
 	metadataCmd.Flags().String("input", "", "Alias for --dir")
-	metadataCmd.Flags().Bool("use-embedded-metadata", false, "Force use of embedded metadata (ignore metadata.json)")
+	metadataCmd.Flags().
+		Bool("use-embedded-metadata", false, "Force use of embedded metadata (ignore metadata.json)")
 	metadataCmd.Flags().Bool("flat", false, "Flat mode (implies --use-embedded-metadata)")
 	metadataCmd.Flags().BoolP("verbose", "v", false, "Verbose output")
 
 	// Field mapping flags (for metadata.json customization)
 	metadataCmd.Flags().String("title-field", "", "Field to use for title (e.g., 'title', 'album')")
-	metadataCmd.Flags().String("series-field", "", "Field to use for series (e.g., 'series', 'album')")
-	metadataCmd.Flags().String("author-fields", "", "Comma-separated fields for authors (e.g., 'artist,album_artist')")
-	metadataCmd.Flags().String("track-field", "", "Field to use for track number (e.g., 'track', 'track_number')")
+	metadataCmd.Flags().
+		String("series-field", "", "Field to use for series (e.g., 'series', 'album')")
+	metadataCmd.Flags().
+		String("author-fields", "", "Comma-separated fields for authors (e.g., 'artist,album_artist')")
+	metadataCmd.Flags().
+		String("track-field", "", "Field to use for track number (e.g., 'track', 'track_number')")
 
 	// Bind to viper
 	viper.BindPFlag("dir", metadataCmd.Flags().Lookup("dir"))

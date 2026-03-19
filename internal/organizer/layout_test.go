@@ -24,7 +24,12 @@ func TestCalculateTargetPathWithSeriesNumber(t *testing.T) {
 					"series_index": 1.0,
 				},
 			},
-			expected: filepath.Join("testbase", "Brandon Sanderson", "Mistborn", "#1 - The Final Empire"),
+			expected: filepath.Join(
+				"testbase",
+				"Brandon Sanderson",
+				"Mistborn",
+				"#1 - The Final Empire",
+			),
 		},
 		{
 			name:   "author-series-title-number with series string",
@@ -35,7 +40,12 @@ func TestCalculateTargetPathWithSeriesNumber(t *testing.T) {
 				Series:  []string{"Mistborn #2"},
 				RawData: map[string]interface{}{},
 			},
-			expected: filepath.Join("testbase", "Brandon Sanderson", "Mistborn", "#2 - The Well of Ascension"),
+			expected: filepath.Join(
+				"testbase",
+				"Brandon Sanderson",
+				"Mistborn",
+				"#2 - The Well of Ascension",
+			),
 		},
 		{
 			name:   "author-series-title-number with decimal series_index",
@@ -48,7 +58,12 @@ func TestCalculateTargetPathWithSeriesNumber(t *testing.T) {
 					"series_index": 0.5,
 				},
 			},
-			expected: filepath.Join("testbase", "Brandon Sanderson", "Mistborn", "#0.5 - The Eleventh Metal"),
+			expected: filepath.Join(
+				"testbase",
+				"Brandon Sanderson",
+				"Mistborn",
+				"#0.5 - The Eleventh Metal",
+			),
 		},
 		{
 			name:   "author-series-title-number without series number",
@@ -59,7 +74,12 @@ func TestCalculateTargetPathWithSeriesNumber(t *testing.T) {
 				Series:  []string{"Mistborn"},
 				RawData: map[string]interface{}{},
 			},
-			expected: filepath.Join("testbase", "Brandon Sanderson", "Mistborn", "The Hero of Ages"),
+			expected: filepath.Join(
+				"testbase",
+				"Brandon Sanderson",
+				"Mistborn",
+				"The Hero of Ages",
+			),
 		},
 		{
 			name:   "author-series-title-number without series",
@@ -83,7 +103,12 @@ func TestCalculateTargetPathWithSeriesNumber(t *testing.T) {
 					"series_index": 1.0,
 				},
 			},
-			expected: filepath.Join("testbase", "Brandon Sanderson", "Mistborn", "The Final Empire"),
+			expected: filepath.Join(
+				"testbase",
+				"Brandon Sanderson",
+				"Mistborn",
+				"The Final Empire",
+			),
 		},
 		{
 			name:   "author-series-title-number with large series number",
@@ -94,7 +119,12 @@ func TestCalculateTargetPathWithSeriesNumber(t *testing.T) {
 				Series:  []string{"The Expanse #1"},
 				RawData: map[string]interface{}{},
 			},
-			expected: filepath.Join("testbase", "James S.A. Corey", "The Expanse", "#1 - Leviathan Wakes"),
+			expected: filepath.Join(
+				"testbase",
+				"James S.A. Corey",
+				"The Expanse",
+				"#1 - Leviathan Wakes",
+			),
 		},
 		{
 			name:   "author-series-title-number with double-digit series number",
@@ -107,7 +137,12 @@ func TestCalculateTargetPathWithSeriesNumber(t *testing.T) {
 					"series_index": 12.0,
 				},
 			},
-			expected: filepath.Join("testbase", "James S.A. Corey", "The Expanse", "#12 - Tiamat's Wrath"),
+			expected: filepath.Join(
+				"testbase",
+				"James S.A. Corey",
+				"The Expanse",
+				"#12 - Tiamat's Wrath",
+			),
 		},
 		{
 			name:   "author-series-title-number with multiple authors",
@@ -118,7 +153,12 @@ func TestCalculateTargetPathWithSeriesNumber(t *testing.T) {
 				Series:  []string{"The Talisman #1"},
 				RawData: map[string]interface{}{},
 			},
-			expected: filepath.Join("testbase", "Stephen King,Peter Straub", "The Talisman", "#1 - The Talisman"),
+			expected: filepath.Join(
+				"testbase",
+				"Stephen King,Peter Straub",
+				"The Talisman",
+				"#1 - The Talisman",
+			),
 		},
 		{
 			name:   "author-series-title-number with special characters in title",
@@ -131,7 +171,12 @@ func TestCalculateTargetPathWithSeriesNumber(t *testing.T) {
 					"series_index": 1.0,
 				},
 			},
-			expected: filepath.Join("testbase", "C.S. Lewis", "The Chronicles of Narnia", "#1 - The Magician's Nephew"),
+			expected: filepath.Join(
+				"testbase",
+				"C.S. Lewis",
+				"The Chronicles of Narnia",
+				"#1 - The Magician's Nephew",
+			),
 		},
 		{
 			name:   "author-series-title-number with invalid series marker",
@@ -377,7 +422,12 @@ func TestLayoutWithSanitization(t *testing.T) {
 					"series_index": 1.0,
 				},
 			},
-			expected: filepath.Join("testbase", "Test Author", "Test Series", "#1 - Book_ The Beginning"),
+			expected: filepath.Join(
+				"testbase",
+				"Test Author",
+				"Test Series",
+				"#1 - Book_ The Beginning",
+			),
 		},
 		{
 			name:   "sanitize slashes in numbered title",
@@ -438,7 +488,12 @@ func TestLayoutWithOutputDir(t *testing.T) {
 					"series_index": 1.0,
 				},
 			},
-			expected: filepath.Join("/output/books", "Test Author", "Test Series", "#1 - Test Book"),
+			expected: filepath.Join(
+				"/output/books",
+				"Test Author",
+				"Test Series",
+				"#1 - Test Book",
+			),
 		},
 		{
 			name:      "output dir with regular layout",
@@ -497,12 +552,22 @@ func TestAllLayoutOptions(t *testing.T) {
 			expected: filepath.Join("testbase", "Brandon Sanderson", "The Final Empire"),
 		},
 		{
-			layout:   "author-series-title",
-			expected: filepath.Join("testbase", "Brandon Sanderson", "Mistborn", "The Final Empire"),
+			layout: "author-series-title",
+			expected: filepath.Join(
+				"testbase",
+				"Brandon Sanderson",
+				"Mistborn",
+				"The Final Empire",
+			),
 		},
 		{
-			layout:   "author-series-title-number",
-			expected: filepath.Join("testbase", "Brandon Sanderson", "Mistborn", "#1 - The Final Empire"),
+			layout: "author-series-title-number",
+			expected: filepath.Join(
+				"testbase",
+				"Brandon Sanderson",
+				"Mistborn",
+				"#1 - The Final Empire",
+			),
 		},
 		{
 			layout:   "series-title",
@@ -513,8 +578,13 @@ func TestAllLayoutOptions(t *testing.T) {
 			expected: filepath.Join("testbase", "Mistborn", "#1 - The Final Empire"),
 		},
 		{
-			layout:   "", // Default should be author-series-title
-			expected: filepath.Join("testbase", "Brandon Sanderson", "Mistborn", "The Final Empire"),
+			layout: "", // Default should be author-series-title
+			expected: filepath.Join(
+				"testbase",
+				"Brandon Sanderson",
+				"Mistborn",
+				"The Final Empire",
+			),
 		},
 		{
 			layout:   "unknown-layout", // Unknown should default to author-title
@@ -534,7 +604,12 @@ func TestAllLayoutOptions(t *testing.T) {
 
 			result := lc.CalculateTargetPath(metadata)
 			if result != tt.expected {
-				t.Errorf("Layout %q: CalculateTargetPath() = %v, want %v", tt.layout, result, tt.expected)
+				t.Errorf(
+					"Layout %q: CalculateTargetPath() = %v, want %v",
+					tt.layout,
+					result,
+					tt.expected,
+				)
 			}
 		})
 	}

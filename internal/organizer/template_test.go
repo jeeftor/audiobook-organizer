@@ -76,7 +76,11 @@ func TestParseTemplate(t *testing.T) {
 			}
 
 			if len(tmpl.tokens) != tt.wantNumTokens {
-				t.Errorf("ParseTemplate() got %d tokens, want %d", len(tmpl.tokens), tt.wantNumTokens)
+				t.Errorf(
+					"ParseTemplate() got %d tokens, want %d",
+					len(tmpl.tokens),
+					tt.wantNumTokens,
+				)
 			}
 		})
 	}
@@ -260,7 +264,6 @@ func TestTemplateWithAuthorFormatting(t *testing.T) {
 
 			renderer := NewTemplateRenderer(tmpl, NewAuthorFormatter(tt.authorFormat))
 			got, err := renderer.Render(tt.metadata)
-
 			if err != nil {
 				t.Errorf("Render() unexpected error: %v", err)
 				return

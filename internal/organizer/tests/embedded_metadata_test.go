@@ -17,7 +17,10 @@ func TestEmbeddedMetadataFlag(t *testing.T) {
 	// Create some test books with metadata
 	books := []models.AudioBook{
 		{
-			Path: filepath.Join(testDataDir, "strange_audiobook_10_Epic_Saga__Adventure__Quest___Glory__John_Smith.m4b"),
+			Path: filepath.Join(
+				testDataDir,
+				"strange_audiobook_10_Epic_Saga__Adventure__Quest___Glory__John_Smith.m4b",
+			),
 			Metadata: organizer.Metadata{
 				Title:   "Epic Saga: Adventure, Quest & Glory",
 				Authors: []string{"John Smith"},
@@ -25,7 +28,10 @@ func TestEmbeddedMetadataFlag(t *testing.T) {
 			},
 		},
 		{
-			Path: filepath.Join(testDataDir, "strange_audiobook_14_Tales_of__ngstr_m___Caf__Chronicles_Mar_a_L_pez_Tr1.m4b"),
+			Path: filepath.Join(
+				testDataDir,
+				"strange_audiobook_14_Tales_of__ngstr_m___Caf__Chronicles_Mar_a_L_pez_Tr1.m4b",
+			),
 			Metadata: organizer.Metadata{
 				Title:       "Tales of Ångström & Café Chronicles",
 				Authors:     []string{"María López"},
@@ -69,9 +75,14 @@ func testEmbeddedMetadata(t *testing.T, books []models.AudioBook, useEmbeddedMet
 			// Verify that the output path is correct based on the embedded metadata flag
 			if useEmbeddedMetadata {
 				// When embedded metadata is enabled, the path should use the metadata title
-				if !strings.Contains(outputPath, book.Metadata.Title) && !strings.Contains(outputPath, fileTitle) {
-					t.Errorf("Expected output path to contain metadata title '%s' or filename '%s', but got '%s'",
-						book.Metadata.Title, fileTitle, outputPath)
+				if !strings.Contains(outputPath, book.Metadata.Title) &&
+					!strings.Contains(outputPath, fileTitle) {
+					t.Errorf(
+						"Expected output path to contain metadata title '%s' or filename '%s', but got '%s'",
+						book.Metadata.Title,
+						fileTitle,
+						outputPath,
+					)
 				}
 			} else {
 				// When embedded metadata is disabled, the path should use the filename

@@ -49,10 +49,30 @@ var (
 
 // envAliases maps config keys to their possible environment variable names
 var envAliases = map[string][]string{
-	"dir":              {"AO_DIR", "AO_INPUT", "AUDIOBOOK_ORGANIZER_DIR", "AUDIOBOOK_ORGANIZER_INPUT"},
-	"input":            {"AO_DIR", "AO_INPUT", "AUDIOBOOK_ORGANIZER_DIR", "AUDIOBOOK_ORGANIZER_INPUT"},
-	"out":              {"AO_OUT", "AO_OUTPUT", "AUDIOBOOK_ORGANIZER_OUT", "AUDIOBOOK_ORGANIZER_OUTPUT"},
-	"output":           {"AO_OUT", "AO_OUTPUT", "AUDIOBOOK_ORGANIZER_OUT", "AUDIOBOOK_ORGANIZER_OUTPUT"},
+	"dir": {
+		"AO_DIR",
+		"AO_INPUT",
+		"AUDIOBOOK_ORGANIZER_DIR",
+		"AUDIOBOOK_ORGANIZER_INPUT",
+	},
+	"input": {
+		"AO_DIR",
+		"AO_INPUT",
+		"AUDIOBOOK_ORGANIZER_DIR",
+		"AUDIOBOOK_ORGANIZER_INPUT",
+	},
+	"out": {
+		"AO_OUT",
+		"AO_OUTPUT",
+		"AUDIOBOOK_ORGANIZER_OUT",
+		"AUDIOBOOK_ORGANIZER_OUTPUT",
+	},
+	"output": {
+		"AO_OUT",
+		"AO_OUTPUT",
+		"AUDIOBOOK_ORGANIZER_OUT",
+		"AUDIOBOOK_ORGANIZER_OUTPUT",
+	},
 	"replace_space":    {"AO_REPLACE_SPACE", "AUDIOBOOK_ORGANIZER_REPLACE_SPACE"},
 	"verbose":          {"AO_VERBOSE", "AUDIOBOOK_ORGANIZER_VERBOSE"},
 	dryRunKey:          {"AO_DRY_RUN", "AUDIOBOOK_ORGANIZER_DRY_RUN"},
@@ -212,32 +232,49 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	// Config file flag
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.audiobook-organizer.yaml)")
+	rootCmd.PersistentFlags().
+		StringVar(&cfgFile, "config", "", "config file (default is $HOME/.audiobook-organizer.yaml)")
 
 	// Persistent flags (available to all subcommands)
-	rootCmd.PersistentFlags().StringVar(&inputDir, "dir", "", "Base directory to scan (alias for --input)")
-	rootCmd.PersistentFlags().StringVar(&inputDir, "input", "", "Base directory to scan (alias for --dir)")
-	rootCmd.PersistentFlags().StringVar(&outputDir, "out", "", "Output directory (alias for --output)")
-	rootCmd.PersistentFlags().StringVar(&outputDir, "output", "", "Output directory (alias for --out)")
+	rootCmd.PersistentFlags().
+		StringVar(&inputDir, "dir", "", "Base directory to scan (alias for --input)")
+	rootCmd.PersistentFlags().
+		StringVar(&inputDir, "input", "", "Base directory to scan (alias for --dir)")
+	rootCmd.PersistentFlags().
+		StringVar(&outputDir, "out", "", "Output directory (alias for --output)")
+	rootCmd.PersistentFlags().
+		StringVar(&outputDir, "output", "", "Output directory (alias for --out)")
 	rootCmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Verbose output")
-	rootCmd.PersistentFlags().BoolVar(&dryRun, dryRunKey, false, "Show what would happen without making changes")
-	rootCmd.PersistentFlags().BoolVar(&useEmbeddedMetadata, useEmbeddedMetaKey, false, "Use metadata embedded in EPUB files if metadata.json is not found")
-	rootCmd.PersistentFlags().BoolVar(&flat, "flat", false, "Process files in a flat directory structure (automatically enables --use-embedded-metadata)")
-	rootCmd.PersistentFlags().BoolVar(&skipErrors, "skip-errors", false, "Skip files with missing/invalid metadata instead of stopping")
+	rootCmd.PersistentFlags().
+		BoolVar(&dryRun, dryRunKey, false, "Show what would happen without making changes")
+	rootCmd.PersistentFlags().
+		BoolVar(&useEmbeddedMetadata, useEmbeddedMetaKey, false, "Use metadata embedded in EPUB files if metadata.json is not found")
+	rootCmd.PersistentFlags().
+		BoolVar(&flat, "flat", false, "Process files in a flat directory structure (automatically enables --use-embedded-metadata)")
+	rootCmd.PersistentFlags().
+		BoolVar(&skipErrors, "skip-errors", false, "Skip files with missing/invalid metadata instead of stopping")
 
 	// Local flags (only for root command)
 	rootCmd.Flags().StringVar(&replaceSpace, "replace_space", "", "Character to replace spaces")
 	rootCmd.Flags().BoolVar(&undo, "undo", false, "Restore files to their original locations")
-	rootCmd.Flags().BoolVar(&prompt, "prompt", false, "Prompt for confirmation before moving each book")
-	rootCmd.Flags().BoolVar(&removeEmpty, removeEmptyKey, false, "Remove empty directories after moving files")
-	rootCmd.Flags().StringVarP(&layout, "layout", "l", "author-series-title", "Directory structure layout:\n  - author-series-title:        Author/Series/Title/ (default)\n  - author-series-title-number: Author/Series/#1 - Title/ (include series number in title)\n  - author-title:               Author/Title/ (ignore series)\n  - author-only:                Author/ (flatten all books)")
+	rootCmd.Flags().
+		BoolVar(&prompt, "prompt", false, "Prompt for confirmation before moving each book")
+	rootCmd.Flags().
+		BoolVar(&removeEmpty, removeEmptyKey, false, "Remove empty directories after moving files")
+	rootCmd.Flags().
+		StringVarP(&layout, "layout", "l", "author-series-title", "Directory structure layout:\n  - author-series-title:        Author/Series/Title/ (default)\n  - author-series-title-number: Author/Series/#1 - Title/ (include series number in title)\n  - author-title:               Author/Title/ (ignore series)\n  - author-only:                Author/ (flatten all books)")
 
 	// Field mapping flags (persistent for all commands)
-	rootCmd.PersistentFlags().StringVar(&titleField, titleFieldKey, "", "Field to use as title (e.g., 'album', 'title', 'track_title')")
-	rootCmd.PersistentFlags().StringVar(&seriesField, seriesFieldKey, "", "Field to use as series (e.g., 'series', 'album')")
-	rootCmd.PersistentFlags().StringVar(&authorFields, authorFieldsKey, "", "Comma-separated list of fields to try for author (e.g., 'authors,narrators,album_artist,artist')")
-	rootCmd.PersistentFlags().StringVar(&trackField, trackFieldKey, "", "Field to use for track number (e.g., 'track', 'track_number', 'trck', 'trk')")
-	rootCmd.PersistentFlags().StringVar(&discField, discFieldKey, "", "Field to use for disc number (e.g., 'disc', 'discnumber', 'disk', 'tpos')")
+	rootCmd.PersistentFlags().
+		StringVar(&titleField, titleFieldKey, "", "Field to use as title (e.g., 'album', 'title', 'track_title')")
+	rootCmd.PersistentFlags().
+		StringVar(&seriesField, seriesFieldKey, "", "Field to use as series (e.g., 'series', 'album')")
+	rootCmd.PersistentFlags().
+		StringVar(&authorFields, authorFieldsKey, "", "Comma-separated list of fields to try for author (e.g., 'authors,narrators,album_artist,artist')")
+	rootCmd.PersistentFlags().
+		StringVar(&trackField, trackFieldKey, "", "Field to use for track number (e.g., 'track', 'track_number', 'trck', 'trk')")
+	rootCmd.PersistentFlags().
+		StringVar(&discField, discFieldKey, "", "Field to use for disc number (e.g., 'disc', 'discnumber', 'disk', 'tpos')")
 
 	// Bind persistent flags to viper
 	viper.BindPFlag("dir", rootCmd.PersistentFlags().Lookup("dir"))

@@ -324,7 +324,11 @@ func verifyPathSanitization(t *testing.T, path string, replaceSpace string) {
 
 		// Check for space replacement if configured
 		if replaceSpace != "" && strings.Contains(component, " ") {
-			t.Errorf("Path component %q contains spaces when replace_space=%q", component, replaceSpace)
+			t.Errorf(
+				"Path component %q contains spaces when replace_space=%q",
+				component,
+				replaceSpace,
+			)
 		}
 	}
 }

@@ -29,7 +29,11 @@ type PreviewModel struct {
 }
 
 // NewPreviewModel creates a new preview model
-func NewPreviewModel(books []AudioBook, config map[string]string, fieldMapping organizer.FieldMapping) *PreviewModel {
+func NewPreviewModel(
+	books []AudioBook,
+	config map[string]string,
+	fieldMapping organizer.FieldMapping,
+) *PreviewModel {
 	m := &PreviewModel{
 		books:        books,
 		config:       config,

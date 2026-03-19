@@ -19,12 +19,12 @@ func main() {
 	os.RemoveAll(outputDir)
 
 	// Create test directories
-	os.MkdirAll(testDir, 0755)
-	os.MkdirAll(outputDir, 0755)
+	os.MkdirAll(testDir, 0o755)
+	os.MkdirAll(outputDir, 0o755)
 
 	// Create a test album with multiple MP3 files that have consistent metadata
 	albumDir := filepath.Join(testDir, "test_album")
-	os.MkdirAll(albumDir, 0755)
+	os.MkdirAll(albumDir, 0o755)
 
 	// Copy a controlled set of test MP3 files that we know have consistent metadata
 	sourceFiles := []string{
@@ -36,7 +36,7 @@ func main() {
 
 	// Create a second album with different metadata
 	album2Dir := filepath.Join(testDir, "test_album2")
-	os.MkdirAll(album2Dir, 0755)
+	os.MkdirAll(album2Dir, 0o755)
 
 	// Copy a second set of files with consistent metadata
 	sourceFiles2 := []string{
@@ -105,7 +105,6 @@ func listOutputFiles(dir string) {
 		}
 		return nil
 	})
-
 	if err != nil {
 		fmt.Printf("Error listing files: %v\n", err)
 	}
@@ -123,7 +122,7 @@ func copySelectedFiles(sourceDir, destDir string, fileNames []string) {
 			continue
 		}
 
-		err = os.WriteFile(destPath, data, 0644)
+		err = os.WriteFile(destPath, data, 0o644)
 		if err != nil {
 			fmt.Printf("Error writing file %s: %v\n", destPath, err)
 		} else {

@@ -3,8 +3,6 @@
 package integration
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/jeeftor/audiobook-organizer/internal/organizer"

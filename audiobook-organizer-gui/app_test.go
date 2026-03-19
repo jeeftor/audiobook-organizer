@@ -111,11 +111,17 @@ func TestApp_UpdateSettings(t *testing.T) {
 
 	// Verify settings were updated
 	if app.config.Layout != "author-only" {
-		t.Errorf("UpdateSettings() did not update Layout: got %s, want 'author-only'", app.config.Layout)
+		t.Errorf(
+			"UpdateSettings() did not update Layout: got %s, want 'author-only'",
+			app.config.Layout,
+		)
 	}
 
 	if app.config.ReplaceSpace != "_" {
-		t.Errorf("UpdateSettings() did not update ReplaceSpace: got %s, want '_'", app.config.ReplaceSpace)
+		t.Errorf(
+			"UpdateSettings() did not update ReplaceSpace: got %s, want '_'",
+			app.config.ReplaceSpace,
+		)
 	}
 
 	if !app.config.Verbose {
@@ -285,7 +291,7 @@ func TestApp_PreviewChanges_SetsConfig(t *testing.T) {
 
 	// Create a test audio file with metadata
 	testFile := filepath.Join(inputDir, "test.mp3")
-	if err := os.WriteFile(testFile, []byte("fake mp3"), 0644); err != nil {
+	if err := os.WriteFile(testFile, []byte("fake mp3"), 0o644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -494,19 +500,19 @@ func TestApp_UndoLastOperation_RestoresOriginalFilename(t *testing.T) {
 
 	// Create the source book directory that existed before organization
 	sourceBookDir := filepath.Join(inputDir, "BookA")
-	if err := os.MkdirAll(sourceBookDir, 0755); err != nil {
+	if err := os.MkdirAll(sourceBookDir, 0o755); err != nil {
 		t.Fatalf("failed to create source book dir: %v", err)
 	}
 
 	// Create the target book directory (where the file was moved to)
 	targetBookDir := filepath.Join(outputDir, "BookA")
-	if err := os.MkdirAll(targetBookDir, 0755); err != nil {
+	if err := os.MkdirAll(targetBookDir, 0o755); err != nil {
 		t.Fatalf("failed to create target book dir: %v", err)
 	}
 
 	// Create the renamed file in the target directory (this is "file.To")
 	renamedFile := filepath.Join(targetBookDir, "01 - original.mp3")
-	if err := os.WriteFile(renamedFile, []byte("fake audio"), 0644); err != nil {
+	if err := os.WriteFile(renamedFile, []byte("fake audio"), 0o644); err != nil {
 		t.Fatalf("failed to create renamed file: %v", err)
 	}
 
@@ -526,7 +532,7 @@ func TestApp_UndoLastOperation_RestoresOriginalFilename(t *testing.T) {
 		t.Fatalf("failed to marshal log entries: %v", err)
 	}
 	logPath := filepath.Join(outputDir, ".abook-org.log")
-	if err := os.WriteFile(logPath, logData, 0644); err != nil {
+	if err := os.WriteFile(logPath, logData, 0o644); err != nil {
 		t.Fatalf("failed to write log file: %v", err)
 	}
 
@@ -539,7 +545,11 @@ func TestApp_UndoLastOperation_RestoresOriginalFilename(t *testing.T) {
 	}
 
 	if result["success"] != true {
-		t.Errorf("UndoLastOperation() success = %v, want true; errors: %v", result["success"], result["errors"])
+		t.Errorf(
+			"UndoLastOperation() success = %v, want true; errors: %v",
+			result["success"],
+			result["errors"],
+		)
 	}
 
 	// The file must be restored to the source dir using the ORIGINAL name (From)
@@ -550,7 +560,10 @@ func TestApp_UndoLastOperation_RestoresOriginalFilename(t *testing.T) {
 
 	// The renamed file in the target dir must no longer exist
 	if _, err := os.Stat(renamedFile); !os.IsNotExist(err) {
-		t.Errorf("UndoLastOperation() left renamed file at %s; it should have been moved", renamedFile)
+		t.Errorf(
+			"UndoLastOperation() left renamed file at %s; it should have been moved",
+			renamedFile,
+		)
 	}
 }
 
@@ -568,7 +581,10 @@ func TestApp_UndoLastOperation_NoLogFile(t *testing.T) {
 	}
 
 	if !strings.Contains(err.Error(), "failed to read operation log") {
-		t.Errorf("UndoLastOperation() error = %q, want it to contain 'failed to read operation log'", err.Error())
+		t.Errorf(
+			"UndoLastOperation() error = %q, want it to contain 'failed to read operation log'",
+			err.Error(),
+		)
 	}
 }
 
@@ -690,8 +706,18 @@ func TestApp_GetBatchPreview_ReturnsItems(t *testing.T) {
 func TestApp_GetBatchPreview_EmptyIndicesReturnsEmpty(t *testing.T) {
 	app := NewApp()
 	lastScanResults = []organizer.Metadata{
-		{Title: "Book One", Authors: []string{"Author A"}, SourcePath: "/input/a.m4b", SourceType: "audio"},
-		{Title: "Book Two", Authors: []string{"Author B"}, SourcePath: "/input/b.m4b", SourceType: "audio"},
+		{
+			Title:      "Book One",
+			Authors:    []string{"Author A"},
+			SourcePath: "/input/a.m4b",
+			SourceType: "audio",
+		},
+		{
+			Title:      "Book Two",
+			Authors:    []string{"Author B"},
+			SourcePath: "/input/b.m4b",
+			SourceType: "audio",
+		},
 	}
 	t.Cleanup(func() { lastScanResults = nil })
 
@@ -700,7 +726,10 @@ func TestApp_GetBatchPreview_EmptyIndicesReturnsEmpty(t *testing.T) {
 		t.Fatalf("GetBatchPreview() unexpected error: %v", err)
 	}
 	if len(items) != 0 {
-		t.Errorf("GetBatchPreview() with empty indices = %d items, want 0 (not all books)", len(items))
+		t.Errorf(
+			"GetBatchPreview() with empty indices = %d items, want 0 (not all books)",
+			len(items),
+		)
 	}
 }
 
@@ -725,10 +754,10 @@ func TestApp_ExecuteFileOperations_MoveDirectory(t *testing.T) {
 
 	// Create a source book directory with an audio file
 	sourceDir := filepath.Join(inputDir, "book1")
-	if err := os.MkdirAll(sourceDir, 0755); err != nil {
+	if err := os.MkdirAll(sourceDir, 0o755); err != nil {
 		t.Fatalf("failed to create source dir: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(sourceDir, "audio.mp3"), []byte("fake audio"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(sourceDir, "audio.mp3"), []byte("fake audio"), 0o644); err != nil {
 		t.Fatalf("failed to create audio file: %v", err)
 	}
 
@@ -764,10 +793,10 @@ func TestApp_ExecuteFileOperations_CopyDirectory(t *testing.T) {
 	outputDir := t.TempDir()
 
 	sourceDir := filepath.Join(inputDir, "book1")
-	if err := os.MkdirAll(sourceDir, 0755); err != nil {
+	if err := os.MkdirAll(sourceDir, 0o755); err != nil {
 		t.Fatalf("failed to create source dir: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(sourceDir, "audio.mp3"), []byte("fake audio"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(sourceDir, "audio.mp3"), []byte("fake audio"), 0o644); err != nil {
 		t.Fatalf("failed to create audio file: %v", err)
 	}
 
@@ -815,10 +844,10 @@ func TestApp_ExecuteFileOperations_WritesUndoLog(t *testing.T) {
 	outputDir := t.TempDir()
 
 	sourceDir := filepath.Join(inputDir, "book1")
-	if err := os.MkdirAll(sourceDir, 0755); err != nil {
+	if err := os.MkdirAll(sourceDir, 0o755); err != nil {
 		t.Fatalf("failed to create source dir: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(sourceDir, "audio.mp3"), []byte("data"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(sourceDir, "audio.mp3"), []byte("data"), 0o644); err != nil {
 		t.Fatalf("failed to create file: %v", err)
 	}
 
@@ -848,10 +877,10 @@ func TestApp_ExecuteFileOperations_OnlyMovesSelected(t *testing.T) {
 	// Create two book directories
 	for _, name := range []string{"book1", "book2"} {
 		dir := filepath.Join(inputDir, name)
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			t.Fatalf("failed to create dir %s: %v", name, err)
 		}
-		if err := os.WriteFile(filepath.Join(dir, "audio.mp3"), []byte("data"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "audio.mp3"), []byte("data"), 0o644); err != nil {
 			t.Fatalf("failed to create file in %s: %v", name, err)
 		}
 	}
@@ -889,7 +918,7 @@ func TestApp_PreviewChanges_SetsAllowedSourcePaths(t *testing.T) {
 	bookNames := []string{"BookA", "BookB", "BookC"}
 	for _, name := range bookNames {
 		bookDir := filepath.Join(inputDir, name)
-		if err := os.MkdirAll(bookDir, 0755); err != nil {
+		if err := os.MkdirAll(bookDir, 0o755); err != nil {
 			t.Fatalf("failed to create book dir %s: %v", name, err)
 		}
 		meta := map[string]any{
@@ -897,7 +926,7 @@ func TestApp_PreviewChanges_SetsAllowedSourcePaths(t *testing.T) {
 			"authors": []string{"Test Author"},
 		}
 		metaData, _ := json.Marshal(meta)
-		if err := os.WriteFile(filepath.Join(bookDir, "metadata.json"), metaData, 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(bookDir, "metadata.json"), metaData, 0o644); err != nil {
 			t.Fatalf("failed to write metadata.json for %s: %v", name, err)
 		}
 	}

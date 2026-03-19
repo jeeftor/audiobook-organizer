@@ -34,8 +34,8 @@ type OrganizerConfig struct {
 	RemoveEmpty         bool
 	UseEmbeddedMetadata bool
 	Flat                bool
-	SkipErrors          bool     // Skip files with missing/invalid metadata instead of stopping
-	Layout              string   // Directory structure layout (author-series-title, author-title, author-only)
+	SkipErrors          bool   // Skip files with missing/invalid metadata instead of stopping
+	Layout              string // Directory structure layout (author-series-title, author-title, author-only)
 	AuthorFormat        string
 	FieldMapping        FieldMapping // Configuration for mapping metadata fields
 	AllowedSourcePaths  []string     // When non-empty, only process book dirs whose path is in this list
@@ -45,24 +45,36 @@ type OrganizerConfig struct {
 func (c *OrganizerConfig) Validate() error {
 	// Check base directory
 	if c.BaseDir == "" {
-		return fmt.Errorf("base directory is required\n\nPlease specify an input directory:\n  --dir=/path/to/audiobooks\n  or\n  --input=/path/to/audiobooks")
+		return fmt.Errorf(
+			"base directory is required\n\nPlease specify an input directory:\n  --dir=/path/to/audiobooks\n  or\n  --input=/path/to/audiobooks",
+		)
 	}
 
 	// Check if base directory exists
 	info, err := os.Stat(c.BaseDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("base directory does not exist: %s\n\nPlease check the path and try again", c.BaseDir)
+			return fmt.Errorf(
+				"base directory does not exist: %s\n\nPlease check the path and try again",
+				c.BaseDir,
+			)
 		}
 		if os.IsPermission(err) {
-			return fmt.Errorf("permission denied accessing: %s\n\nTry running with appropriate permissions:\n  sudo audiobook-organizer --dir=%s", c.BaseDir, c.BaseDir)
+			return fmt.Errorf(
+				"permission denied accessing: %s\n\nTry running with appropriate permissions:\n  sudo audiobook-organizer --dir=%s",
+				c.BaseDir,
+				c.BaseDir,
+			)
 		}
 		return fmt.Errorf("error accessing base directory %s: %w", c.BaseDir, err)
 	}
 
 	// Verify it's a directory
 	if !info.IsDir() {
-		return fmt.Errorf("%s is not a directory\n\nPlease specify a directory, not a file", c.BaseDir)
+		return fmt.Errorf(
+			"%s is not a directory\n\nPlease specify a directory, not a file",
+			c.BaseDir,
+		)
 	}
 
 	// If output directory is specified, validate it
@@ -71,8 +83,12 @@ func (c *OrganizerConfig) Validate() error {
 		if _, err := os.Stat(c.OutputDir); err != nil {
 			if os.IsNotExist(err) && !c.DryRun {
 				// Try to create it
-				if err := os.MkdirAll(c.OutputDir, 0755); err != nil {
-					return fmt.Errorf("cannot create output directory %s: %w\n\nPlease check permissions or create it manually", c.OutputDir, err)
+				if err := os.MkdirAll(c.OutputDir, 0o755); err != nil {
+					return fmt.Errorf(
+						"cannot create output directory %s: %w\n\nPlease check permissions or create it manually",
+						c.OutputDir,
+						err,
+					)
 				}
 			} else if os.IsPermission(err) {
 				return fmt.Errorf("permission denied accessing output directory: %s\n\nTry running with appropriate permissions", c.OutputDir)
@@ -91,12 +107,18 @@ func (c *OrganizerConfig) Validate() error {
 		"series-title-number":        true,
 	}
 	if c.Layout != "" && !validLayouts[c.Layout] {
-		return fmt.Errorf("invalid layout: %s\n\nValid options are:\n  author-series-title (default)\n  author-series-title-number\n  author-series\n  author-title\n  author-only\n  series-title\n  series-title-number", c.Layout)
+		return fmt.Errorf(
+			"invalid layout: %s\n\nValid options are:\n  author-series-title (default)\n  author-series-title-number\n  author-series\n  author-title\n  author-only\n  series-title\n  series-title-number",
+			c.Layout,
+		)
 	}
 
 	// Validate replace_space character (should be single char or empty)
 	if len(c.ReplaceSpace) > 1 {
-		return fmt.Errorf("replace_space must be a single character, got: %q\n\nExamples:\n  --replace_space=_\n  --replace_space=.\n  --replace_space=-", c.ReplaceSpace)
+		return fmt.Errorf(
+			"replace_space must be a single character, got: %q\n\nExamples:\n  --replace_space=_\n  --replace_space=.\n  --replace_space=-",
+			c.ReplaceSpace,
+		)
 	}
 
 	return nil
@@ -117,7 +139,7 @@ func (f *FileOps) CreateDirIfNotExists(dir string) error {
 	if f.dryRun {
 		return nil
 	}
-	return os.MkdirAll(dir, 0755)
+	return os.MkdirAll(dir, 0o755)
 }
 
 // FileExists checks if a file exists on the filesystem
@@ -179,7 +201,11 @@ func (lc *LayoutCalculator) CalculateTargetPath(metadata Metadata) string {
 	case "author-series-title", "":
 		return filepath.Join(targetBase, authorDir, lc.calculateSeriesPath(titleDir, metadata))
 	case "author-series-title-number":
-		return filepath.Join(targetBase, authorDir, lc.calculateSeriesPathWithNumber(titleDir, metadata))
+		return filepath.Join(
+			targetBase,
+			authorDir,
+			lc.calculateSeriesPathWithNumber(titleDir, metadata),
+		)
 	case "series-title":
 		return filepath.Join(targetBase, lc.calculateSeriesPath(titleDir, metadata))
 	case "series-title-number":
@@ -209,7 +235,10 @@ func (lc *LayoutCalculator) calculateSeriesPath(titleDir string, metadata Metada
 
 // calculateSeriesPathWithNumber handles series-based path calculation with series number in title
 // Returns the series/title portion of the path (e.g., "Series/#1 - Title" or just "Title")
-func (lc *LayoutCalculator) calculateSeriesPathWithNumber(titleDir string, metadata Metadata) string {
+func (lc *LayoutCalculator) calculateSeriesPathWithNumber(
+	titleDir string,
+	metadata Metadata,
+) string {
 	if validSeries := metadata.GetValidSeries(); validSeries != "" {
 		seriesDir := lc.sanitizer(validSeries)
 
@@ -414,6 +443,7 @@ func (o *Organizer) removeEmptyDirs(dir string) error {
 
 	return nil
 }
+
 func (o *Organizer) removeEmptySourceDirs() error {
 	if !o.config.RemoveEmpty {
 		return nil

@@ -10,7 +10,12 @@ import (
 
 // GenerateOutputPath generates a preview of the output path based on metadata and layout
 // This is the universal function used by both settings preview and the actual preview screen
-func GenerateOutputPath(book AudioBook, layout string, fieldMapping organizer.FieldMapping, outputDir string) string {
+func GenerateOutputPath(
+	book AudioBook,
+	layout string,
+	fieldMapping organizer.FieldMapping,
+	outputDir string,
+) string {
 	// Apply field mapping to get updated metadata
 	updatedMetadata := book.Metadata
 	updatedMetadata.ApplyFieldMapping(fieldMapping)

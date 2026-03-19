@@ -38,10 +38,10 @@ func setupTestEnvironment(t *testing.T, files []testFile) *testEnvironment {
 	outputDir := filepath.Join(tempDir, "output")
 
 	// Create input and output directories
-	if err := os.MkdirAll(inputDir, 0755); err != nil {
+	if err := os.MkdirAll(inputDir, 0o755); err != nil {
 		t.Fatalf("Failed to create input directory: %v", err)
 	}
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		t.Fatalf("Failed to create output directory: %v", err)
 	}
 
@@ -49,7 +49,7 @@ func setupTestEnvironment(t *testing.T, files []testFile) *testEnvironment {
 	for _, tf := range files {
 		// Create any necessary subdirectories
 		fullPath := filepath.Join(inputDir, tf.Path)
-		if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
 			t.Fatalf("Failed to create directory for %s: %v", fullPath, err)
 		}
 

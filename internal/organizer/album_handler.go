@@ -87,7 +87,10 @@ func (o *Organizer) ProcessMultiFileAlbum(dirPath string) error {
 }
 
 // groupFilesByAlbum groups files in a directory by their album metadata
-func (o *Organizer) groupFilesByAlbum(dirPath string, entries []os.DirEntry) (map[string]*AlbumGroup, error) {
+func (o *Organizer) groupFilesByAlbum(
+	dirPath string,
+	entries []os.DirEntry,
+) (map[string]*AlbumGroup, error) {
 	albumGroups := make(map[string]*AlbumGroup)
 
 	for _, entry := range entries {

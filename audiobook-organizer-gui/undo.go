@@ -55,7 +55,7 @@ func (a *App) UndoLastOperation() (map[string]interface{}, error) {
 	// Find all entries from the last operation (same timestamp range - within 1 second)
 	var lastOpEntries []MoveLogEntry
 	for _, entry := range entries {
-		if entry.Timestamp.After(lastTimestamp.Add(-1*time.Second)) {
+		if entry.Timestamp.After(lastTimestamp.Add(-1 * time.Second)) {
 			lastOpEntries = append(lastOpEntries, entry)
 		}
 	}
@@ -74,8 +74,11 @@ func (a *App) UndoLastOperation() (map[string]interface{}, error) {
 			a.log("Moving back: %s -> %s", sourcePath, targetPath)
 
 			// Ensure target directory exists
-			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-				errors = append(errors, fmt.Sprintf("Failed to create directory for %s: %v", file, err))
+			if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
+				errors = append(
+					errors,
+					fmt.Sprintf("Failed to create directory for %s: %v", file, err),
+				)
 				continue
 			}
 
@@ -116,7 +119,7 @@ func (a *App) UndoLastOperation() (map[string]interface{}, error) {
 	if err != nil {
 		a.log("Warning: Failed to update log file: %v", err)
 	} else {
-		if err := os.WriteFile(logPath, updatedData, 0644); err != nil {
+		if err := os.WriteFile(logPath, updatedData, 0o644); err != nil {
 			a.log("Warning: Failed to write updated log: %v", err)
 		}
 	}
@@ -137,7 +140,7 @@ func (a *App) GetUndoInfo() (map[string]interface{}, error) {
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		return map[string]interface{}{
-			"canUndo":       false,
+			"canUndo":        false,
 			"operationCount": 0,
 		}, nil
 	}
@@ -149,7 +152,7 @@ func (a *App) GetUndoInfo() (map[string]interface{}, error) {
 
 	if len(entries) == 0 {
 		return map[string]interface{}{
-			"canUndo":       false,
+			"canUndo":        false,
 			"operationCount": 0,
 		}, nil
 	}
@@ -164,7 +167,7 @@ func (a *App) GetUndoInfo() (map[string]interface{}, error) {
 	}
 
 	return map[string]interface{}{
-		"canUndo":       true,
+		"canUndo":        true,
 		"operationCount": lastOpCount,
 		"lastOperation":  lastTimestamp,
 	}, nil

@@ -61,7 +61,7 @@ func TestPromptConfirmation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tempDir := t.TempDir()
 			sourceDir := filepath.Join(tempDir, "source")
-			if err := os.MkdirAll(sourceDir, 0755); err != nil {
+			if err := os.MkdirAll(sourceDir, 0o755); err != nil {
 				t.Fatal(err)
 			}
 
@@ -111,7 +111,11 @@ func TestPromptConfirmation(t *testing.T) {
 				t.Fatalf("NewOrganizer() error = %v", err)
 			}
 
-			got := org.PromptForConfirmation(metadata, sourceDir, filepath.Join(tempDir, "Test Author/Test Book"))
+			got := org.PromptForConfirmation(
+				metadata,
+				sourceDir,
+				filepath.Join(tempDir, "Test Author/Test Book"),
+			)
 			if got != tt.want {
 				t.Errorf("PromptForConfirmation() = %v, want %v", got, tt.want)
 			}

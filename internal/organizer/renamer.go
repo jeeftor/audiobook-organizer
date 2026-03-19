@@ -29,30 +29,45 @@ type RenamerConfig struct {
 func (c *RenamerConfig) Validate() error {
 	// Check base directory
 	if c.BaseDir == "" {
-		return fmt.Errorf("base directory is required\n\nPlease specify a directory to scan:\n  --dir=/path/to/audiobooks")
+		return fmt.Errorf(
+			"base directory is required\n\nPlease specify a directory to scan:\n  --dir=/path/to/audiobooks",
+		)
 	}
 
 	// Check if directory exists
 	info, err := os.Stat(c.BaseDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("base directory does not exist: %s\n\nPlease check the path and try again", c.BaseDir)
+			return fmt.Errorf(
+				"base directory does not exist: %s\n\nPlease check the path and try again",
+				c.BaseDir,
+			)
 		}
 		if os.IsPermission(err) {
-			return fmt.Errorf("permission denied accessing: %s\n\nTry running with appropriate permissions:\n  sudo audiobook-organizer rename --dir=%s", c.BaseDir, c.BaseDir)
+			return fmt.Errorf(
+				"permission denied accessing: %s\n\nTry running with appropriate permissions:\n  sudo audiobook-organizer rename --dir=%s",
+				c.BaseDir,
+				c.BaseDir,
+			)
 		}
 		return fmt.Errorf("error accessing base directory %s: %w", c.BaseDir, err)
 	}
 
 	// Verify it's a directory
 	if !info.IsDir() {
-		return fmt.Errorf("%s is not a directory\n\nPlease specify a directory, not a file", c.BaseDir)
+		return fmt.Errorf(
+			"%s is not a directory\n\nPlease specify a directory, not a file",
+			c.BaseDir,
+		)
 	}
 
 	// Validate template if provided
 	if c.Template != "" {
 		if err := ValidateTemplate(c.Template); err != nil {
-			return fmt.Errorf("invalid template: %w\n\nTemplate must use valid field placeholders like {author}, {title}, {series}\nSee available fields with: audiobook-organizer rename --help-template", err)
+			return fmt.Errorf(
+				"invalid template: %w\n\nTemplate must use valid field placeholders like {author}, {title}, {series}\nSee available fields with: audiobook-organizer rename --help-template",
+				err,
+			)
 		}
 	}
 
@@ -61,12 +76,18 @@ func (c *RenamerConfig) Validate() error {
 	case AuthorFormatFirstLast, AuthorFormatLastFirst, AuthorFormatPreserve:
 		// Valid formats
 	default:
-		return fmt.Errorf("invalid author format: %d\n\nValid options are:\n  first-last  (e.g., Brandon Sanderson)\n  last-first  (e.g., Sanderson, Brandon)\n  preserve    (keep original format)", c.AuthorFormat)
+		return fmt.Errorf(
+			"invalid author format: %d\n\nValid options are:\n  first-last  (e.g., Brandon Sanderson)\n  last-first  (e.g., Sanderson, Brandon)\n  preserve    (keep original format)",
+			c.AuthorFormat,
+		)
 	}
 
 	// Validate replace_space character (should be single char or empty)
 	if len(c.ReplaceSpace) > 1 {
-		return fmt.Errorf("replace_space must be a single character, got: %q\n\nExamples:\n  --replace_space=_\n  --replace_space=.\n  --replace_space=-", c.ReplaceSpace)
+		return fmt.Errorf(
+			"replace_space must be a single character, got: %q\n\nExamples:\n  --replace_space=_\n  --replace_space=.\n  --replace_space=-",
+			c.ReplaceSpace,
+		)
 	}
 
 	return nil
@@ -360,7 +381,7 @@ func (r *Renamer) SaveLog() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(logPath, data, 0644)
+	return os.WriteFile(logPath, data, 0o644)
 }
 
 // UndoRenames reverses rename operations from log
@@ -380,7 +401,11 @@ func (r *Renamer) UndoRenames() error {
 	for i := len(entries) - 1; i >= 0; i-- {
 		entry := entries[i]
 		if r.config.Verbose {
-			PrintYellow("Undoing: %s → %s", filepath.Base(entry.NewPath), filepath.Base(entry.OldPath))
+			PrintYellow(
+				"Undoing: %s → %s",
+				filepath.Base(entry.NewPath),
+				filepath.Base(entry.OldPath),
+			)
 		}
 
 		if !r.config.DryRun {

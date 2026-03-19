@@ -45,7 +45,8 @@ func (o *Organizer) handleFlatMode(path string, info os.FileInfo, err error) err
 	}
 
 	// Skip output directory to avoid processing files we just organized
-	if o.config.OutputDir != "" && (path == o.config.OutputDir || isSubPathOf(o.config.OutputDir, path)) {
+	if o.config.OutputDir != "" &&
+		(path == o.config.OutputDir || isSubPathOf(o.config.OutputDir, path)) {
 		return nil
 	}
 
@@ -227,7 +228,10 @@ func (o *Organizer) processSupportedFilesInDirectory(path string) error {
 	for _, entry := range entries {
 		if entry.IsDir() {
 			if o.config.Verbose {
-				PrintYellow("⏩ Skipping subdirectory in flat mode: %s", filepath.Join(path, entry.Name()))
+				PrintYellow(
+					"⏩ Skipping subdirectory in flat mode: %s",
+					filepath.Join(path, entry.Name()),
+				)
 			}
 			continue
 		}
@@ -545,7 +549,11 @@ func (o *Organizer) executeSingleFileMove(filePath, targetPath string, metadata 
 	o.addSingleFileMoveToSummary(filePath, targetPath)
 	originalName := filepath.Base(filePath)
 	targetName := filepath.Base(targetPath)
-	o.updateLogAndCleanup(filepath.Dir(filePath), filepath.Dir(targetPath), []FilePair{{From: originalName, To: targetName}})
+	o.updateLogAndCleanup(
+		filepath.Dir(filePath),
+		filepath.Dir(targetPath),
+		[]FilePair{{From: originalName, To: targetName}},
+	)
 
 	return nil
 }
@@ -718,7 +726,10 @@ func getProviderTypeDisplay(provider MetadataProvider) (string, string) {
 }
 
 // promptForMoveConfirmation asks the user for confirmation before moving files.
-func (o *Organizer) promptForMoveConfirmation(metadata Metadata, sourcePath, targetPath string) bool {
+func (o *Organizer) promptForMoveConfirmation(
+	metadata Metadata,
+	sourcePath, targetPath string,
+) bool {
 	return o.PromptForConfirmation(metadata, sourcePath, targetPath)
 }
 
@@ -751,7 +762,6 @@ func (o *Organizer) updateLogAndCleanup(sourcePath, targetPath string, fileNames
 	if err := o.saveLog(); err != nil {
 		PrintYellow("⚠️  Warning: couldn't save log: %v", err)
 	}
-
 }
 
 // readMetadataFromJSON reads and processes metadata from a JSON file,
@@ -959,7 +969,10 @@ func (o *Organizer) syncTargetDirectory(targetDir string) error {
 
 // moveFiles moves all files from a source directory to a target directory,
 // handling track number prefixes and maintaining a list of moved files.
-func (o *Organizer) moveFiles(sourcePath, targetPath string, dirMetadata *Metadata) ([]FilePair, error) {
+func (o *Organizer) moveFiles(
+	sourcePath, targetPath string,
+	dirMetadata *Metadata,
+) ([]FilePair, error) {
 	if o.config.Verbose {
 		message := o.formatDirectoryMoveHeader(sourcePath, targetPath)
 		PrintCyan("%s", message)
@@ -1002,7 +1015,11 @@ func (o *Organizer) getDirectoryMetadata(sourcePath string) *Metadata {
 }
 
 // processDirectoryFiles processes individual files in a directory for moving.
-func (o *Organizer) processDirectoryFiles(entries []os.DirEntry, sourcePath, targetPath string, dirMetadata *Metadata) ([]FilePair, error) {
+func (o *Organizer) processDirectoryFiles(
+	entries []os.DirEntry,
+	sourcePath, targetPath string,
+	dirMetadata *Metadata,
+) ([]FilePair, error) {
 	var fileNames []FilePair
 
 	for _, entry := range entries {

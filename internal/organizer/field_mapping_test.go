@@ -100,12 +100,22 @@ func TestFieldMapping(t *testing.T) {
 			// Verify the results
 			assert.Equal(t, tt.expectedTitle, tt.metadata.Title, "title should match")
 			if len(tt.metadata.Series) > 0 {
-				assert.Equal(t, tt.expectedSeries, tt.metadata.Series[0], "first series should match")
+				assert.Equal(
+					t,
+					tt.expectedSeries,
+					tt.metadata.Series[0],
+					"first series should match",
+				)
 			} else {
 				assert.Empty(t, tt.expectedSeries, "expected no series")
 			}
 			if len(tt.metadata.Authors) > 0 {
-				assert.Equal(t, tt.expectedAuthor, tt.metadata.Authors[0], "first author should match")
+				assert.Equal(
+					t,
+					tt.expectedAuthor,
+					tt.metadata.Authors[0],
+					"first author should match",
+				)
 			} else {
 				assert.Empty(t, tt.expectedAuthor, "expected no authors")
 			}

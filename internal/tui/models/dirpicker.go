@@ -369,7 +369,9 @@ func (m *DirPickerModel) View() string {
 
 	// Show current directory
 	currentDirStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#00AAFF"))
-	content += currentDirStyle.Render(fmt.Sprintf("Current: %s", m.filepicker.CurrentDirectory)) + "\n\n"
+	content += currentDirStyle.Render(
+		fmt.Sprintf("Current: %s", m.filepicker.CurrentDirectory),
+	) + "\n\n"
 
 	// Show currently selected input dir if we're picking output
 	if m.mode == PickingOutput && m.inputDir != "" {
@@ -423,15 +425,21 @@ func (m *DirPickerModel) View() string {
 		filterStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#00FF00")).
 			Bold(true)
-		content += filterStyle.Render(fmt.Sprintf("Filter: %s_ (%d matches)", m.filterText, len(m.filteredDirs))) + "\n"
+		content += filterStyle.Render(
+			fmt.Sprintf("Filter: %s_ (%d matches)", m.filterText, len(m.filteredDirs)),
+		) + "\n"
 	} else {
 		content += "\n"
 	}
 
 	// Help text
 	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#888"))
-	content += helpStyle.Render("↑/↓: Navigate • Enter: Open Directory • Ctrl+S: Select Current Directory")
-	content += "\n" + helpStyle.Render("Type to filter • ESC: Clear filter • Ctrl+B: Up • Ctrl+H: Home • Ctrl+R: Root • Ctrl+Q: Quit")
+	content += helpStyle.Render(
+		"↑/↓: Navigate • Enter: Open Directory • Ctrl+S: Select Current Directory",
+	)
+	content += "\n" + helpStyle.Render(
+		"Type to filter • ESC: Clear filter • Ctrl+B: Up • Ctrl+H: Home • Ctrl+R: Root • Ctrl+Q: Quit",
+	)
 
 	return content
 }

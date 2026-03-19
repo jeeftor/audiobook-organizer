@@ -51,7 +51,8 @@ func ScanForAudiobooks(baseDir string, config *OrganizerConfig) ([]Metadata, err
 		}
 
 		// Skip the output directory to avoid scanning organized files
-		if config.OutputDir != "" && (path == config.OutputDir || isSubPath(config.OutputDir, path)) {
+		if config.OutputDir != "" &&
+			(path == config.OutputDir || isSubPath(config.OutputDir, path)) {
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
@@ -66,7 +67,6 @@ func ScanForAudiobooks(baseDir string, config *OrganizerConfig) ([]Metadata, err
 		// Hierarchical mode: scan directories
 		return scanHierarchicalMode(path, info, config, &results)
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("error scanning directory: %w", err)
 	}
@@ -117,7 +117,12 @@ func ScanSingleFile(filePath string, config *OrganizerConfig) (Metadata, error) 
 }
 
 // scanFlatMode processes a single file in flat mode
-func scanFlatMode(path string, info os.FileInfo, config *OrganizerConfig, results *[]Metadata) error {
+func scanFlatMode(
+	path string,
+	info os.FileInfo,
+	config *OrganizerConfig,
+	results *[]Metadata,
+) error {
 	// Skip directories in flat mode
 	if info.IsDir() {
 		return nil
@@ -145,7 +150,12 @@ func scanFlatMode(path string, info os.FileInfo, config *OrganizerConfig, result
 }
 
 // scanHierarchicalMode processes a directory in hierarchical mode
-func scanHierarchicalMode(path string, info os.FileInfo, config *OrganizerConfig, results *[]Metadata) error {
+func scanHierarchicalMode(
+	path string,
+	info os.FileInfo,
+	config *OrganizerConfig,
+	results *[]Metadata,
+) error {
 	// Only process directories
 	if !info.IsDir() {
 		return nil
@@ -235,7 +245,10 @@ func tryAudioMetadata(dirPath string, config *OrganizerConfig) (Metadata, bool) 
 }
 
 // getMetadataProviderForFile returns the appropriate metadata provider for a file
-func getMetadataProviderForFile(filePath string, config *OrganizerConfig) (organizer.MetadataProvider, error) {
+func getMetadataProviderForFile(
+	filePath string,
+	config *OrganizerConfig,
+) (organizer.MetadataProvider, error) {
 	ext := strings.ToLower(filepath.Ext(filePath))
 
 	switch ext {

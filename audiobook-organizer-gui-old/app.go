@@ -196,10 +196,31 @@ func (a *App) GetFieldMappingOptions() []FieldMappingOption {
 	textFieldOptions := []string{"title", "album", "series", "name", "book", "work"}
 
 	// Predefined common author fields
-	authorFieldOptions := []string{"authors", "artist", "album_artist", "narrator", "narrators", "creator", "author", "writer", "composer"}
+	authorFieldOptions := []string{
+		"authors",
+		"artist",
+		"album_artist",
+		"narrator",
+		"narrators",
+		"creator",
+		"author",
+		"writer",
+		"composer",
+	}
 
 	// Predefined numeric fields for track/disc
-	numericFields := []string{"track", "track_number", "trck", "trk", "tracknumber", "disc", "discnumber", "disk", "tpos", "disc_number"}
+	numericFields := []string{
+		"track",
+		"track_number",
+		"trck",
+		"trk",
+		"tracknumber",
+		"disc",
+		"discnumber",
+		"disk",
+		"tpos",
+		"disc_number",
+	}
 
 	return []FieldMappingOption{
 		{
@@ -353,7 +374,11 @@ var lastScanResults []organizer.Metadata
 // GetSampleMetadataPreviews returns sample metadata for up to 3 books with field indicators
 func (a *App) GetSampleMetadataPreviews(dir string) ([]MetadataPreview, error) {
 	fmt.Printf("DEBUG: GetSampleMetadataPreviews called with dir=%s\n", dir)
-	fmt.Printf("DEBUG: Current config: UseEmbedded=%v, Flat=%v\n", a.config.UseEmbeddedMetadata, a.config.Flat)
+	fmt.Printf(
+		"DEBUG: Current config: UseEmbedded=%v, Flat=%v\n",
+		a.config.UseEmbeddedMetadata,
+		a.config.Flat,
+	)
 
 	// Use cached scan results if available
 	var audiobooks []organizer.Metadata
@@ -378,7 +403,13 @@ func (a *App) GetSampleMetadataPreviews(dir string) ([]MetadataPreview, error) {
 	var previews []MetadataPreview
 	for i := 0; i < len(audiobooks); i++ {
 		sample := audiobooks[i]
-		fmt.Printf("DEBUG: Sample audiobook %d: Title=%s, Album=%s, SourceType=%s\n", i, sample.Title, sample.Album, sample.SourceType)
+		fmt.Printf(
+			"DEBUG: Sample audiobook %d: Title=%s, Album=%s, SourceType=%s\n",
+			i,
+			sample.Title,
+			sample.Album,
+			sample.SourceType,
+		)
 		fmt.Printf("DEBUG: RawData has %d fields\n", len(sample.RawData))
 
 		// Build raw fields with indicators
@@ -542,7 +573,10 @@ func (a *App) ScanDirectory(dir string) ([]organizer.Metadata, error) {
 	scanConfig.BaseDir = dir
 	scanConfig.DryRun = true
 
-	fmt.Printf("DEBUG: Calling ScanForAudiobooks with config: UseEmbeddedMetadata=%v\n", scanConfig.UseEmbeddedMetadata)
+	fmt.Printf(
+		"DEBUG: Calling ScanForAudiobooks with config: UseEmbeddedMetadata=%v\n",
+		scanConfig.UseEmbeddedMetadata,
+	)
 
 	// Use the public scanning API
 	audiobooks, err := organizer.ScanForAudiobooks(dir, &scanConfig)
@@ -588,7 +622,11 @@ func (a *App) UpdateSettings(config organizer.OrganizerConfig) error {
 }
 
 // PreviewChanges generates a preview of file operations for selected books
-func (a *App) PreviewChanges(inputDir string, outputDir string, selectedBooks []int) ([]PreviewItem, error) {
+func (a *App) PreviewChanges(
+	inputDir string,
+	outputDir string,
+	selectedBooks []int,
+) ([]PreviewItem, error) {
 	if inputDir == "" || outputDir == "" {
 		return nil, fmt.Errorf("input and output directories are required")
 	}
@@ -646,7 +684,11 @@ func (a *App) PreviewChanges(inputDir string, outputDir string, selectedBooks []
 		if len(indices) > 1 {
 			for _, idx := range indices {
 				moves[idx].IsConflict = true
-				moves[idx].ConflictReason = fmt.Sprintf("Multiple books (%d) would be moved to: %s", len(indices), targetPath)
+				moves[idx].ConflictReason = fmt.Sprintf(
+					"Multiple books (%d) would be moved to: %s",
+					len(indices),
+					targetPath,
+				)
 				conflictCount++
 			}
 		}
@@ -662,7 +704,13 @@ func (a *App) PreviewChanges(inputDir string, outputDir string, selectedBooks []
 			To:         move.TargetPath,
 			IsConflict: move.IsConflict,
 		}
-		fmt.Printf("DEBUG: Preview %d: %s → %s (conflict=%v)\n", i, move.SourcePath, move.TargetPath, move.IsConflict)
+		fmt.Printf(
+			"DEBUG: Preview %d: %s → %s (conflict=%v)\n",
+			i,
+			move.SourcePath,
+			move.TargetPath,
+			move.IsConflict,
+		)
 	}
 
 	// Create organizer for later execution

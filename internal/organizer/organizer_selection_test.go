@@ -11,7 +11,7 @@ import (
 func createBookDir(t *testing.T, baseDir, name, title, author string) string {
 	t.Helper()
 	bookDir := filepath.Join(baseDir, name)
-	if err := os.MkdirAll(bookDir, 0755); err != nil {
+	if err := os.MkdirAll(bookDir, 0o755); err != nil {
 		t.Fatalf("failed to create book directory %s: %v", bookDir, err)
 	}
 	meta := map[string]interface{}{
@@ -22,10 +22,10 @@ func createBookDir(t *testing.T, baseDir, name, title, author string) string {
 	if err != nil {
 		t.Fatalf("failed to marshal metadata: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(bookDir, "metadata.json"), metaBytes, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(bookDir, "metadata.json"), metaBytes, 0o644); err != nil {
 		t.Fatalf("failed to write metadata.json: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(bookDir, "audio.mp3"), []byte("fake audio data"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(bookDir, "audio.mp3"), []byte("fake audio data"), 0o644); err != nil {
 		t.Fatalf("failed to write audio.mp3: %v", err)
 	}
 	return bookDir
@@ -173,7 +173,7 @@ func TestOrganizerFilePairLog_StoresBothNames(t *testing.T) {
 
 	// Create a book directory manually so we control the filename.
 	bookDir := filepath.Join(baseDir, "MyBook")
-	if err := os.MkdirAll(bookDir, 0755); err != nil {
+	if err := os.MkdirAll(bookDir, 0o755); err != nil {
 		t.Fatalf("failed to create book dir: %v", err)
 	}
 
@@ -184,12 +184,12 @@ func TestOrganizerFilePairLog_StoresBothNames(t *testing.T) {
 		"track_number": 1,
 	}
 	metaBytes, _ := json.Marshal(meta)
-	if err := os.WriteFile(filepath.Join(bookDir, "metadata.json"), metaBytes, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(bookDir, "metadata.json"), metaBytes, 0o644); err != nil {
 		t.Fatalf("failed to write metadata.json: %v", err)
 	}
 
 	originalName := "original_name.mp3"
-	if err := os.WriteFile(filepath.Join(bookDir, originalName), []byte("fake audio"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(bookDir, originalName), []byte("fake audio"), 0o644); err != nil {
 		t.Fatalf("failed to write audio file: %v", err)
 	}
 
@@ -248,7 +248,7 @@ func TestOrganizerUndoRestoresOriginalFilename(t *testing.T) {
 	outputDir := t.TempDir()
 
 	bookDir := filepath.Join(baseDir, "MyBook")
-	if err := os.MkdirAll(bookDir, 0755); err != nil {
+	if err := os.MkdirAll(bookDir, 0o755); err != nil {
 		t.Fatalf("failed to create book dir: %v", err)
 	}
 
@@ -258,13 +258,13 @@ func TestOrganizerUndoRestoresOriginalFilename(t *testing.T) {
 		"track_number": 1,
 	}
 	metaBytes, _ := json.Marshal(meta)
-	if err := os.WriteFile(filepath.Join(bookDir, "metadata.json"), metaBytes, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(bookDir, "metadata.json"), metaBytes, 0o644); err != nil {
 		t.Fatalf("failed to write metadata.json: %v", err)
 	}
 
 	originalName := "original_name.mp3"
 	originalContent := []byte("fake audio content for undo test")
-	if err := os.WriteFile(filepath.Join(bookDir, originalName), originalContent, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(bookDir, originalName), originalContent, 0o644); err != nil {
 		t.Fatalf("failed to write audio file: %v", err)
 	}
 
@@ -328,6 +328,10 @@ func TestOrganizerUndoRestoresOriginalFilename(t *testing.T) {
 		t.Fatalf("failed to read restored file: %v", err)
 	}
 	if string(restoredContent) != string(originalContent) {
-		t.Errorf("restored file content mismatch: got %q, want %q", string(restoredContent), string(originalContent))
+		t.Errorf(
+			"restored file content mismatch: got %q, want %q",
+			string(restoredContent),
+			string(originalContent),
+		)
 	}
 }

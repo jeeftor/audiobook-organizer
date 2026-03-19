@@ -56,7 +56,13 @@ func TestHasCommonPrefix(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := hasCommonPrefix(tt.str1, tt.str2)
 			if result != tt.expected {
-				t.Errorf("hasCommonPrefix(%q, %q) = %v, want %v", tt.str1, tt.str2, result, tt.expected)
+				t.Errorf(
+					"hasCommonPrefix(%q, %q) = %v, want %v",
+					tt.str1,
+					tt.str2,
+					result,
+					tt.expected,
+				)
 			}
 		})
 	}
@@ -111,7 +117,13 @@ func TestHasTrackNumberPattern(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := hasTrackNumberPattern(tt.str1, tt.str2)
 			if result != tt.expected {
-				t.Errorf("hasTrackNumberPattern(%q, %q) = %v, want %v", tt.str1, tt.str2, result, tt.expected)
+				t.Errorf(
+					"hasTrackNumberPattern(%q, %q) = %v, want %v",
+					tt.str1,
+					tt.str2,
+					result,
+					tt.expected,
+				)
 			}
 		})
 	}
@@ -766,7 +778,11 @@ func TestGroupFilesByAlbum(t *testing.T) {
 
 			// Check number of groups
 			if len(albumGroups) != tt.expectedGroups {
-				t.Errorf("groupFilesByAlbum() returned %d groups, want %d", len(albumGroups), tt.expectedGroups)
+				t.Errorf(
+					"groupFilesByAlbum() returned %d groups, want %d",
+					len(albumGroups),
+					tt.expectedGroups,
+				)
 			}
 
 			// Check number of files in each group
@@ -777,7 +793,12 @@ func TestGroupFilesByAlbum(t *testing.T) {
 					continue
 				}
 				if len(group.Files) != expectedCount {
-					t.Errorf("Album group %s has %d files, want %d", key, len(group.Files), expectedCount)
+					t.Errorf(
+						"Album group %s has %d files, want %d",
+						key,
+						len(group.Files),
+						expectedCount,
+					)
 				}
 			}
 		})
@@ -801,7 +822,11 @@ func TestAlbumGroupSorting(t *testing.T) {
 			name:      "Some files without track numbers",
 			files:     []string{"fileC.mp3", "fileA.mp3", "file1.mp3"},
 			trackNums: map[string]int{"file1.mp3": 1, "fileA.mp3": 0, "fileC.mp3": 0},
-			expected:  []string{"file1.mp3", "fileA.mp3", "fileC.mp3"}, // Track number first, then alphabetical
+			expected: []string{
+				"file1.mp3",
+				"fileA.mp3",
+				"fileC.mp3",
+			}, // Track number first, then alphabetical
 		},
 		{
 			name:      "No track numbers",
@@ -830,12 +855,21 @@ func TestAlbumGroupSorting(t *testing.T) {
 
 			// Check if sorted correctly
 			if len(ag.Files) != len(tt.expected) {
-				t.Fatalf("SortFilesByTrackNumber() resulted in %d files, want %d", len(ag.Files), len(tt.expected))
+				t.Fatalf(
+					"SortFilesByTrackNumber() resulted in %d files, want %d",
+					len(ag.Files),
+					len(tt.expected),
+				)
 			}
 
 			for i, file := range ag.Files {
 				if file != tt.expected[i] {
-					t.Errorf("SortFilesByTrackNumber() at position %d: got %s, want %s", i, file, tt.expected[i])
+					t.Errorf(
+						"SortFilesByTrackNumber() at position %d: got %s, want %s",
+						i,
+						file,
+						tt.expected[i],
+					)
 				}
 			}
 		})

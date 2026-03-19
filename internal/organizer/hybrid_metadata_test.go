@@ -21,13 +21,13 @@ func TestHybridMetadataExtraction(t *testing.T) {
 	}`
 
 	metadataPath := filepath.Join(tmpDir, "metadata.json")
-	if err := os.WriteFile(metadataPath, []byte(metadataJSON), 0644); err != nil {
+	if err := os.WriteFile(metadataPath, []byte(metadataJSON), 0o644); err != nil {
 		t.Fatalf("Failed to write metadata.json: %v", err)
 	}
 
 	// Create a dummy audio file (MP3)
 	audioPath := filepath.Join(tmpDir, "chapter01.mp3")
-	if err := os.WriteFile(audioPath, []byte("dummy audio data"), 0644); err != nil {
+	if err := os.WriteFile(audioPath, []byte("dummy audio data"), 0o644); err != nil {
 		t.Fatalf("Failed to write audio file: %v", err)
 	}
 
@@ -79,13 +79,13 @@ func TestHybridMetadataFromAudioFile(t *testing.T) {
 	}`
 
 	metadataPath := filepath.Join(tmpDir, "metadata.json")
-	if err := os.WriteFile(metadataPath, []byte(metadataJSON), 0644); err != nil {
+	if err := os.WriteFile(metadataPath, []byte(metadataJSON), 0o644); err != nil {
 		t.Fatalf("Failed to write metadata.json: %v", err)
 	}
 
 	// Create audio file
 	audioPath := filepath.Join(tmpDir, "test.mp3")
-	if err := os.WriteFile(audioPath, []byte("dummy audio"), 0644); err != nil {
+	if err := os.WriteFile(audioPath, []byte("dummy audio"), 0o644); err != nil {
 		t.Fatalf("Failed to write audio file: %v", err)
 	}
 
@@ -95,7 +95,6 @@ func TestHybridMetadataFromAudioFile(t *testing.T) {
 	// 3. Do hybrid extraction if found
 	provider := NewMetadataProvider(audioPath, false)
 	metadata, err := provider.GetMetadata()
-
 	// Dummy audio file can't be parsed, but we can verify JSON fallback behavior
 	// The hybrid extraction will attempt to read the audio file and may fail
 	// That's expected with dummy data - in production, real audio files would work
@@ -122,20 +121,19 @@ func TestUseEmbeddedMetadataOnly(t *testing.T) {
 	}`
 
 	metadataPath := filepath.Join(tmpDir, "metadata.json")
-	if err := os.WriteFile(metadataPath, []byte(metadataJSON), 0644); err != nil {
+	if err := os.WriteFile(metadataPath, []byte(metadataJSON), 0o644); err != nil {
 		t.Fatalf("Failed to write metadata.json: %v", err)
 	}
 
 	// Create audio file
 	audioPath := filepath.Join(tmpDir, "test.m4b")
-	if err := os.WriteFile(audioPath, []byte("dummy audio"), 0644); err != nil {
+	if err := os.WriteFile(audioPath, []byte("dummy audio"), 0o644); err != nil {
 		t.Fatalf("Failed to write audio file: %v", err)
 	}
 
 	// With useEmbeddedOnly=true, should NOT use metadata.json
 	provider := NewMetadataProvider(audioPath, true)
 	_, err := provider.GetMetadata()
-
 	// Since we can't extract from a dummy audio file, this will fail
 	// But that's expected - the important thing is it's NOT using JSON
 	if err != nil {
@@ -157,13 +155,13 @@ func TestJSONMetadataProviderHybridExtraction(t *testing.T) {
 	}`
 
 	metadataPath := filepath.Join(tmpDir, "metadata.json")
-	if err := os.WriteFile(metadataPath, []byte(metadataJSON), 0644); err != nil {
+	if err := os.WriteFile(metadataPath, []byte(metadataJSON), 0o644); err != nil {
 		t.Fatalf("Failed to write metadata.json: %v", err)
 	}
 
 	// Create audio file in same directory
 	audioPath := filepath.Join(tmpDir, "chapter.mp3")
-	if err := os.WriteFile(audioPath, []byte("dummy"), 0644); err != nil {
+	if err := os.WriteFile(audioPath, []byte("dummy"), 0o644); err != nil {
 		t.Fatalf("Failed to write audio file: %v", err)
 	}
 
@@ -203,13 +201,13 @@ func TestRenamerHybridMetadata(t *testing.T) {
 	}`
 
 	metadataPath := filepath.Join(tmpDir, "metadata.json")
-	if err := os.WriteFile(metadataPath, []byte(metadataJSON), 0644); err != nil {
+	if err := os.WriteFile(metadataPath, []byte(metadataJSON), 0o644); err != nil {
 		t.Fatalf("Failed to write metadata.json: %v", err)
 	}
 
 	// Create audio file
 	audioPath := filepath.Join(tmpDir, "audio.m4b")
-	if err := os.WriteFile(audioPath, []byte("dummy audio"), 0644); err != nil {
+	if err := os.WriteFile(audioPath, []byte("dummy audio"), 0o644); err != nil {
 		t.Fatalf("Failed to write audio file: %v", err)
 	}
 
@@ -254,11 +252,19 @@ func TestRenamerHybridMetadata(t *testing.T) {
 
 	// Verify metadata from JSON
 	if candidate.Metadata.Title != "Test Audiobook" {
-		t.Errorf("Candidate.Metadata.Title = %q, want %q", candidate.Metadata.Title, "Test Audiobook")
+		t.Errorf(
+			"Candidate.Metadata.Title = %q, want %q",
+			candidate.Metadata.Title,
+			"Test Audiobook",
+		)
 	}
 
 	if candidate.Metadata.SourceType != "json" {
-		t.Errorf("Candidate.Metadata.SourceType = %q, want %q (hybrid mode)", candidate.Metadata.SourceType, "json")
+		t.Errorf(
+			"Candidate.Metadata.SourceType = %q, want %q (hybrid mode)",
+			candidate.Metadata.SourceType,
+			"json",
+		)
 	}
 
 	// Verify RawData has JSON fields
