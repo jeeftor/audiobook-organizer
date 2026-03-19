@@ -54,6 +54,24 @@ jobs:
         env:
           CGO_ENABLED: 1
 
+      - name: Create macOS DMG
+        if: matrix.goos == 'darwin'
+        run: |
+          GUI_BIN=$(find dist -name "audiobook-organizer-gui" -type f | head -1)
+          if [ -n "$GUI_BIN" ]; then
+            mkdir -p dmg_staging
+            cp "$GUI_BIN" dmg_staging/audiobook-organizer-gui
+            cp docs/MACOS_INSTALL.txt dmg_staging/README.txt
+            hdiutil create \
+              -volname "Audiobook Organizer GUI" \
+              -srcfolder dmg_staging \
+              -ov -format UDZO \
+              dist/audiobook-organizer-gui_macOS.dmg
+            echo "DMG created: dist/audiobook-organizer-gui_macOS.dmg"
+          else
+            echo "GUI binary not found, skipping DMG creation"
+          fi
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -154,6 +172,12 @@ jobs:
             fi
           done
 
+          # macOS DMG (pre-built on macOS runner)
+          if [ -f "dist/audiobook-organizer-gui_macOS.dmg" ]; then
+            cp dist/audiobook-organizer-gui_macOS.dmg archives/
+            echo "Included macOS DMG"
+          fi
+
           ls -lh archives/
 
       # Create or update pre-release
@@ -175,9 +199,20 @@ jobs:
 
             Download the appropriate archive for your platform:
             - **CLI**: `audiobook-organizer_<platform>.tar.gz` or `.zip`
-            - **GUI**: `audiobook-organizer-gui_<platform>.tar.gz` or `.zip`
+            - **GUI (macOS)**: `audiobook-organizer-gui_macOS.dmg` ← easiest!
+            - **GUI (other)**: `audiobook-organizer-gui_<platform>.tar.gz` or `.zip`
 
             Extract and run the binary directly.
+
+            ### macOS Gatekeeper Warning
+
+            Since this app is unsigned, macOS will block it on first launch.
+            To open it, **right-click → Open → click Open** in the dialog.
+            Or remove the quarantine flag via Terminal:
+            ```
+            xattr -d com.apple.quarantine audiobook-organizer-gui
+            ```
+            The DMG includes a `README.txt` with full instructions.
 
             ### Available Binaries
             - Linux (amd64, arm64)

@@ -1,0 +1,32 @@
+Audiobook Organizer GUI - macOS Installation
+============================================
+
+IMPORTANT: Opening the App (Gatekeeper Warning)
+================================================
+Because this app is not notarized with an Apple Developer certificate,
+macOS Gatekeeper will show a warning and block it from opening.
+
+You have three options to open it:
+
+Option 1 - Right-click method (easiest, no Terminal needed):
+  1. Right-click (or Ctrl+click) the audiobook-organizer-gui binary
+  2. Select "Open" from the context menu
+  3. Click "Open" in the dialog that appears
+  (You only need to do this once — it will open normally after that)
+
+Option 2 - Remove quarantine flag via Terminal:
+  xattr -d com.apple.quarantine /path/to/audiobook-organizer-gui
+
+Option 3 - System Settings:
+  System Settings → Privacy & Security → scroll down →
+  find "audiobook-organizer-gui was blocked" → click "Open Anyway"
+
+About This App
+==============
+audiobook-organizer-gui organizes your audiobook files into a structured
+directory layout based on metadata (author, series, title, track number).
+
+Supported formats: M4B, MP3, EPUB, metadata.json (audiobookshelf)
+
+Source code & documentation:
+  https://github.com/jeeftor/audiobook-organizer
