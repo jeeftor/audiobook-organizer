@@ -1,44 +1,38 @@
 import { useState, useEffect } from 'react'
-import { organizer } from '../../wailsjs/go/models'
-import { GetCurrentLayout, GetCurrentAuthorFormat } from '../../wailsjs/go/main/App'
+import { organizer, main } from '../../wailsjs/go/models'
+import { GetLivePreviewPath } from '../../wailsjs/go/main/App'
 import { ArrowRight } from 'lucide-react'
 import { RenameTemplateBuilder } from './RenameTemplateBuilder'
-import { GetRenameConfig } from '../../wailsjs/go/main/App'
+import { ColoredPath } from './ColoredPath'
+import { useSettings } from '../contexts/SettingsContext'
 
 interface OutputPreviewSimpleProps {
   book: organizer.Metadata | null
+  bookIdx: number | null
   outputDir: string
 }
 
-export function OutputPreviewSimple({ book, outputDir }: OutputPreviewSimpleProps) {
-  const [layout, setLayout] = useState('author-series-title')
-  const [authorFormat, setAuthorFormat] = useState('preserve')
-  const [renameEnabled, setRenameEnabled] = useState(false)
+export function OutputPreviewSimple({ book, bookIdx, outputDir }: OutputPreviewSimpleProps) {
+  const [preview, setPreview] = useState<main.PreviewItem | null>(null)
+  const { settings } = useSettings()
 
-  // Load layout and author format on mount and when book changes
+  const renameEnabled = settings.renameConfig.enabled
+
+  // Re-fetch preview whenever bookIdx, outputDir, or any relevant setting changes
   useEffect(() => {
-    const loadSettings = () => {
-      GetCurrentLayout().then(l => setLayout(l)).catch(err => {
-        console.error('Failed to get layout:', err)
-      })
-      GetCurrentAuthorFormat().then(f => setAuthorFormat(f)).catch(err => {
-        console.error('Failed to get author format:', err)
-      })
-      GetRenameConfig().then(cfg => {
-        setRenameEnabled(cfg.enabled || false)
-      }).catch(err => {
-        console.error('Failed to get rename config:', err)
-      })
+    if (bookIdx === null || bookIdx < 0) {
+      setPreview(null)
+      return
     }
+    GetLivePreviewPath(bookIdx, outputDir).then(item => {
+      setPreview(item)
+    }).catch(err => {
+      console.error('Failed to get live preview path:', err)
+      setPreview(null)
+    })
+  }, [bookIdx, outputDir, settings.layout, settings.authorFormat, JSON.stringify(settings.fieldOptions)])
 
-    loadSettings()
-
-    // Poll for changes every 500ms to catch layout/format updates
-    const interval = setInterval(loadSettings, 500)
-    return () => clearInterval(interval)
-  }, [book])
-
-  if (!book) {
+  if (!book || !preview) {
     return (
       <div className="p-4 text-center text-sm text-muted-foreground">
         Select a file to preview output path
@@ -46,56 +40,18 @@ export function OutputPreviewSimple({ book, outputDir }: OutputPreviewSimpleProp
     )
   }
 
-  const formatAuthorName = (name: string): string => {
-    if (authorFormat === 'preserve') {
-      return name
-    }
+  // Build path parts for color-coded display from backend-provided fields
+  const effectiveOutputDir = preview.output_dir || outputDir || '/output'
+  const relPath = preview.to.startsWith(effectiveOutputDir)
+    ? preview.to.slice(effectiveOutputDir.length)
+    : preview.to
+  const relParts = relPath.split('/').filter(p => p.length > 0)
+  const pathParts = [effectiveOutputDir, ...relParts]
 
-    const parts = name.split(' ')
-    if (parts.length < 2) return name
-
-    if (authorFormat === 'first-last') {
-      // Already in First Last format, return as-is
-      return name
-    } else if (authorFormat === 'last-first') {
-      // Convert to Last, First
-      const lastName = parts[parts.length - 1]
-      const firstName = parts.slice(0, -1).join(' ')
-      return `${lastName}, ${firstName}`
-    }
-
-    return name
-  }
-
-  const rawAuthor = book.authors?.[0] || 'Unknown Author'
-  const author = formatAuthorName(rawAuthor)
-  const series = book.series?.[0]
-  const title = book.title || book.album || 'Unknown Title'
-  const filename = book.source_path?.split('/').pop() || 'file.mp3'
-
-  // Build output path based on layout
-  const pathParts = [outputDir || '/output']
-
-  switch (layout) {
-    case 'author-series-title':
-      pathParts.push(author)
-      if (series) pathParts.push(series)
-      pathParts.push(title)
-      break
-    case 'author-title':
-      pathParts.push(author, title)
-      break
-    case 'series-title':
-      if (series) pathParts.push(series)
-      pathParts.push(title)
-      break
-    case 'author-only':
-      pathParts.push(author)
-      break
-  }
-
-  pathParts.push(filename)
-  const outputPath = pathParts.join('/')
+  const author = preview.author || 'Unknown Author'
+  const series = preview.series || undefined
+  const title = preview.title || 'Unknown Title'
+  const filename = preview.filename || book.source_path?.split('/').pop() || 'file.mp3'
 
   return (
     <div className="p-4 space-y-3">
@@ -114,29 +70,14 @@ export function OutputPreviewSimple({ book, outputDir }: OutputPreviewSimpleProp
 
         <div>
           <div className="text-xs font-medium text-muted-foreground mb-1">OUTPUT</div>
-          <div className="p-2 bg-green-500/10 border border-green-500/20 rounded text-xs font-mono break-all">
-            {/* Color-coded path segments matching Path Structure */}
-            {pathParts.map((part, idx) => {
-              let color = 'text-foreground'
-              if (idx === 0) {
-                // Output dir - default color
-                color = 'text-muted-foreground'
-              } else if (part === author) {
-                color = 'text-orange-600'
-              } else if (part === series) {
-                color = 'text-cyan-600'
-              } else if (part === title) {
-                color = 'text-green-600'
-              } else if (part === filename) {
-                color = 'text-blue-600'
-              }
-              return (
-                <span key={idx}>
-                  <span className={color}>{part}</span>
-                  {idx < pathParts.length - 1 && <span className="text-muted-foreground">/</span>}
-                </span>
-              )
-            })}
+          <div className="p-2 text-xs font-mono break-all">
+            <ColoredPath
+              parts={pathParts}
+              author={author}
+              series={series}
+              title={title}
+              filename={filename}
+            />
           </div>
         </div>
       </div>

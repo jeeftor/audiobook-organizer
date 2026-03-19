@@ -1,19 +1,15 @@
 import { useState, useEffect } from 'react'
-import { organizer } from '../../wailsjs/go/models'
 import { main } from '../../wailsjs/go/models'
 import { ChevronDown, ChevronRight, Copy } from 'lucide-react'
 import {
-  GetCurrentLayout,
-  GetCurrentAuthorFormat,
-  GetRenameConfig,
-  GetFieldMappingOptions,
   UpdateFieldMappingField,
+  UpdateLayout,
+  GetBatchPreview,
 } from '../../wailsjs/go/main/App'
-import { buildOutputParts } from '../utils/pathUtils'
 import { ColoredPath } from './ColoredPath'
+import { useSettings } from '../contexts/SettingsContext'
 
 interface ExecutionPreviewProps {
-  books: organizer.Metadata[]
   selectedIndices: Set<number>
   outputDir: string
   onExecute: (copyMode: boolean, operations: Array<{from: string, to: string}>) => void
@@ -22,7 +18,6 @@ interface ExecutionPreviewProps {
 }
 
 export function ExecutionPreview({
-  books,
   selectedIndices,
   outputDir,
   onExecute,
@@ -31,52 +26,39 @@ export function ExecutionPreview({
 }: ExecutionPreviewProps) {
   const [copyMode, setCopyMode] = useState(false)
   const [showCommands, setShowCommands] = useState(false)
-  const [layout, setLayout] = useState('author-series-title')
-  const [authorFormat, setAuthorFormat] = useState('preserve')
-  const [renameEnabled, setRenameEnabled] = useState(false)
-  const [renameTemplate, setRenameTemplate] = useState('')
-  const [fieldOptions, setFieldOptions] = useState<main.FieldMappingOption[]>([])
+  const [previewItems, setPreviewItems] = useState<main.PreviewItem[]>([])
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [isExecuting, setIsExecuting] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [viewMode, setViewMode] = useState<'books' | 'files'>('books')
+  const { settings, refreshSettings } = useSettings()
 
-  // Load layout, authorFormat, renameConfig, and field mapping options from backend
+  const selectedIndicesArray = Array.from(selectedIndices)
+
+  // Reload batch preview whenever selection, outputDir, or any relevant setting changes
   useEffect(() => {
-    const loadSettings = () => {
-      GetCurrentLayout()
-        .then(l => setLayout(l))
-        .catch(err => console.error('Failed to get layout:', err))
-
-      GetCurrentAuthorFormat()
-        .then(f => setAuthorFormat(f))
-        .catch(err => console.error('Failed to get author format:', err))
-
-      GetRenameConfig()
-        .then(cfg => {
-          setRenameEnabled(cfg.enabled)
-          setRenameTemplate(cfg.template)
-        })
-        .catch(err => console.error('Failed to get rename config:', err))
-
-      GetFieldMappingOptions()
-        .then(opts => setFieldOptions(opts))
-        .catch(err => console.error('Failed to get field mapping options:', err))
+    if (selectedIndicesArray.length === 0) {
+      setPreviewItems([])
+      return
     }
-
-    loadSettings()
-    const interval = setInterval(loadSettings, 500)
-    return () => clearInterval(interval)
-  }, [])
-
-  const selectedBooks = books.filter((_, idx) => selectedIndices.has(idx))
+    setPreviewLoading(true)
+    GetBatchPreview(selectedIndicesArray, outputDir)
+      .then(items => setPreviewItems(items || []))
+      .catch(err => console.error('Failed to get batch preview:', err))
+      .finally(() => setPreviewLoading(false))
+  }, [selectedIndices, outputDir, settings.layout, settings.authorFormat, JSON.stringify(settings.fieldOptions)])
 
   const getFieldOption = (field: string) => {
-    return fieldOptions.find(opt => opt.field === field)
+    return settings.fieldOptions.find(opt => opt.field === field)
   }
 
   const handleFieldMappingChange = async (field: string, value: string) => {
     try {
       await UpdateFieldMappingField(field, value)
-      // Reload options immediately
-      const opts = await GetFieldMappingOptions()
-      setFieldOptions(opts)
+      refreshSettings()
+      // Refresh preview with updated field mapping
+      const items = await GetBatchPreview(selectedIndicesArray, outputDir)
+      setPreviewItems(items || [])
       if (onFieldMappingChange) {
         onFieldMappingChange()
       }
@@ -85,38 +67,53 @@ export function ExecutionPreview({
     }
   }
 
-  // Build operations using shared utility
-  const operations = selectedBooks.map((book) => {
-    const { parts, author, series, title, filename } = buildOutputParts(
-      book,
-      outputDir,
-      layout,
-      authorFormat
-    )
-    // Use renamed filename if enabled, otherwise original
-    const outputFilename = renameEnabled ? `${title}.mp3` : filename
-    // Replace the last part (filename) with outputFilename
-    const finalParts = [...parts.slice(0, -1), outputFilename]
-    return {
-      from: book.source_path,
-      to: finalParts.join('/'),
-      directory: finalParts.slice(0, -1).join('/'),
-      parts: finalParts,
-      author,
-      series,
-      title,
-      filename: outputFilename,
+  // Group by book: author + series (or title when no series).
+  // This correctly collapses individual track files into their parent book.
+  const bookGroups = (() => {
+    const map = new Map<string, { key: string; bookLabel: string; author: string; series?: string; items: main.PreviewItem[] }>()
+    for (const item of previewItems) {
+      const bookName = item.series || item.title
+      const key = `${item.author}|||${bookName}`
+      if (!map.has(key)) {
+        map.set(key, { key, bookLabel: bookName, author: item.author, series: item.series || undefined, items: [] })
+      }
+      map.get(key)!.items.push(item)
     }
-  })
+    return Array.from(map.values())
+  })()
+
+  const hasMultipleFilesPerBook = bookGroups.some(g => g.items.length > 1)
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  // Build path parts from a PreviewItem for ColoredPath component
+  const getPathParts = (item: main.PreviewItem) => {
+    const effectiveOutputDir = item.output_dir || outputDir || '/output'
+    const relPath = item.to.startsWith(effectiveOutputDir)
+      ? item.to.slice(effectiveOutputDir.length)
+      : item.to
+    const relParts = relPath.split('/').filter(p => p.length > 0)
+    return [effectiveOutputDir, ...relParts]
+  }
 
   // Generate bash commands
   const generateCommands = () => {
-    const dirs = new Set(operations.map(op => op.directory))
+    const dirs = new Set(previewItems.map(item => {
+      const parts = getPathParts(item)
+      return parts.slice(0, -1).join('/')
+    }))
     const mkdirCommands = Array.from(dirs).map(dir => `mkdir -p "${dir}"`)
-    const fileCommands = operations.map(op =>
+    const fileCommands = previewItems.map(item =>
       copyMode
-        ? `cp "${op.from}" "${op.to}"`
-        : `mv "${op.from}" "${op.to}"`
+        ? `cp "${item.from}" "${item.to}"`
+        : `mv "${item.from}" "${item.to}"`
     )
     return [...mkdirCommands, '', ...fileCommands].join('\n')
   }
@@ -125,7 +122,27 @@ export function ExecutionPreview({
     <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
       {/* Header */}
       <div className="border-b border-border p-3 bg-card">
-        <div className="text-lg font-semibold">Ready to Organize ({selectedBooks.length} files)</div>
+        <div className="flex items-center justify-between">
+          <div className="text-lg font-semibold">
+            Ready to Organize —{' '}
+            {hasMultipleFilesPerBook
+              ? <>{bookGroups.length} {bookGroups.length === 1 ? 'book' : 'books'} <span className="text-sm font-normal text-muted-foreground">({previewItems.length} files)</span></>
+              : <>{previewItems.length} {previewItems.length === 1 ? 'file' : 'files'}</>
+            }
+          </div>
+          {hasMultipleFilesPerBook && (
+            <div className="flex rounded border border-border overflow-hidden text-xs">
+              <button
+                onClick={() => setViewMode('books')}
+                className={`px-3 py-1 transition-colors ${viewMode === 'books' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/50'}`}
+              >Books</button>
+              <button
+                onClick={() => setViewMode('files')}
+                className={`px-3 py-1 transition-colors ${viewMode === 'files' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/50'}`}
+              >Files</button>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-4 mt-2 text-sm">
           {/* Copy mode checkbox */}
           <div className="flex items-center gap-2">
@@ -144,13 +161,31 @@ export function ExecutionPreview({
 
           <div className="text-muted-foreground">|</div>
 
-          {/* Settings summary */}
-          <div className="text-xs text-muted-foreground">
-            Layout: <span className="text-foreground">{layout}</span>
-            {renameEnabled && (
-              <> • Rename: <span className="text-foreground">{renameTemplate}</span></>
-            )}
+          {/* Layout selector */}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">Layout:</span>
+            <select
+              value={settings.layout}
+              onChange={async (e) => {
+                await UpdateLayout(e.target.value)
+                refreshSettings()
+              }}
+              className="text-xs p-1 rounded border border-border bg-background"
+            >
+              {settings.layoutOptions.map(opt => (
+                <option key={opt.name} value={opt.name}>{opt.name}</option>
+              ))}
+            </select>
           </div>
+
+          {settings.renameConfig.enabled && (
+            <>
+              <div className="text-muted-foreground">|</div>
+              <div className="text-xs text-muted-foreground">
+                Rename: <span className="text-foreground">{settings.renameConfig.template}</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Field Mapping bar */}
@@ -219,37 +254,97 @@ export function ExecutionPreview({
 
       {/* Preview list */}
       <div className="flex-1 overflow-y-auto p-3">
-        <div className="grid grid-cols-2 gap-2 text-xs mb-2 font-medium text-muted-foreground">
-          <div>From</div>
-          <div>To</div>
-        </div>
+        {viewMode === 'books' ? (
+          /* Books view — one row per book, expandable to see individual files */
+          <div className="space-y-1">
+            {bookGroups.map(group => {
+              const expanded = expandedGroups.has(group.key)
+              const firstItem = group.items[0]
+              const firstParts = getPathParts(firstItem)
+              // Show path up to (but not including) the filename
+              const folderParts = group.items.length > 1 ? firstParts.slice(0, -1) : firstParts
+              return (
+                <div key={group.key} className="border border-border rounded overflow-hidden">
+                  {/* Book header row */}
+                  <button
+                    onClick={() => group.items.length > 1 && toggleGroup(group.key)}
+                    className={`w-full grid grid-cols-2 gap-2 text-[10px] p-1.5 bg-muted/10 transition-colors text-left ${group.items.length > 1 ? 'hover:bg-muted/30 cursor-pointer' : 'cursor-default'}`}
+                  >
+                    <div className="font-mono text-muted-foreground flex items-center gap-1 min-w-0">
+                      {group.items.length > 1
+                        ? (expanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />)
+                        : <span className="w-3 shrink-0" />
+                      }
+                      <span className="truncate">{firstItem.from}</span>
+                      {group.items.length > 1 && (
+                        <span className="ml-1 text-[9px] bg-muted px-1 py-0.5 rounded whitespace-nowrap shrink-0">{group.items.length} files</span>
+                      )}
+                    </div>
+                    <div className="font-mono break-all">
+                      <ColoredPath
+                        parts={folderParts}
+                        author={group.author}
+                        series={group.series}
+                        title={group.bookLabel}
+                        filename={group.items.length === 1 ? firstItem.filename : ''}
+                      />
+                    </div>
+                  </button>
 
-        <div className="space-y-1">
-          {operations.map((op, idx) => (
-            <div key={idx} className="grid grid-cols-2 gap-2 text-[10px]">
-              <div className="p-1.5 bg-muted/20 rounded font-mono break-all border border-border">
-                {op.from}
-              </div>
-              <div className="p-1.5 bg-green-500/10 rounded font-mono break-all border border-green-500/20">
-                <ColoredPath
-                  parts={op.parts}
-                  author={op.author}
-                  series={op.series}
-                  title={op.title}
-                  filename={op.filename}
-                />
-              </div>
+                  {/* File rows — shown when group expanded */}
+                  {expanded && (
+                    <div className="divide-y divide-border/50 border-t border-border">
+                      {group.items.map((item, idx) => (
+                        <div key={idx} className="grid grid-cols-2 gap-2 text-[10px] px-4 py-1 bg-background/50">
+                          <div className="font-mono text-muted-foreground truncate">{item.filename}</div>
+                          <div className="font-mono">
+                            <ColoredPath
+                              parts={getPathParts(item)}
+                              author={item.author}
+                              series={item.series || undefined}
+                              title={item.title}
+                              filename={item.filename}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          /* Files view — flat list, one row per file */
+          <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-2 text-xs mb-1 font-medium text-muted-foreground px-1">
+              <div>From</div>
+              <div>To</div>
             </div>
-          ))}
-        </div>
+            {previewItems.map((item, idx) => (
+              <div key={idx} className="grid grid-cols-2 gap-2 text-[10px]">
+                <div className="p-1.5 bg-muted/20 rounded font-mono break-all border border-border">{item.from}</div>
+                <div className="p-1.5 font-mono break-all">
+                  <ColoredPath
+                    parts={getPathParts(item)}
+                    author={item.author}
+                    series={item.series || undefined}
+                    title={item.title}
+                    filename={item.filename}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Warnings */}
-        {(renameEnabled || operations.length > 10) && (
+        {(settings.renameConfig.enabled || previewItems.length > 10) && (
           <div className="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded text-xs">
             <div className="font-medium text-yellow-700 dark:text-yellow-400 mb-1">Notice</div>
             <ul className="text-muted-foreground space-y-0.5 ml-4 list-disc">
-              {renameEnabled && <li>Files will be renamed</li>}
-              <li>{new Set(operations.map(op => op.directory)).size} directories will be created</li>
+              {settings.renameConfig.enabled && <li>Files will be renamed</li>}
+              <li>{new Set(previewItems.map(item => getPathParts(item).slice(0, -1).join('/'))).size} directories will be created</li>
               {!copyMode && <li>Original files will be moved (not copied)</li>}
             </ul>
           </div>
@@ -276,19 +371,7 @@ export function ExecutionPreview({
               {generateCommands()}
             </pre>
             <button
-              onClick={() => {
-                const commands = generateCommands()
-                // navigator.clipboard requires HTTPS; use execCommand fallback for Wails
-                const ta = document.createElement('textarea')
-                ta.value = commands
-                ta.style.position = 'fixed'
-                ta.style.opacity = '0'
-                document.body.appendChild(ta)
-                ta.focus()
-                ta.select()
-                document.execCommand('copy')
-                document.body.removeChild(ta)
-              }}
+              onClick={() => navigator.clipboard.writeText(generateCommands())}
               className="mt-2 text-xs px-2 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90"
             >
               Copy to Clipboard
@@ -306,10 +389,14 @@ export function ExecutionPreview({
           Cancel
         </button>
         <button
-          onClick={() => onExecute(copyMode, operations.map(op => ({ from: op.from, to: op.to })))}
-          className="px-6 py-2 rounded bg-green-600 text-white hover:bg-green-700 transition-colors font-medium"
+          onClick={() => {
+            setIsExecuting(true)
+            onExecute(copyMode, previewItems.map(item => ({ from: item.from, to: item.to })))
+          }}
+          disabled={previewLoading || isExecuting || previewItems.length === 0}
+          className="px-6 py-2 rounded bg-green-600 text-white hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Execute Organization →
+          {previewLoading ? 'Loading preview…' : isExecuting ? 'Executing…' : 'Execute Organization →'}
         </button>
       </div>
     </div>

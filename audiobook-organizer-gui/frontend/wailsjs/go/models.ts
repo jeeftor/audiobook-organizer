@@ -94,6 +94,20 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class FileOperation {
+	    from: string;
+	    to: string;
+
+	    static createFrom(source: any = {}) {
+	        return new FileOperation(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.from = source["from"];
+	        this.to = source["to"];
+	    }
+	}
 	export class InitialDirectories {
 	    input_dir: string;
 	    output_dir: string;
@@ -178,6 +192,11 @@ export namespace main {
 	    from: string;
 	    to: string;
 	    is_conflict: boolean;
+	    author: string;
+	    series: string;
+	    title: string;
+	    filename: string;
+	    output_dir: string;
 
 	    static createFrom(source: any = {}) {
 	        return new PreviewItem(source);
@@ -188,6 +207,11 @@ export namespace main {
 	        this.from = source["from"];
 	        this.to = source["to"];
 	        this.is_conflict = source["is_conflict"];
+	        this.author = source["author"];
+	        this.series = source["series"];
+	        this.title = source["title"];
+	        this.filename = source["filename"];
+	        this.output_dir = source["output_dir"];
 	    }
 	}
 	export class ProgressUpdate {

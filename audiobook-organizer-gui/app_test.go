@@ -572,6 +572,312 @@ func TestApp_UndoLastOperation_NoLogFile(t *testing.T) {
 	}
 }
 
+// TestApp_GetLivePreviewPath_ValidIndex verifies that GetLivePreviewPath returns a
+// fully populated PreviewItem (author, series, title, filename, output_dir) from
+// the cached scan results for the given index.
+func TestApp_GetLivePreviewPath_ValidIndex(t *testing.T) {
+	outputDir := t.TempDir()
+
+	app := NewApp()
+	app.config.Layout = "author-series-title"
+
+	// Populate cache directly (no filesystem scan needed)
+	lastScanResults = []organizer.Metadata{
+		{
+			Title:      "The Way of Kings",
+			Authors:    []string{"Brandon Sanderson"},
+			Series:     []string{"Stormlight Archive"},
+			SourcePath: "/input/thewayofkings.m4b",
+			SourceType: "audio",
+		},
+	}
+	t.Cleanup(func() { lastScanResults = nil })
+
+	// Put the app in flat mode so SourcePath is the file (not the dir)
+	app.config.Flat = true
+
+	item, err := app.GetLivePreviewPath(0, outputDir)
+	if err != nil {
+		t.Fatalf("GetLivePreviewPath() error = %v", err)
+	}
+
+	if item.Author != "Brandon Sanderson" {
+		t.Errorf("Author = %q, want %q", item.Author, "Brandon Sanderson")
+	}
+	if item.Series != "Stormlight Archive" {
+		t.Errorf("Series = %q, want %q", item.Series, "Stormlight Archive")
+	}
+	if item.Title != "The Way of Kings" {
+		t.Errorf("Title = %q, want %q", item.Title, "The Way of Kings")
+	}
+	if item.Filename != "thewayofkings.m4b" {
+		t.Errorf("Filename = %q, want %q", item.Filename, "thewayofkings.m4b")
+	}
+	if item.OutputDir != outputDir {
+		t.Errorf("OutputDir = %q, want %q", item.OutputDir, outputDir)
+	}
+	if item.To == "" {
+		t.Error("To should not be empty")
+	}
+}
+
+// TestApp_GetLivePreviewPath_InvalidIndex verifies that GetLivePreviewPath returns an
+// error when the book index is out of range.
+func TestApp_GetLivePreviewPath_InvalidIndex(t *testing.T) {
+	app := NewApp()
+	lastScanResults = nil
+	t.Cleanup(func() { lastScanResults = nil })
+
+	_, err := app.GetLivePreviewPath(0, "/output")
+	if err == nil {
+		t.Error("GetLivePreviewPath() expected error for empty cache, got nil")
+	}
+}
+
+// TestApp_GetBatchPreview_ReturnsItems verifies that GetBatchPreview returns one
+// enriched PreviewItem per selected index with all metadata fields populated.
+func TestApp_GetBatchPreview_ReturnsItems(t *testing.T) {
+	outputDir := t.TempDir()
+
+	app := NewApp()
+	app.config.Layout = "author-series-title"
+	app.config.Flat = true
+
+	lastScanResults = []organizer.Metadata{
+		{
+			Title:      "The Way of Kings",
+			Authors:    []string{"Brandon Sanderson"},
+			Series:     []string{"Stormlight Archive"},
+			SourcePath: "/input/book1.m4b",
+			SourceType: "audio",
+		},
+		{
+			Title:      "Words of Radiance",
+			Authors:    []string{"Brandon Sanderson"},
+			Series:     []string{"Stormlight Archive"},
+			SourcePath: "/input/book2.m4b",
+			SourceType: "audio",
+		},
+	}
+	t.Cleanup(func() { lastScanResults = nil })
+
+	items, err := app.GetBatchPreview([]int{0, 1}, outputDir)
+	if err != nil {
+		t.Fatalf("GetBatchPreview() error = %v", err)
+	}
+
+	if len(items) != 2 {
+		t.Fatalf("GetBatchPreview() returned %d items, want 2", len(items))
+	}
+
+	if items[0].Author != "Brandon Sanderson" {
+		t.Errorf("items[0].Author = %q, want %q", items[0].Author, "Brandon Sanderson")
+	}
+	if items[0].Title != "The Way of Kings" {
+		t.Errorf("items[0].Title = %q, want %q", items[0].Title, "The Way of Kings")
+	}
+	if items[1].Title != "Words of Radiance" {
+		t.Errorf("items[1].Title = %q, want %q", items[1].Title, "Words of Radiance")
+	}
+	if items[0].OutputDir != outputDir {
+		t.Errorf("items[0].OutputDir = %q, want %q", items[0].OutputDir, outputDir)
+	}
+}
+
+// TestApp_GetBatchPreview_EmptyIndicesReturnsEmpty verifies that GetBatchPreview
+// returns an empty list when selectedIndices is empty (not all books).
+// This prevents the footgun where an empty selection would process every book.
+func TestApp_GetBatchPreview_EmptyIndicesReturnsEmpty(t *testing.T) {
+	app := NewApp()
+	lastScanResults = []organizer.Metadata{
+		{Title: "Book One", Authors: []string{"Author A"}, SourcePath: "/input/a.m4b", SourceType: "audio"},
+		{Title: "Book Two", Authors: []string{"Author B"}, SourcePath: "/input/b.m4b", SourceType: "audio"},
+	}
+	t.Cleanup(func() { lastScanResults = nil })
+
+	items, err := app.GetBatchPreview([]int{}, "/output")
+	if err != nil {
+		t.Fatalf("GetBatchPreview() unexpected error: %v", err)
+	}
+	if len(items) != 0 {
+		t.Errorf("GetBatchPreview() with empty indices = %d items, want 0 (not all books)", len(items))
+	}
+}
+
+// TestApp_GetBatchPreview_EmptyNoScanResults verifies that GetBatchPreview returns
+// an error when the scan cache is empty.
+func TestApp_GetBatchPreview_EmptyNoScanResults(t *testing.T) {
+	app := NewApp()
+	lastScanResults = nil
+	t.Cleanup(func() { lastScanResults = nil })
+
+	_, err := app.GetBatchPreview([]int{0}, "/output")
+	if err == nil {
+		t.Error("GetBatchPreview() expected error when no scan results, got nil")
+	}
+}
+
+// TestApp_ExecuteFileOperations_MoveDirectory verifies that ExecuteFileOperations
+// moves a source directory to the target location and returns a summary with one move.
+func TestApp_ExecuteFileOperations_MoveDirectory(t *testing.T) {
+	inputDir := t.TempDir()
+	outputDir := t.TempDir()
+
+	// Create a source book directory with an audio file
+	sourceDir := filepath.Join(inputDir, "book1")
+	if err := os.MkdirAll(sourceDir, 0755); err != nil {
+		t.Fatalf("failed to create source dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(sourceDir, "audio.mp3"), []byte("fake audio"), 0644); err != nil {
+		t.Fatalf("failed to create audio file: %v", err)
+	}
+
+	targetDir := filepath.Join(outputDir, "Author", "Book1")
+
+	app := NewApp()
+	app.config.OutputDir = outputDir
+
+	ops := []FileOperation{{From: sourceDir, To: targetDir}}
+	summary, err := app.ExecuteFileOperations(ops, false)
+	if err != nil {
+		t.Fatalf("ExecuteFileOperations() error = %v", err)
+	}
+
+	if len(summary.Moves) != 1 {
+		t.Fatalf("ExecuteFileOperations() Moves = %d, want 1", len(summary.Moves))
+	}
+
+	// Target file should exist
+	if _, err := os.Stat(filepath.Join(targetDir, "audio.mp3")); os.IsNotExist(err) {
+		t.Errorf("ExecuteFileOperations() did not move file to target dir")
+	}
+
+	// Source dir should be gone
+	if _, err := os.Stat(sourceDir); !os.IsNotExist(err) {
+		t.Errorf("ExecuteFileOperations() left source dir at %s", sourceDir)
+	}
+}
+
+// TestApp_ExecuteFileOperations_CopyDirectory verifies that copy mode leaves the source intact.
+func TestApp_ExecuteFileOperations_CopyDirectory(t *testing.T) {
+	inputDir := t.TempDir()
+	outputDir := t.TempDir()
+
+	sourceDir := filepath.Join(inputDir, "book1")
+	if err := os.MkdirAll(sourceDir, 0755); err != nil {
+		t.Fatalf("failed to create source dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(sourceDir, "audio.mp3"), []byte("fake audio"), 0644); err != nil {
+		t.Fatalf("failed to create audio file: %v", err)
+	}
+
+	targetDir := filepath.Join(outputDir, "Author", "Book1")
+
+	app := NewApp()
+	app.config.OutputDir = outputDir
+
+	ops := []FileOperation{{From: sourceDir, To: targetDir}}
+	summary, err := app.ExecuteFileOperations(ops, true) // copy mode
+	if err != nil {
+		t.Fatalf("ExecuteFileOperations() error = %v", err)
+	}
+
+	if len(summary.Moves) != 1 {
+		t.Fatalf("ExecuteFileOperations() Moves = %d, want 1", len(summary.Moves))
+	}
+
+	// Target file should exist
+	if _, err := os.Stat(filepath.Join(targetDir, "audio.mp3")); os.IsNotExist(err) {
+		t.Errorf("ExecuteFileOperations() did not copy file to target dir")
+	}
+
+	// Source dir should still exist (copy mode)
+	if _, err := os.Stat(sourceDir); os.IsNotExist(err) {
+		t.Errorf("ExecuteFileOperations() removed source dir in copy mode")
+	}
+}
+
+// TestApp_ExecuteFileOperations_EmptyOps returns empty summary without error.
+func TestApp_ExecuteFileOperations_EmptyOps(t *testing.T) {
+	app := NewApp()
+	summary, err := app.ExecuteFileOperations([]FileOperation{}, false)
+	if err != nil {
+		t.Fatalf("ExecuteFileOperations() error = %v", err)
+	}
+	if len(summary.Moves) != 0 {
+		t.Errorf("ExecuteFileOperations() Moves = %d, want 0", len(summary.Moves))
+	}
+}
+
+// TestApp_ExecuteFileOperations_WritesUndoLog verifies that the undo log is written.
+func TestApp_ExecuteFileOperations_WritesUndoLog(t *testing.T) {
+	inputDir := t.TempDir()
+	outputDir := t.TempDir()
+
+	sourceDir := filepath.Join(inputDir, "book1")
+	if err := os.MkdirAll(sourceDir, 0755); err != nil {
+		t.Fatalf("failed to create source dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(sourceDir, "audio.mp3"), []byte("data"), 0644); err != nil {
+		t.Fatalf("failed to create file: %v", err)
+	}
+
+	targetDir := filepath.Join(outputDir, "Author", "Book1")
+
+	app := NewApp()
+	app.config.OutputDir = outputDir
+
+	ops := []FileOperation{{From: sourceDir, To: targetDir}}
+	_, err := app.ExecuteFileOperations(ops, false)
+	if err != nil {
+		t.Fatalf("ExecuteFileOperations() error = %v", err)
+	}
+
+	logPath := filepath.Join(outputDir, ".abook-org.log")
+	if _, err := os.Stat(logPath); os.IsNotExist(err) {
+		t.Errorf("ExecuteFileOperations() did not write undo log at %s", logPath)
+	}
+}
+
+// TestApp_ExecuteFileOperations_OnlyMovesSelected verifies that only the specified
+// operations are executed and other directories in the input remain untouched.
+func TestApp_ExecuteFileOperations_OnlyMovesSelected(t *testing.T) {
+	inputDir := t.TempDir()
+	outputDir := t.TempDir()
+
+	// Create two book directories
+	for _, name := range []string{"book1", "book2"} {
+		dir := filepath.Join(inputDir, name)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatalf("failed to create dir %s: %v", name, err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "audio.mp3"), []byte("data"), 0644); err != nil {
+			t.Fatalf("failed to create file in %s: %v", name, err)
+		}
+	}
+
+	// Only move book1
+	targetDir := filepath.Join(outputDir, "Author", "Book1")
+	app := NewApp()
+	app.config.OutputDir = outputDir
+
+	ops := []FileOperation{{From: filepath.Join(inputDir, "book1"), To: targetDir}}
+	_, err := app.ExecuteFileOperations(ops, false)
+	if err != nil {
+		t.Fatalf("ExecuteFileOperations() error = %v", err)
+	}
+
+	// book1 should be moved
+	if _, err := os.Stat(filepath.Join(inputDir, "book1")); !os.IsNotExist(err) {
+		t.Errorf("ExecuteFileOperations() left book1 in source dir")
+	}
+
+	// book2 should still be in the input dir (untouched)
+	if _, err := os.Stat(filepath.Join(inputDir, "book2")); os.IsNotExist(err) {
+		t.Errorf("ExecuteFileOperations() removed book2 which was not selected")
+	}
+}
+
 // TestApp_PreviewChanges_SetsAllowedSourcePaths verifies that after calling PreviewChanges
 // with a subset of selected book indices, AllowedSourcePaths on the config contains
 // exactly the source paths of the selected books.
@@ -586,7 +892,7 @@ func TestApp_PreviewChanges_SetsAllowedSourcePaths(t *testing.T) {
 		if err := os.MkdirAll(bookDir, 0755); err != nil {
 			t.Fatalf("failed to create book dir %s: %v", name, err)
 		}
-		meta := map[string]interface{}{
+		meta := map[string]any{
 			"title":   name,
 			"authors": []string{"Test Author"},
 		}

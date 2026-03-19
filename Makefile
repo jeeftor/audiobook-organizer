@@ -68,7 +68,7 @@ gui-dev:
 
 # Start GUI with ./books as input and . as output
 gui-dev1:
-	cd audiobook-organizer-gui && wails dev -appargs "--dir=../books --out=.."
+	cd audiobook-organizer-gui && wails dev -appargs "--dir=../books --out=.. --flat"
 
 # Start GUI with books-meta as input
 gui-dev2:

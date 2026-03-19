@@ -1,41 +1,44 @@
 import { useState, useEffect } from 'react'
-import { organizer } from '../../wailsjs/go/models'
+import { main } from '../../wailsjs/go/models'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { GetCurrentLayout, GetCurrentAuthorFormat } from '../../wailsjs/go/main/App'
-import { buildOutputParts } from '../utils/pathUtils'
+import { GetBatchPreview } from '../../wailsjs/go/main/App'
 import { ColoredPath } from './ColoredPath'
+import { useSettings } from '../contexts/SettingsContext'
 
 interface BatchPreviewProps {
-  books: organizer.Metadata[]
   selectedIndices: Set<number>
   outputDir: string
 }
 
-export function BatchPreview({ books, selectedIndices, outputDir }: BatchPreviewProps) {
+export function BatchPreview({ selectedIndices, outputDir }: BatchPreviewProps) {
   const [expanded, setExpanded] = useState(false)
-  const [layout, setLayout] = useState('author-series-title')
-  const [authorFormat, setAuthorFormat] = useState('preserve')
+  const [previewItems, setPreviewItems] = useState<main.PreviewItem[]>([])
+  const { settings } = useSettings()
 
-  // Load layout and author format
+  const selectedIndicesArray = Array.from(selectedIndices)
+
+  // Re-fetch whenever selection, outputDir, or any relevant setting changes
   useEffect(() => {
-    const loadSettings = () => {
-      GetCurrentLayout().then(l => setLayout(l)).catch(err => {
-        console.error('Failed to get layout:', err)
-      })
-      GetCurrentAuthorFormat().then(f => setAuthorFormat(f)).catch(err => {
-        console.error('Failed to get author format:', err)
-      })
+    if (selectedIndicesArray.length === 0) {
+      setPreviewItems([])
+      return
     }
-    loadSettings()
-    const interval = setInterval(loadSettings, 500)
-    return () => clearInterval(interval)
-  }, [])
+    GetBatchPreview(selectedIndicesArray, outputDir)
+      .then(items => setPreviewItems(items || []))
+      .catch(() => setPreviewItems([]))
+  }, [selectedIndices, outputDir, settings.layout, settings.authorFormat, JSON.stringify(settings.fieldOptions)])
 
-  // Filter to only selected books
-  const selectedBooks = books.filter((_, idx) => selectedIndices.has(idx))
-
-  if (selectedBooks.length === 0) {
+  if (previewItems.length === 0) {
     return null
+  }
+
+  const getPathParts = (item: main.PreviewItem) => {
+    const effectiveOutputDir = item.output_dir || outputDir || '/output'
+    const relPath = item.to.startsWith(effectiveOutputDir)
+      ? item.to.slice(effectiveOutputDir.length)
+      : item.to
+    const relParts = relPath.split('/').filter(p => p.length > 0)
+    return [effectiveOutputDir, ...relParts]
   }
 
   return (
@@ -51,7 +54,7 @@ export function BatchPreview({ books, selectedIndices, outputDir }: BatchPreview
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           )}
           <span className="text-xs font-medium">Batch Preview</span>
-          <span className="text-xs text-muted-foreground">({selectedBooks.length} selected)</span>
+          <span className="text-xs text-muted-foreground">({previewItems.length} selected)</span>
         </div>
       </button>
 
@@ -63,29 +66,20 @@ export function BatchPreview({ books, selectedIndices, outputDir }: BatchPreview
             <div className="font-medium text-muted-foreground">Output</div>
 
             {/* File list */}
-            {selectedBooks.map((book, idx) => {
-              const { parts, author, series, title, filename } = buildOutputParts(
-                book,
-                outputDir,
-                layout,
-                authorFormat
-              )
-
+            {previewItems.map((item, idx) => {
+              const parts = getPathParts(item)
               return (
                 <div key={idx} className="contents">
-                  {/* Input */}
                   <div className="p-1.5 bg-muted/20 rounded font-mono text-[10px] break-all border border-border">
-                    {book.source_path}
+                    {item.from}
                   </div>
-
-                  {/* Output - color-coded */}
-                  <div className="p-1.5 bg-green-500/10 rounded font-mono text-[10px] break-all border border-green-500/20">
+                  <div className="p-1.5 font-mono text-[10px] break-all">
                     <ColoredPath
                       parts={parts}
-                      author={author}
-                      series={series}
-                      title={title}
-                      filename={filename}
+                      author={item.author}
+                      series={item.series || undefined}
+                      title={item.title}
+                      filename={item.filename}
                     />
                   </div>
                 </div>

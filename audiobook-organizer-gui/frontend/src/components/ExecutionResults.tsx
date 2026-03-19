@@ -4,13 +4,14 @@ import { useState } from 'react'
 interface ExecutionResultsProps {
   success: boolean
   filesProcessed: number
+  skippedCount: number
   errors: string[]
   movedFiles?: Array<{from: string, to: string}>
   onBack: () => void
   onUndo?: () => void
 }
 
-export function ExecutionResults({ success, filesProcessed, errors, movedFiles, onBack, onUndo }: ExecutionResultsProps) {
+export function ExecutionResults({ success, filesProcessed, skippedCount, errors, movedFiles, onBack, onUndo }: ExecutionResultsProps) {
   const [undoing, setUndoing] = useState(false)
 
   const handleUndo = async () => {
@@ -46,6 +47,12 @@ export function ExecutionResults({ success, filesProcessed, errors, movedFiles, 
               <span className="text-muted-foreground">Files Processed:</span>
               <span className="font-semibold">{filesProcessed}</span>
             </div>
+            {skippedCount > 0 && (
+              <div className="flex justify-between text-lg">
+                <span className="text-muted-foreground">Skipped (already moved or missing):</span>
+                <span className="font-semibold text-yellow-600">{skippedCount}</span>
+              </div>
+            )}
             {errors.length > 0 && (
               <div className="flex justify-between text-lg">
                 <span className="text-muted-foreground">Errors:</span>

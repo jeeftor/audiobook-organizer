@@ -7,7 +7,7 @@ import { OutputPreviewSimple } from './components/OutputPreviewSimple'
 import { OptionsPanel } from './components/OptionsPanel'
 import { ExecutionPreview } from './components/ExecutionPreview'
 import { ExecutionResults } from './components/ExecutionResults'
-import { GetInitialDirectories, ScanDirectory } from '../wailsjs/go/main/App'
+import { GetInitialDirectories, ScanDirectory, ExecuteFileOperations } from '../wailsjs/go/main/App'
 import { organizer } from '../wailsjs/go/models'
 
 function App() {
@@ -21,6 +21,7 @@ function App() {
   const [executionResults, setExecutionResults] = useState<{
     success: boolean
     filesProcessed: number
+    skippedCount: number
     errors: string[]
     movedFiles?: Array<{from: string, to: string}>
   } | null>(null)
@@ -62,32 +63,30 @@ function App() {
         console.log(`[App] Scan completed, found ${result?.length || 0} audiobooks`)
         setBooks(result || [])
 
-        if (result && result.length > 0) {
-          if (preserveSelection && currentPaths.length > 0) {
-            // Restore all selected indices
-            const newSelectedIndices = new Set<number>()
-            currentPaths.forEach(path => {
-              const idx = result.findIndex(book => book.source_path === path)
-              if (idx !== -1) newSelectedIndices.add(idx)
-            })
+        if (result && result.length > 0 && preserveSelection && currentPaths.length > 0) {
+          // Restore all selected indices
+          const newSelectedIndices = new Set<number>()
+          currentPaths.forEach(path => {
+            const idx = result.findIndex(book => book.source_path === path)
+            if (idx !== -1) newSelectedIndices.add(idx)
+          })
 
-            if (newSelectedIndices.size > 0) {
-              setSelectedIndices(newSelectedIndices)
-              // Restore single selection if it still exists
-              const newSingleIdx = currentSinglePath
-                ? result.findIndex(book => book.source_path === currentSinglePath)
-                : -1
-              setSelectedIndex(newSingleIdx !== -1 ? newSingleIdx : Array.from(newSelectedIndices)[0])
-            } else {
-              // Fallback to first book
-              setSelectedIndex(0)
-              setSelectedIndices(new Set([0]))
-            }
+          if (newSelectedIndices.size > 0) {
+            setSelectedIndices(newSelectedIndices)
+            // Restore single-focused item if it still exists
+            const newSingleIdx = currentSinglePath
+              ? result.findIndex(book => book.source_path === currentSinglePath)
+              : -1
+            setSelectedIndex(newSingleIdx !== -1 ? newSingleIdx : Array.from(newSelectedIndices)[0])
           } else {
-            // Auto-select first book
-            setSelectedIndex(0)
-            setSelectedIndices(new Set([0]))
+            // Previous selection no longer in results — clear it
+            setSelectedIndices(new Set())
+            setSelectedIndex(null)
           }
+        } else if (!preserveSelection) {
+          // Fresh scan: clear any prior selection
+          setSelectedIndices(new Set())
+          setSelectedIndex(null)
         }
       })
       .catch((err) => {
@@ -106,6 +105,22 @@ function App() {
   }
 
   const selectedBook = selectedIndex !== null ? books[selectedIndex] : null
+
+  // Keep selectedIndex pointing at a checked book.
+  // Runs whenever selectedIndices changes (Select All, Clear, group select, toggle).
+  useEffect(() => {
+    if (selectedIndices.size === 0) {
+      setSelectedIndex(null)
+      return
+    }
+    const sorted = Array.from(selectedIndices).sort((a, b) => a - b)
+    setSelectedIndex(current => {
+      if (current === null || !selectedIndices.has(current)) {
+        return sorted[0]
+      }
+      return current
+    })
+  }, [selectedIndices])
 
   // Auto-scan when input directory changes
   useEffect(() => {
@@ -286,6 +301,7 @@ function App() {
           </div>
           <OutputPreviewSimple
             book={selectedBook}
+            bookIdx={selectedIndex}
             outputDir={outputDir}
           />
         </div>
@@ -311,9 +327,13 @@ function App() {
           <ExecutionResults
             success={executionResults.success}
             filesProcessed={executionResults.filesProcessed}
+            skippedCount={executionResults.skippedCount}
             errors={executionResults.errors}
             movedFiles={executionResults.movedFiles}
-            onBack={() => setCurrentView('editing')}
+            onBack={() => {
+              setCurrentView('editing')
+              if (inputDir) scanDirectory(inputDir)
+            }}
             onUndo={async () => {
               try {
                 const { UndoLastOperation } = await import('../wailsjs/go/main/App')
@@ -324,6 +344,7 @@ function App() {
                 setExecutionResults({
                   success: result.success || false,
                   filesProcessed: result.filesRestored || 0,
+                  skippedCount: 0,
                   errors: result.errors || []
                 })
 
@@ -336,6 +357,7 @@ function App() {
                 setExecutionResults({
                   success: false,
                   filesProcessed: 0,
+                  skippedCount: 0,
                   errors: [String(err)]
                 })
               }
@@ -348,21 +370,18 @@ function App() {
       {currentView === 'preview' && (
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <ExecutionPreview
-            books={books}
             selectedIndices={selectedIndices}
             outputDir={outputDir}
             onFieldMappingChange={() => scanDirectory(inputDir, true)}
-            onExecute={async (_copyMode, operations) => {
-              const selectedIndicesArray = Array.from(selectedIndices)
+            onExecute={async (copyMode, operations) => {
               try {
-                const { PreviewChanges, ExecuteOrganize } = await import('../wailsjs/go/main/App')
-                // Configure organizer with only selected files
-                await PreviewChanges(inputDir, outputDir, selectedIndicesArray)
-                // Execute (not a dry run)
-                const summary = await ExecuteOrganize(false)
+                // Directly execute only the operations shown in the preview
+                const summary = await ExecuteFileOperations(operations, copyMode)
+                const moved = summary.Moves?.length || 0
                 setExecutionResults({
                   success: true,
-                  filesProcessed: summary.Moves?.length || 0,
+                  filesProcessed: moved,
+                  skippedCount: operations.length - moved,
                   errors: [],
                   movedFiles: summary.Moves?.map(m => ({ from: m.from, to: m.to })) || operations,
                 })
@@ -371,6 +390,7 @@ function App() {
                 setExecutionResults({
                   success: false,
                   filesProcessed: 0,
+                  skippedCount: 0,
                   errors: [String(err)],
                   movedFiles: operations,
                 })

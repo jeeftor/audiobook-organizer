@@ -7,10 +7,14 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
+
+//go:embed build/appicon.png
+var icon []byte
 
 func main() {
 	// Parse CLI arguments
@@ -27,7 +31,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "Audiobook Organizer v2",
+		Title:  "Audiobook Organizer",
 		Width:  1400,
 		Height: 900,
 		AssetServer: &assetserver.Options{
@@ -37,6 +41,13 @@ func main() {
 		OnStartup:        app.startup,
 		Bind: []interface{}{
 			app,
+		},
+		Mac: &mac.Options{
+			About: &mac.AboutInfo{
+				Title:   "Audiobook Organizer",
+				Message: "Organize your audiobook library with ease.\n\nhttps://github.com/jeeftor/audiobook-organizer",
+				Icon:    icon,
+			},
 		},
 	})
 

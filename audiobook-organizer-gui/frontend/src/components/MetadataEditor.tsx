@@ -177,16 +177,28 @@ export function MetadataEditor({ book, bookIndex, books, selectedIndices, output
                   </span>
                 </td>
                 <td className="py-1.5 px-2 font-mono break-all">
-                  {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                  {mappedTo ? (
+                    <span className={`inline-block px-1 py-0.5 rounded border font-mono ${
+                      mappedTo === 'Title'  ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 border-green-300 dark:border-green-700' :
+                      mappedTo === 'Series' ? 'text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/40 border-cyan-300 dark:border-cyan-700' :
+                      mappedTo === 'Author' ? 'text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 border-orange-300 dark:border-orange-700' :
+                      mappedTo === 'Track'  ? 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-700' :
+                      'text-foreground'
+                    }`}>
+                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                    </span>
+                  ) : (
+                    typeof value === 'object' ? JSON.stringify(value) : String(value)
+                  )}
                 </td>
                 <td className="py-1.5 px-2 text-right">
                   {mappedTo && (
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded inline-block ${
-                      mappedTo === 'Title' ? 'text-green-600 bg-green-600/20' :
-                      mappedTo === 'Series' ? 'text-cyan-600 bg-cyan-600/20' :
-                      mappedTo === 'Author' ? 'text-orange-600 bg-orange-600/20' :
-                      mappedTo === 'Track' ? 'text-blue-600 bg-blue-600/20' :
-                      'text-primary bg-primary/20'
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border inline-block ${
+                      mappedTo === 'Title'  ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/40 border-green-300 dark:border-green-700' :
+                      mappedTo === 'Series' ? 'text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/40 border-cyan-300 dark:border-cyan-700' :
+                      mappedTo === 'Author' ? 'text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 border-orange-300 dark:border-orange-700' :
+                      mappedTo === 'Track'  ? 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-700' :
+                      'text-primary bg-primary/20 border-primary/30'
                     }`}>
                       ← {mappedTo}
                     </span>
@@ -206,7 +218,6 @@ export function MetadataEditor({ book, bookIndex, books, selectedIndices, output
 
       {/* Batch Preview - collapsible bottom panel */}
       <BatchPreview
-        books={books}
         selectedIndices={selectedIndices}
         outputDir={outputDir}
       />

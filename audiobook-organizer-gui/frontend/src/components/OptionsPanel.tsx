@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { UpdateScanMode, GetCurrentScanMode, UpdateFieldMapping, GetFieldMappingPresets, UpdateLayout, GetCurrentLayout, UpdateAuthorFormat, GetCurrentAuthorFormat, GetFieldMappingOptions, UpdateFieldMappingField } from '../../wailsjs/go/main/App'
-import { main } from '../../wailsjs/go/models'
+import { UpdateScanMode, GetCurrentScanMode, UpdateFieldMapping, GetFieldMappingPresets, UpdateLayout, UpdateAuthorFormat, UpdateFieldMappingField } from '../../wailsjs/go/main/App'
+import { useSettings } from '../contexts/SettingsContext'
 
 interface OptionsPanelProps {
   outputDir: string
@@ -13,9 +13,7 @@ interface OptionsPanelProps {
 export function OptionsPanel({ outputDir, selectedBook, onScanModeChange, onFieldMappingChange, onLayoutChange }: OptionsPanelProps) {
   const [scanMode, setScanMode] = useState('embedded (directory)')
   const [fieldMapping, setFieldMapping] = useState('Audio')
-  const [layout, setLayout] = useState('author-series-title')
-  const [authorFormat, setAuthorFormat] = useState('First Last')
-  const [fieldOptions, setFieldOptions] = useState<main.FieldMappingOption[]>([])
+  const { settings, refreshSettings } = useSettings()
 
   useEffect(() => {
     GetCurrentScanMode().then(mode => {
@@ -23,35 +21,12 @@ export function OptionsPanel({ outputDir, selectedBook, onScanModeChange, onFiel
     }).catch(err => {
       console.error('Failed to get current scan mode:', err)
     })
-
-    GetCurrentLayout().then(layout => {
-      setLayout(layout)
-    }).catch(err => {
-      console.error('Failed to get current layout:', err)
-    })
-
-    GetCurrentAuthorFormat().then(format => {
-      setAuthorFormat(format)
-    }).catch(err => {
-      console.error('Failed to get current author format:', err)
-    })
-
-    loadFieldOptions()
   }, [])
-
-  const loadFieldOptions = async () => {
-    try {
-      const options = await GetFieldMappingOptions()
-      setFieldOptions(options)
-    } catch (err) {
-      console.error('Failed to load field options:', err)
-    }
-  }
 
   const handleFieldMappingChange = async (field: string, value: string) => {
     try {
       await UpdateFieldMappingField(field, value)
-      await loadFieldOptions()
+      refreshSettings()
       if (onFieldMappingChange) {
         onFieldMappingChange()
       }
@@ -61,7 +36,7 @@ export function OptionsPanel({ outputDir, selectedBook, onScanModeChange, onFiel
   }
 
   const getFieldOption = (field: string) => {
-    return fieldOptions.find(opt => opt.field === field)
+    return settings.fieldOptions.find(opt => opt.field === field)
   }
 
   const handleScanModeChange = async (mode: string) => {
@@ -87,6 +62,7 @@ export function OptionsPanel({ outputDir, selectedBook, onScanModeChange, onFiel
         await UpdateFieldMapping(selected.mapping)
         setFieldMapping(preset)
         console.log('Field mapping updated to:', preset)
+        refreshSettings()
 
         // Trigger re-scan with new mapping
         if (onFieldMappingChange) {
@@ -101,7 +77,7 @@ export function OptionsPanel({ outputDir, selectedBook, onScanModeChange, onFiel
   const handleLayoutChange = async (newLayout: string) => {
     try {
       await UpdateLayout(newLayout)
-      setLayout(newLayout)
+      refreshSettings()
       console.log('Layout updated to:', newLayout)
 
       // Trigger preview update
@@ -116,7 +92,7 @@ export function OptionsPanel({ outputDir, selectedBook, onScanModeChange, onFiel
   const handleAuthorFormatChange = async (format: string) => {
     try {
       await UpdateAuthorFormat(format)
-      setAuthorFormat(format)
+      refreshSettings()
       console.log('Author format updated to:', format)
 
       // Trigger preview update
@@ -184,13 +160,12 @@ export function OptionsPanel({ outputDir, selectedBook, onScanModeChange, onFiel
           <span className="text-xs font-medium">Layout:</span>
           <select
             className="text-xs p-1 rounded border border-border bg-background"
-            value={layout}
+            value={settings.layout}
             onChange={(e) => handleLayoutChange(e.target.value)}
           >
-            <option value="author-series-title">author-series-title</option>
-            <option value="author-title">author-title</option>
-            <option value="series-title">series-title</option>
-            <option value="author-only">author-only</option>
+            {settings.layoutOptions.map(opt => (
+              <option key={opt.name} value={opt.name}>{opt.name}</option>
+            ))}
           </select>
         </div>
 
@@ -199,7 +174,7 @@ export function OptionsPanel({ outputDir, selectedBook, onScanModeChange, onFiel
           <span className="text-xs font-medium">Author:</span>
           <select
             className="text-xs p-1 rounded border border-border bg-background"
-            value={authorFormat}
+            value={settings.authorFormat}
             onChange={(e) => handleAuthorFormatChange(e.target.value)}
           >
             <option value="preserve">Preserve</option>

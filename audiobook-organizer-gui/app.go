@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/jeeftor/audiobook-organizer/pkg/organizer"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -472,11 +475,120 @@ type ProgressUpdate struct {
 	CurrentFile string `json:"current_file"`
 }
 
-// PreviewItem represents a file operation preview
+// PreviewItem represents a file operation preview with enriched metadata for color-coded display
 type PreviewItem struct {
 	From       string `json:"from"`
 	To         string `json:"to"`
 	IsConflict bool   `json:"is_conflict"`
+	// Path component fields for color-coded rendering in the frontend
+	Author    string `json:"author"`
+	Series    string `json:"series"`
+	Title     string `json:"title"`
+	Filename  string `json:"filename"`
+	OutputDir string `json:"output_dir"`
+}
+
+// parseAuthorFormat converts the string author format setting to the typed constant
+func parseAuthorFormat(s string) organizer.AuthorFormat {
+	switch s {
+	case "last-first":
+		return organizer.AuthorFormatLastFirst
+	case "first-last":
+		return organizer.AuthorFormatFirstLast
+	default:
+		return organizer.AuthorFormatPreserve
+	}
+}
+
+// enrichedPreviewItem builds a PreviewItem from a PreviewMove with metadata fields populated
+func (a *App) enrichedPreviewItem(move organizer.PreviewMove, outputDir string) PreviewItem {
+	author := ""
+	if len(move.Metadata.Authors) > 0 {
+		author = move.Metadata.Authors[0]
+		formatter := organizer.NewAuthorFormatter(parseAuthorFormat(a.config.AuthorFormat))
+		author = formatter.FormatAuthor(author)
+	}
+	series := ""
+	if len(move.Metadata.Series) > 0 {
+		series = move.Metadata.Series[0]
+	}
+	title := move.Metadata.Title
+	if title == "" {
+		title = move.Metadata.Album
+	}
+	// SourcePath is the audio file in flat mode, or metadata.json in json mode.
+	// Use the base of SourcePath as the filename for display purposes.
+	filename := filepath.Base(move.Metadata.SourcePath)
+
+	return PreviewItem{
+		From:       move.SourcePath,
+		To:         move.TargetPath,
+		IsConflict: move.IsConflict,
+		Author:     author,
+		Series:     series,
+		Title:      title,
+		Filename:   filename,
+		OutputDir:  outputDir,
+	}
+}
+
+// GetLivePreviewPath returns a single enriched PreviewItem for the book at bookIdx,
+// using the given outputDir (overrides a.config.OutputDir for this call).
+func (a *App) GetLivePreviewPath(bookIdx int, outputDir string) (PreviewItem, error) {
+	if bookIdx < 0 || bookIdx >= len(lastScanResults) {
+		return PreviewItem{}, fmt.Errorf("book index %d out of range (0-%d)", bookIdx, len(lastScanResults)-1)
+	}
+
+	// Clone config to avoid mutating shared state
+	cfg := *a.config
+	if outputDir != "" {
+		cfg.OutputDir = outputDir
+	}
+
+	moves, err := organizer.CalculateTargetPaths([]organizer.Metadata{lastScanResults[bookIdx]}, &cfg)
+	if err != nil {
+		return PreviewItem{}, fmt.Errorf("error calculating path: %w", err)
+	}
+	if len(moves) == 0 {
+		return PreviewItem{}, fmt.Errorf("no path calculated for book %d", bookIdx)
+	}
+
+	return a.enrichedPreviewItem(moves[0], cfg.OutputDir), nil
+}
+
+// GetBatchPreview returns enriched PreviewItems for the selected book indices.
+// Returns an empty list if selectedIndices is empty — callers must pass a non-empty
+// selection; the "select all if empty" footgun has been removed.
+func (a *App) GetBatchPreview(selectedIndices []int, outputDir string) ([]PreviewItem, error) {
+	if len(lastScanResults) == 0 {
+		return nil, fmt.Errorf("no scan results - please scan first")
+	}
+	if len(selectedIndices) == 0 {
+		return []PreviewItem{}, nil
+	}
+
+	cfg := *a.config
+	if outputDir != "" {
+		cfg.OutputDir = outputDir
+	}
+
+	var selectedMetadata []organizer.Metadata
+	for _, idx := range selectedIndices {
+		if idx >= 0 && idx < len(lastScanResults) {
+			selectedMetadata = append(selectedMetadata, lastScanResults[idx])
+		}
+	}
+
+	moves, err := organizer.CalculateTargetPaths(selectedMetadata, &cfg)
+	if err != nil {
+		return nil, fmt.Errorf("error calculating paths: %w", err)
+	}
+
+	items := make([]PreviewItem, len(moves))
+	for i, move := range moves {
+		items[i] = a.enrichedPreviewItem(move, cfg.OutputDir)
+	}
+	return items, nil
 }
 
 // NewApp creates a new App application struct
@@ -807,6 +919,165 @@ func (a *App) ExecuteOrganize(dryRun bool) (*organizer.Summary, error) {
 	summary := org.GetSummary()
 
 	return &summary, nil
+}
+
+// FileOperation represents a single file/directory move or copy operation.
+type FileOperation struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+// ExecuteFileOperations performs file organization by directly executing the given
+// from/to operations. This is the preferred execution path from the GUI because it
+// uses the exact paths computed by GetBatchPreview, bypassing the AllowedSourcePaths
+// walk-based filtering that caused all-files-selected bugs.
+func (a *App) ExecuteFileOperations(operations []FileOperation, copyMode bool) (*organizer.Summary, error) {
+	if len(operations) == 0 {
+		return &organizer.Summary{}, nil
+	}
+
+	now := time.Now()
+	var summary organizer.Summary
+	var logEntries []MoveLogEntry
+
+	for _, op := range operations {
+		if op.From == "" || op.To == "" {
+			a.log("Skipping operation with empty path: from=%q to=%q", op.From, op.To)
+			continue
+		}
+
+		// Resolve source symlinks (handles macOS /var → /private/var etc.)
+		from := op.From
+		if resolved, err := filepath.EvalSymlinks(from); err == nil {
+			from = resolved
+		}
+		to := op.To
+
+		info, err := os.Stat(from)
+		if err != nil {
+			a.log("Skipping missing source %s: %v", from, err)
+			continue
+		}
+
+		// Create parent of target
+		if err := os.MkdirAll(filepath.Dir(to), 0755); err != nil {
+			return nil, fmt.Errorf("failed to create parent directory for %s: %w", to, err)
+		}
+
+		if copyMode {
+			if info.IsDir() {
+				if err := execCopyDir(from, to); err != nil {
+					a.log("Error copying %s → %s: %v", from, to, err)
+					continue
+				}
+			} else {
+				if err := execCopyFile(from, to); err != nil {
+					a.log("Error copying %s → %s: %v", from, to, err)
+					continue
+				}
+			}
+		} else {
+			if err := os.Rename(from, to); err != nil {
+				// Cross-device: fall back to copy + delete
+				if info.IsDir() {
+					if err := execCopyDir(from, to); err != nil {
+						a.log("Error moving %s → %s: %v", from, to, err)
+						continue
+					}
+					os.RemoveAll(from)
+				} else {
+					if err := execCopyFile(from, to); err != nil {
+						a.log("Error moving %s → %s: %v", from, to, err)
+						continue
+					}
+					os.Remove(from)
+				}
+			}
+		}
+
+		summary.Moves = append(summary.Moves, organizer.MoveSummary{
+			From: from,
+			To:   to,
+		})
+
+		// Build undo log entry: list files now present in the target location
+		var filePairs []FilePair
+		if info.IsDir() {
+			if entries, err := os.ReadDir(to); err == nil {
+				for _, entry := range entries {
+					if !entry.IsDir() {
+						filePairs = append(filePairs, FilePair{From: entry.Name(), To: entry.Name()})
+					}
+				}
+			}
+		} else {
+			filePairs = []FilePair{{From: filepath.Base(from), To: filepath.Base(to)}}
+		}
+		logEntries = append(logEntries, MoveLogEntry{
+			Timestamp:  now,
+			SourcePath: from,
+			TargetPath: to,
+			Files:      filePairs,
+		})
+	}
+
+	// Append to the undo log
+	if len(logEntries) > 0 && a.config.OutputDir != "" {
+		logPath := filepath.Join(a.config.OutputDir, ".abook-org.log")
+		if err := appendUndoLog(logPath, logEntries); err != nil {
+			a.log("Warning: failed to write undo log: %v", err)
+		}
+	}
+
+	return &summary, nil
+}
+
+// appendUndoLog appends new log entries to the undo log file (creates it if missing).
+func appendUndoLog(logPath string, newEntries []MoveLogEntry) error {
+	var existing []MoveLogEntry
+	if data, err := os.ReadFile(logPath); err == nil {
+		_ = json.Unmarshal(data, &existing)
+	}
+	all := append(existing, newEntries...)
+	data, err := json.MarshalIndent(all, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(logPath, data, 0644)
+}
+
+// execCopyDir recursively copies src directory tree into dst.
+func execCopyDir(src, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dst, rel)
+		if info.IsDir() {
+			return os.MkdirAll(target, info.Mode())
+		}
+		return execCopyFile(path, target)
+	})
+}
+
+// execCopyFile copies a single file from src to dst.
+func execCopyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	return err
 }
 
 // GetProgress returns the current operation progress
