@@ -44,6 +44,10 @@ jobs:
         working-directory: audiobook-organizer-gui/frontend
         run: npm install
 
+      - name: Build frontend (for GUI embed)
+        working-directory: audiobook-organizer-gui/frontend
+        run: npm run build
+
       - name: Build with goreleaser (single platform, snapshot)
         run: |
           go run github.com/goreleaser/goreleaser/v2@latest build --single-target --snapshot --clean
