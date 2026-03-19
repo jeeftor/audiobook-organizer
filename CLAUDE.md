@@ -205,18 +205,20 @@ The tool supports flexible field mapping to handle different metadata structures
 - **Title Field**: Single field to use as title (e.g., `album`, `title`, `track_title`)
 - **Series Field**: Field to use for series (e.g., `series`, `album`)
 - **Track Field**: Field for track numbers (e.g., `track`, `track_number`)
+- **Disc Field**: Field for disc numbers (e.g., `disc`, `discnumber`, `disk`, `tpos`)
 
 Field mapping is implemented in `types.go` with the `FieldMapping` struct and `ApplyFieldMapping()` method.
 
 ## Directory Layout Options
 
-The tool supports six layout patterns via the `--layout` flag:
+The tool supports seven layout patterns via the `--layout` flag:
 - `author-series-title`: Full hierarchy Author/Series/Title/ (default)
 - `author-series-title-number`: Author/Series/#1 - Title/ (includes series number)
 - `author-series`: Author/Series/ (series-focused, no title level)
 - `author-title`: Author/Title/ (skips series level)
 - `author-only`: Author/ (flattens all books to author directory)
 - `series-title`: Series/Title/ (series-first organization, no author directory)
+- `series-title-number`: Series/#1 - Title/ (series-first with numbering, no author directory)
 
 Layout logic is handled by the `LayoutCalculator` struct in organizer.go:82.
 

@@ -119,10 +119,11 @@ audiobook-organizer rename --dir=/path --undo
 | `--series-field` | - | `series` | Field to use as series |
 | `--title-field` | - | `title` | Field to use as title |
 | `--track-field` | - | `track` | Field to use for track number |
+| `--disc-field` | - | `disc` | Field to use for disc number (e.g., `disc`, `discnumber`, `disk`, `tpos`) |
 
 ### Layout Options
 
-Six directory structure patterns:
+Seven directory structure patterns:
 
 ```bash
 # Standard (default): Author/Series/Title/
@@ -142,6 +143,9 @@ Six directory structure patterns:
 
 # Series without author: Series/Title/
 --layout=series-title
+
+# Series without author, numbered: Series/#1 - Title/
+--layout=series-title-number
 ```
 
 **See also:** [LAYOUTS.md](LAYOUTS.md) for detailed layout comparison
@@ -229,6 +233,7 @@ audiobook-organizer \
 | `--title-field` | `title` | Field to use as title |
 | `--series-field` | `series` | Field to use as series |
 | `--track-field` | `track` | Field to use for track number |
+| `--disc-field` | `disc` | Field to use for disc number (e.g., `disc`, `discnumber`, `tpos`) |
 
 ### Template Fields
 

@@ -285,13 +285,16 @@ Lists all scanned audiobooks:
 
 #### Preview Display
 
-Shows all file operations in a scrollable list:
-- **From path** → **To path** for each operation
-- **Color-coded paths** matching the book list screen
-- **Conflict highlighting** - Yellow background for conflicting operations
-- **Conflict count badge** - Shows number of affected operations
+Shows all file operations in a scrollable list with two view modes (toggle at top-right):
 
-**Scrollable:** Max-height 70vh to fit many operations
+- **Books view** (default) — Groups individual track files under their parent book. Expandable rows show "2 files" badges; click to expand and see each track's target path. Best for multi-file audiobooks.
+- **Files view** — Flat list, one row per file. Best for single-file books or inspecting exact paths.
+
+Each row shows:
+- **From path** (left) — original file location
+- **To path** (right) — color-coded destination path (orange = author, cyan = series, green = title)
+
+The header shows total counts: e.g. "Ready to Organize — 3 books (44 files)"
 
 #### File Naming Options
 
