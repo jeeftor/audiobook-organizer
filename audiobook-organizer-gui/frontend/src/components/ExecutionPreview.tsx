@@ -11,6 +11,7 @@ import { useSettings } from '../contexts/SettingsContext'
 
 interface ExecutionPreviewProps {
   selectedIndices: Set<number>
+  inputDir: string
   outputDir: string
   onExecute: (copyMode: boolean, operations: Array<{from: string, to: string}>) => void
   onCancel: () => void
@@ -19,6 +20,7 @@ interface ExecutionPreviewProps {
 
 export function ExecutionPreview({
   selectedIndices,
+  inputDir,
   outputDir,
   onExecute,
   onCancel,
@@ -101,6 +103,28 @@ export function ExecutionPreview({
       : item.to
     const relParts = relPath.split('/').filter(p => p.length > 0)
     return [effectiveOutputDir, ...relParts]
+  }
+
+  // Generate equivalent CLI command
+  const generateCliCommand = () => {
+    const parts = ['audiobook-organizer']
+    if (inputDir) parts.push(`--dir="${inputDir}"`)
+    if (outputDir) parts.push(`--out="${outputDir}"`)
+    if (settings.layout) parts.push(`--layout=${settings.layout}`)
+
+    const titleField = getFieldOption('title')?.current
+    if (titleField && titleField !== 'title') parts.push(`--title-field=${titleField}`)
+
+    const seriesField = getFieldOption('series')?.current
+    if (seriesField && seriesField !== 'series') parts.push(`--series-field=${seriesField}`)
+
+    const authorField = getFieldOption('authors')?.current
+    if (authorField && authorField !== 'authors') parts.push(`--author-fields=${authorField}`)
+
+    const trackField = getFieldOption('track')?.current
+    if (trackField && trackField !== 'track') parts.push(`--track-field=${trackField}`)
+
+    return parts.join(' \\\n  ')
   }
 
   // Generate bash commands
@@ -362,20 +386,38 @@ export function ExecutionPreview({
           ) : (
             <ChevronRight className="h-3 w-3 text-muted-foreground" />
           )}
-          <span className="font-medium">Show Bash Commands</span>
+          <span className="font-medium">Show Commands</span>
         </button>
 
         {showCommands && (
-          <div className="p-3 bg-muted/20 border-t border-border max-h-48 overflow-y-auto">
-            <pre className="text-[10px] font-mono bg-background p-2 rounded border border-border overflow-x-auto">
-              {generateCommands()}
-            </pre>
-            <button
-              onClick={() => navigator.clipboard.writeText(generateCommands())}
-              className="mt-2 text-xs px-2 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-            >
-              Copy to Clipboard
-            </button>
+          <div className="p-3 bg-muted/20 border-t border-border max-h-64 overflow-y-auto space-y-3">
+            {/* CLI command */}
+            <div>
+              <div className="text-[10px] font-medium text-muted-foreground mb-1">CLI Command (equivalent)</div>
+              <pre className="text-[10px] font-mono bg-background p-2 rounded border border-border overflow-x-auto">
+                {generateCliCommand()}
+              </pre>
+              <button
+                onClick={() => navigator.clipboard.writeText(generateCliCommand())}
+                className="mt-1 text-xs px-2 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+              >
+                Copy CLI Command
+              </button>
+            </div>
+
+            {/* Bash mv/cp commands */}
+            <div>
+              <div className="text-[10px] font-medium text-muted-foreground mb-1">Bash Commands (individual files)</div>
+              <pre className="text-[10px] font-mono bg-background p-2 rounded border border-border overflow-x-auto">
+                {generateCommands()}
+              </pre>
+              <button
+                onClick={() => navigator.clipboard.writeText(generateCommands())}
+                className="mt-1 text-xs px-2 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+              >
+                Copy Bash Commands
+              </button>
+            </div>
           </div>
         )}
       </div>
