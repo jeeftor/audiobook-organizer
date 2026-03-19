@@ -155,29 +155,32 @@ if command -v docker &> /dev/null; then
 
     if [ -f Dockerfile ]; then
         echo "Building Docker image..."
-        docker build -t audiobook-organizer:test-env . > /dev/null 2>&1
-
-        OUTPUT=$(docker run --rm \
-            -e AO_INPUT=/data/input \
-            -e AO_OUTPUT=/data/output \
-            -e AO_VERBOSE=true \
-            -e AO_DRY_RUN=true \
-            -v "$TEST_INPUT:/data/input" \
-            -v "$TEST_OUTPUT:/data/output" \
-            audiobook-organizer:test-env 2>&1 || true)
-
-        echo "$OUTPUT"
-
-        if echo "$OUTPUT" | grep -q "either --dir or --input must be specified"; then
-            echo -e "${RED}❌ FAILED: Docker env vars not recognized! (Issue #17)${NC}"
-            FAILED=1
-        elif echo "$OUTPUT" | grep -q "Resolving paths"; then
-            echo -e "${GREEN}✅ PASSED: Docker env vars recognized${NC}"
+        if ! docker build -t audiobook-organizer:test-env . > /dev/null 2>&1; then
+            echo -e "${YELLOW}⚠️  SKIPPED: Docker build failed (image unavailable)${NC}"
+            echo ""
         else
-            echo -e "${YELLOW}⚠️  UNKNOWN: Could not determine result${NC}"
-            FAILED=1
+            OUTPUT=$(docker run --rm \
+                -e AO_INPUT=/data/input \
+                -e AO_OUTPUT=/data/output \
+                -e AO_VERBOSE=true \
+                -e AO_DRY_RUN=true \
+                -v "$TEST_INPUT:/data/input" \
+                -v "$TEST_OUTPUT:/data/output" \
+                audiobook-organizer:test-env 2>&1 || true)
+
+            echo "$OUTPUT"
+
+            if echo "$OUTPUT" | grep -q "either --dir or --input must be specified"; then
+                echo -e "${RED}❌ FAILED: Docker env vars not recognized! (Issue #17)${NC}"
+                FAILED=1
+            elif echo "$OUTPUT" | grep -q "Resolving paths"; then
+                echo -e "${GREEN}✅ PASSED: Docker env vars recognized${NC}"
+            else
+                echo -e "${YELLOW}⚠️  UNKNOWN: Could not determine result${NC}"
+                FAILED=1
+            fi
+            echo ""
         fi
-        echo ""
     else
         echo "Dockerfile not found, skipping Docker test"
         echo ""

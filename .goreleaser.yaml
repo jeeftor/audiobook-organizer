@@ -59,10 +59,6 @@ builds:
     goarch:
       - amd64
       - arm64
-    hooks:
-      pre:
-        - cd audiobook-organizer-gui/frontend && npm install
-        - cd audiobook-organizer-gui/frontend && npm run build
     ldflags:
       - >
         -s -w

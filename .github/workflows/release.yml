@@ -90,6 +90,10 @@ jobs:
         working-directory: audiobook-organizer-gui/frontend
         run: npm install
 
+      - name: Build frontend (for GUI embed)
+        working-directory: audiobook-organizer-gui/frontend
+        run: npm run build
+
       - name: Build with goreleaser (single platform)
         run: |
           go run github.com/goreleaser/goreleaser/v2@latest build --single-target --snapshot --clean
@@ -162,7 +166,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Install frontend dependencies (needed for goreleaser hooks)
+      # Install frontend dependencies (goreleaser continue --merge uses pre-built binaries; no frontend build needed here)
       - name: Install frontend dependencies
         working-directory: audiobook-organizer-gui/frontend
         run: npm install
