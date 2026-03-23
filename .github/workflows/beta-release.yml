@@ -48,6 +48,11 @@ jobs:
         working-directory: audiobook-organizer-gui/frontend
         run: npm run build
 
+      - name: Copy frontend dist for unified binary
+        run: |
+          mkdir -p internal/guiapp/frontend/dist
+          cp -r audiobook-organizer-gui/frontend/dist/. internal/guiapp/frontend/dist/
+
       - name: Build with goreleaser (single platform, snapshot)
         run: |
           go run github.com/goreleaser/goreleaser/v2@latest build --single-target --snapshot --clean
@@ -226,6 +231,15 @@ jobs:
           draft: false
           prerelease: true
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Keep only the 5 most recent pre-releases, delete older ones
+      - name: Prune old beta releases (keep 5)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release list --json tagName,createdAt,isPrerelease --limit 100 \
+            --jq '[.[] | select(.isPrerelease)] | sort_by(.createdAt) | .[:-5] | .[].tagName' \
+          | xargs -r -I {} sh -c 'echo "Deleting old beta: {}" && gh release delete "{}" --yes --cleanup-tag'
 
       - name: Upload build artifacts (backup)
         uses: actions/upload-artifact@v4

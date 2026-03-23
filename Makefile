@@ -3,17 +3,22 @@ GIT_TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 BUILD_TIME ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# LDFLAGS for embedding version information
-LDFLAGS := -ldflags "-s -w \
+VERSION_FLAGS := \
 	-X github.com/jeeftor/audiobook-organizer/cmd.buildVersion=$(GIT_TAG) \
 	-X github.com/jeeftor/audiobook-organizer/cmd.buildCommit=$(GIT_COMMIT) \
-	-X github.com/jeeftor/audiobook-organizer/cmd.buildTime=$(BUILD_TIME)"
+	-X github.com/jeeftor/audiobook-organizer/cmd.buildTime=$(BUILD_TIME)
+
+# LDFLAGS for CLI-only builds (no CGO)
+LDFLAGS := -ldflags "-s -w $(VERSION_FLAGS)"
+
+# LDFLAGS for unified GUI builds (needs UniformTypeIdentifiers on macOS)
+GUI_LDFLAGS := -ldflags "-s -w -extldflags '-framework UniformTypeIdentifiers' $(VERSION_FLAGS)"
 
 # Test packages
 UNIT_TEST_PKGS = ./...
 INTEGRATION_TEST_PKGS = $(shell go list ./... | grep -v '/integration$$')
 
-.PHONY: all build clean dev gui-dev gui-dev1 gui-dev2 gui-build gui-install gui2-dev gui2-build gui2-install release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help
+.PHONY: all build clean dev gui-dev gui-dev1 gui-dev2 gui-build gui-install gui-unified release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help
 
 # Default target - show help
 all: help
@@ -23,18 +28,16 @@ help:
 	@echo "Available targets:"
 	@echo ""
 	@echo "  Development:"
-	@echo "    dev              Build CLI binary with version info"
+	@echo "    dev              Build CLI/TUI binary"
 	@echo "    gui-dev          Start GUI in dev mode (copies books to gui-books)"
-	@echo "    gui-dev1         Start GUI with ./books as input"
-	@echo "    gui-dev2         Start GUI with ./books-meta as input"
+	@echo "    gui-dev1         Start GUI dev with ./books as input"
+	@echo "    gui-dev2         Start GUI dev with ./books-meta as input"
 	@echo "    gui-install      Install GUI frontend dependencies"
-	@echo "    gui2-dev         Start GUI2 (new three-pane layout) in dev mode"
-	@echo "    gui2-install     Install GUI2 frontend dependencies"
 	@echo ""
 	@echo "  Build:"
 	@echo "    build            Build for distribution (goreleaser)"
-	@echo "    gui-build        Build GUI for production"
-	@echo "    gui2-build       Build GUI2 for production"
+	@echo "    gui-build        Build standalone Wails GUI binary"
+	@echo "    gui-unified      Build single CLI+GUI binary ('gui' subcommand opens window)"
 	@echo "    release          Create a release (requires GITHUB_TOKEN)"
 	@echo "    clean            Remove build artifacts"
 	@echo ""
@@ -52,55 +55,55 @@ help:
 	@echo "    fmt              Format Go code"
 	@echo "    fmt-check        Check code formatting"
 
-# Development build with version info (CLI)
+# Development build (CLI/TUI only, no CGO needed)
 dev:
 	go build $(LDFLAGS) -o bin/audiobook-organizer
 
-# Start GUI in development mode
+# Start GUI in development mode (uses wails dev for hot reload)
 gui-dev:
 	@echo "Starting GUI in development mode..."
-	@rm -rf gui-books
-	@rm -rf output
+	@rm -rf gui-books output
 	@mkdir -p output
 	@cp -r books gui-books
 	cd audiobook-organizer-gui && wails dev -appargs "--dir=../gui-books --out=../output"
 
-
-# Start GUI with ./books as input and . as output
+# Start GUI dev with ./books as input
 gui-dev1:
 	cd audiobook-organizer-gui && wails dev -appargs "--dir=../books --out=.. --flat"
 
-# Start GUI with books-meta as input
+# Start GUI dev with books-meta as input
 gui-dev2:
 	cd audiobook-organizer-gui && wails dev -appargs "--dir=../books-meta"
 
-# Build GUI for production
+# Build standalone Wails GUI binary (separate binary, wails build)
 gui-build:
 	cd audiobook-organizer-gui && wails build
 
-# Install GUI dependencies
+# Build a single unified binary where 'audiobook-organizer gui' opens the window.
+# The frontend must be built against the guiapp package bindings (not main).
+gui-unified:
+	@echo "Building frontend (guiapp bindings)..."
+	cd audiobook-organizer-gui/frontend && npm run build
+	@echo "Copying dist to internal/guiapp/frontend/dist..."
+	@mkdir -p internal/guiapp/frontend/dist
+	@rm -rf internal/guiapp/frontend/dist/*
+	@cp -r audiobook-organizer-gui/frontend/dist/. internal/guiapp/frontend/dist/
+	@echo "Building unified binary..."
+	CGO_ENABLED=1 go build -tags desktop,production,gui $(GUI_LDFLAGS) -o bin/audiobook-organizer .
+	@echo "Done: bin/audiobook-organizer (CLI + GUI)"
+
+# Install GUI frontend dependencies
 gui-install:
-	cd audiobook-organizer-gui/frontend && npm install
-
-# Start GUI2 in development mode (new three-pane layout)
-gui2-dev:
-	cd audiobook-organizer-gui && wails dev -appargs "--dir=../books --out=.. --log-level=debug"
-
-# Build GUI2 for production
-gui2-build:
-	cd audiobook-organizer-gui && wails build
-
-# Install GUI2 dependencies
-gui2-install:
 	cd audiobook-organizer-gui/frontend && npm install
 
 # Build using goreleaser for distribution
 build:
 	goreleaser build --snapshot --clean
 
-# Clean build artifacts
+# Clean all build artifacts including the embedded frontend dist
 clean:
 	rm -rf ./dist ./bin ./coverage.out ./coverage.html
+	rm -rf ./internal/guiapp/frontend/dist
 
 # Check and install gotestsum if needed
 GOTESTSUM := $(shell command -v gotestsum 2> /dev/null)
@@ -146,7 +149,7 @@ ensure-gotestsum:
 release:
 	goreleaser release --clean
 
-# Run go vet to check for suspicious code
+# Run go vet
 vet:
 	@echo "Running go vet..."
 	go vet ./...

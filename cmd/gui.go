@@ -2,84 +2,34 @@ package cmd
 
 import (
 	"fmt"
-	"runtime"
+	"os"
 
+	"github.com/jeeftor/audiobook-organizer/internal/guiapp"
 	"github.com/spf13/cobra"
 )
 
-// guiCmd represents the gui command
 var guiCmd = &cobra.Command{
 	Use:   "gui",
-	Short: "Information about the desktop GUI application",
-	Long: `The audiobook-organizer-gui is a separate desktop application with a graphical interface.
+	Short: "Launch the desktop GUI application",
+	Long: `Launch the Audiobook Organizer graphical interface.
 
-It provides the same organization features as the CLI/TUI but with a visual interface
-for selecting directories, previewing changes, and configuring field mappings.`,
+The GUI provides a three-pane layout for browsing, editing metadata,
+and previewing file organization changes before applying them.
+
+On macOS, the binary must be allowed in System Settings > Privacy & Security
+the first time it runs.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("🖥️  Audiobook Organizer GUI")
-		fmt.Println("==========================")
-		fmt.Println()
-		fmt.Println("The GUI is a separate desktop application available from GitHub releases.")
-		fmt.Println()
-		fmt.Println("📥 Download:")
-		fmt.Println("   https://github.com/jeeftor/audiobook-organizer/releases")
-		fmt.Println()
-		fmt.Printf("   Look for: audiobook-organizer-gui_%s_%s\n", osName(), archName())
-		fmt.Println()
-		fmt.Println("📦 Installation:")
-		switch runtime.GOOS {
-		case "darwin":
-			fmt.Println("   1. Download the .tar.gz for your architecture")
-			fmt.Println("   2. Extract: tar -xzf audiobook-organizer-gui_Darwin_*.tar.gz")
-			fmt.Println("   3. Move to Applications or run directly")
-			fmt.Println()
-			fmt.Println(
-				"   Note: You may need to allow the app in System Settings > Privacy & Security",
-			)
-		case "windows":
-			fmt.Println("   1. Download the .zip for your architecture")
-			fmt.Println("   2. Extract the zip file")
-			fmt.Println("   3. Run audiobook-organizer-gui.exe")
-		case "linux":
-			fmt.Println("   1. Download the .tar.gz for your architecture")
-			fmt.Println("   2. Extract: tar -xzf audiobook-organizer-gui_Linux_*.tar.gz")
-			fmt.Println("   3. Run: ./audiobook-organizer-gui")
-		default:
-			fmt.Println("   1. Download the appropriate archive for your platform")
-			fmt.Println("   2. Extract and run the binary")
+		inputDir, _ := cmd.Flags().GetString("input")
+		outputDir, _ := cmd.Flags().GetString("output")
+		if err := guiapp.Run(inputDir, outputDir); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
-		fmt.Println()
-		fmt.Println("💡 Tip: Use 'audiobook-organizer tui' for an interactive terminal interface")
-		fmt.Println("        that doesn't require a separate download.")
 	},
 }
 
-func osName() string {
-	switch runtime.GOOS {
-	case "darwin":
-		return "Darwin"
-	case "linux":
-		return "Linux"
-	case "windows":
-		return "Windows"
-	default:
-		return runtime.GOOS
-	}
-}
-
-func archName() string {
-	switch runtime.GOARCH {
-	case "amd64":
-		return "x86_64"
-	case "arm64":
-		return "arm64"
-	case "386":
-		return "i386"
-	default:
-		return runtime.GOARCH
-	}
-}
-
 func init() {
+	guiCmd.Flags().StringP("input", "i", "", "Input directory to pre-load in the GUI")
+	guiCmd.Flags().StringP("output", "o", "", "Output directory to pre-load in the GUI")
 	rootCmd.AddCommand(guiCmd)
 }

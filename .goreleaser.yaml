@@ -42,7 +42,7 @@ builds:
         -X github.com/jeeftor/audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
         -X github.com/jeeftor/audiobook-organizer/cmd.buildTime={{.Date}}
 
-  # GUI Binary (Wails)
+  # GUI Binary (Wails, standalone - kept for backward compat)
   - id: gui
     dir: ./audiobook-organizer-gui
     main: .
@@ -66,6 +66,34 @@ builds:
         -X github.com/jeeftor/audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
         -X github.com/jeeftor/audiobook-organizer/cmd.buildTime={{.Date}}
 
+  # Unified binary: CLI + GUI in one (audiobook-organizer gui launches the window)
+  - id: cli-gui
+    main: ./main.go
+    binary: audiobook-organizer
+    env:
+      - CGO_ENABLED=1
+    tags:
+      - desktop
+      - production
+      - gui
+    flags:
+      - -trimpath
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - >
+        -s -w
+        -extldflags '-framework UniformTypeIdentifiers'
+        -X github.com/jeeftor/audiobook-organizer/cmd.buildVersion={{.Version}}
+        -X github.com/jeeftor/audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
+        -X github.com/jeeftor/audiobook-organizer/cmd.buildTime={{.Date}}
+
 archives:
   # CLI Archives
   - id: cli-archive
@@ -83,7 +111,23 @@ archives:
       - LICENSE*
       - CHANGELOG*
 
-  # GUI Archives
+  # Unified CLI+GUI Archives
+  - id: cli-gui-archive
+    builds:
+      - cli-gui
+    formats:
+      - tar.gz
+    name_template: '{{ .ProjectName }}-unified_{{- title .Os }}_{{- if eq .Arch "amd64" }}x86_64{{- else }}{{ .Arch }}{{ end }}'
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - README.md
+      - LICENSE*
+      - CHANGELOG*
+
+  # GUI Archives (standalone Wails binary)
   - id: gui-archive
     builds:
       - gui
