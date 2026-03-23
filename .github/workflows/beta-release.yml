@@ -149,29 +149,15 @@ jobs:
         run: |
           mkdir -p archives
 
-          # CLI archives
-          for dir in dist/cli_*/; do
+          # Unified CLI+GUI archives (replaces the old cli-only archives)
+          for dir in dist/cli-gui_*/; do
             if [ -d "$dir" ]; then
-              platform=$(basename "$dir" | sed 's/cli_//')
+              platform=$(basename "$dir" | sed 's/cli-gui_//')
               cd "$dir"
               if [[ "$platform" == *"windows"* ]]; then
                 zip "../../archives/audiobook-organizer_${platform}.zip" audiobook-organizer.exe
               else
                 tar czf "../../archives/audiobook-organizer_${platform}.tar.gz" audiobook-organizer
-              fi
-              cd ../..
-            fi
-          done
-
-          # GUI archives
-          for dir in dist/gui_*/; do
-            if [ -d "$dir" ]; then
-              platform=$(basename "$dir" | sed 's/gui_//')
-              cd "$dir"
-              if [[ "$platform" == *"windows"* ]]; then
-                zip "../../archives/audiobook-organizer-gui_${platform}.zip" audiobook-organizer-gui.exe
-              else
-                tar czf "../../archives/audiobook-organizer-gui_${platform}.tar.gz" audiobook-organizer-gui
               fi
               cd ../..
             fi
@@ -202,12 +188,16 @@ jobs:
 
             ### Installation
 
-            Download the appropriate archive for your platform:
-            - **CLI**: `audiobook-organizer_<platform>.tar.gz` or `.zip`
-            - **GUI (macOS)**: `audiobook-organizer-gui_macOS.dmg` ← easiest!
-            - **GUI (other)**: `audiobook-organizer-gui_<platform>.tar.gz` or `.zip`
+            Download `audiobook-organizer_<platform>.tar.gz` (or `.zip` on Windows) for your platform.
+            This is a **unified binary** — CLI, TUI, and GUI are all included:
 
-            Extract and run the binary directly.
+            ```
+            audiobook-organizer          # CLI mode
+            audiobook-organizer tui      # interactive terminal UI
+            audiobook-organizer gui      # opens the desktop GUI window
+            ```
+
+            Extract and run directly.
 
             ### macOS Gatekeeper Warning
 
