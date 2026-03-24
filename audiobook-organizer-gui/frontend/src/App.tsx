@@ -9,6 +9,7 @@ import { ExecutionPreview } from './components/ExecutionPreview'
 import { ExecutionResults } from './components/ExecutionResults'
 import { GetInitialDirectories, ScanDirectory, ExecuteFileOperations } from '../wailsjs/go/main/App'
 import { organizer } from '../wailsjs/go/models'
+import { EventsOn } from '../wailsjs/runtime/runtime'
 
 function App() {
   const [inputDir, setInputDir] = useState('')
@@ -129,6 +130,15 @@ function App() {
       scanDirectory(inputDir, false)
     }
   }, [inputDir])
+
+  // Listen for directory drag-and-drop from Go
+  useEffect(() => {
+    const cleanup = EventsOn('directory-dropped', (dir: string) => {
+      console.log('[App] Directory dropped:', dir)
+      setInputDir(dir)
+    })
+    return cleanup as () => void
+  }, [])
 
   // Handle mouse move for resizing
   useEffect(() => {

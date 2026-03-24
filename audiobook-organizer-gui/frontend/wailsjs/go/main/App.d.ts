@@ -3,6 +3,8 @@
 import {main} from '../models';
 import {organizer} from '../models';
 
+export function LogEvent(arg1:string):Promise<void>;
+
 export function ExecuteFileOperations(arg1:Array<main.FileOperation>,arg2:boolean):Promise<organizer.Summary>;
 
 export function ExecuteOrganize(arg1:boolean):Promise<organizer.Summary>;

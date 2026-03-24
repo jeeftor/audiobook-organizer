@@ -25,6 +25,7 @@ type App struct {
 	initialDirs  InitialDirectories
 	logLevel     string
 	verbose      bool
+	devtools     bool
 	renameConfig RenameConfig
 }
 
@@ -606,12 +607,13 @@ func (a *App) GetBatchPreview(selectedIndices []int, outputDir string) ([]Previe
 
 // NewApp creates a new App application struct
 func NewApp() *App {
-	return NewAppWithDirs("", "")
+	return NewAppWithDirs("", "", false)
 }
 
 // NewAppWithDirs creates a new App with pre-set directories from CLI args
-func NewAppWithDirs(inputDir, outputDir string) *App {
+func NewAppWithDirs(inputDir, outputDir string, devtools bool) *App {
 	return &App{
+		devtools: devtools,
 		config: &organizer.OrganizerConfig{
 			Layout:              "author-series-title",
 			ReplaceSpace:        " ",
@@ -641,19 +643,61 @@ func NewAppWithDirs(inputDir, outputDir string) *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	env := runtime.Environment(ctx)
+	fmt.Printf("[GUI] Window started (build=%s, devtools=%v)\n", env.BuildType, a.devtools)
+	if a.devtools {
+		runtime.WindowSetTitle(ctx, "Audiobook Organizer - dev")
+	}
+	if a.initialDirs.InputDir != "" {
+		fmt.Printf("[GUI] Input dir: %s\n", a.initialDirs.InputDir)
+	}
+	if a.initialDirs.OutputDir != "" {
+		fmt.Printf("[GUI] Output dir: %s\n", a.initialDirs.OutputDir)
+	}
+
+	// Handle drag-and-drop: emit "directory-dropped" event when a directory is dropped
+	runtime.OnFileDrop(ctx, func(x, y int, paths []string) {
+		for _, path := range paths {
+			info, err := os.Stat(path)
+			if err == nil && info.IsDir() {
+				fmt.Printf("[GUI] Directory dropped: %s\n", path)
+				runtime.EventsEmit(ctx, "directory-dropped", path)
+				return
+			}
+		}
+		fmt.Printf("[GUI] Drop ignored (no directory in %v)\n", paths)
+	})
 }
+
+// domReady is called after the frontend DOM is ready.
+func (a *App) domReady(ctx context.Context) {}
 
 // GetInitialDirectories returns the directories set via CLI arguments
 func (a *App) GetInitialDirectories() InitialDirectories {
 	return a.initialDirs
 }
 
-// SelectDirectory opens a directory picker dialog
+// SelectDirectory opens a directory picker dialog.
+// On macOS we use our own NSOpenPanel dispatched on the main thread, because
+// Wails' sheet-based dialog can be immediately dismissed when the app isn't frontmost.
 func (a *App) SelectDirectory(title string) (string, error) {
-	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: title,
-	})
-	return dir, err
+	fmt.Printf("[GUI] SelectDirectory called (title=%q)\n", title)
+	dir := selectDirectoryNative(title)
+	if dir == "" {
+		// Fall back to Wails runtime dialog (works on Linux/Windows)
+		var err error
+		runtime.WindowShow(a.ctx)
+		activateForDialog()
+		dir, err = runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+			Title: title,
+		})
+		if err != nil {
+			fmt.Printf("[GUI] SelectDirectory error: %v\n", err)
+			return "", err
+		}
+	}
+	fmt.Printf("[GUI] SelectDirectory result: %q\n", dir)
+	return dir, nil
 }
 
 // ScanDirectory scans a directory for audiobooks and returns metadata
@@ -1141,20 +1185,15 @@ func (a *App) GetLogPath() string {
 func (a *App) SetLogLevel(level string) {
 	a.logLevel = level
 	a.verbose = (level == "debug")
-	if a.verbose {
-		fmt.Printf("LOG LEVEL: %s (verbose=%v)\n", level, a.verbose)
-	}
-	// Also update the config
+	fmt.Printf("[GUI] Log level set to: %s\n", level)
 	if a.config != nil {
 		a.config.Verbose = a.verbose
 	}
 }
 
-// log prints a message if verbose logging is enabled
+// log prints a message to stdout (always visible in the launching terminal)
 func (a *App) log(format string, args ...interface{}) {
-	if a.verbose {
-		fmt.Printf("[DEBUG] "+format+"\n", args...)
-	}
+	fmt.Printf("[GUI] "+format+"\n", args...)
 }
 
 // ScanStatistics provides summary information about scan results
@@ -1348,6 +1387,11 @@ func (a *App) GetAvailableTemplateFields() []map[string]string {
 // Greet returns a greeting (keeping for backwards compatibility with template)
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s! Ready to organize some audiobooks? 📚", name)
+}
+
+// LogEvent prints a message from the frontend to the terminal (for debugging).
+func (a *App) LogEvent(msg string) {
+	fmt.Printf("[GUI] %s\n", msg)
 }
 
 // OrganizeFiles executes the organization process for selected files ONLY

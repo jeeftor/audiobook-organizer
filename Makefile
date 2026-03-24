@@ -18,7 +18,7 @@ GUI_LDFLAGS := -ldflags "-s -w -extldflags '-framework UniformTypeIdentifiers' $
 UNIT_TEST_PKGS = ./...
 INTEGRATION_TEST_PKGS = $(shell go list ./... | grep -v '/integration$$')
 
-.PHONY: all build clean dev gui-dev gui-dev1 gui-dev2 gui-build gui-install gui-unified release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help
+.PHONY: all build clean dev gui-dev gui-dev1 gui-dev2 gui-build gui-install gui-unified gui-unified-dev release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help
 
 # Default target - show help
 all: help
@@ -38,6 +38,7 @@ help:
 	@echo "    build            Build for distribution (goreleaser)"
 	@echo "    gui-build        Build standalone Wails GUI binary"
 	@echo "    gui-unified      Build single CLI+GUI binary ('gui' subcommand opens window)"
+	@echo "    gui-unified-dev  Build + launch GUI with devtools/inspect enabled"
 	@echo "    release          Create a release (requires GITHUB_TOKEN)"
 	@echo "    clean            Remove build artifacts"
 	@echo ""
@@ -93,6 +94,13 @@ gui-unified:
 	@echo "Building unified binary..."
 	CGO_ENABLED=1 go build -tags desktop,production,gui $(GUI_LDFLAGS) -o bin/audiobook-organizer .
 	@echo "Done: bin/audiobook-organizer (CLI + GUI)"
+
+# Build and immediately launch with devtools enabled (right-click → Inspect).
+# Uses the same production binary — no Vite server needed.
+gui-unified-dev: gui-unified
+	@echo ""
+	@echo "Launching with devtools enabled..."
+	bin/audiobook-organizer gui --devtools
 
 # Install GUI frontend dependencies
 gui-install:

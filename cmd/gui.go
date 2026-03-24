@@ -21,7 +21,8 @@ the first time it runs.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		inputDir, _ := cmd.Flags().GetString("input")
 		outputDir, _ := cmd.Flags().GetString("output")
-		if err := guiapp.Run(inputDir, outputDir); err != nil {
+		devtools, _ := cmd.Flags().GetBool("devtools")
+		if err := guiapp.Run(inputDir, outputDir, devtools); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
@@ -31,5 +32,6 @@ the first time it runs.`,
 func init() {
 	guiCmd.Flags().StringP("input", "i", "", "Input directory to pre-load in the GUI")
 	guiCmd.Flags().StringP("output", "o", "", "Output directory to pre-load in the GUI")
+	guiCmd.Flags().Bool("devtools", false, "Enable right-click → Inspect (WebKit developer tools)")
 	rootCmd.AddCommand(guiCmd)
 }
