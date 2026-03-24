@@ -93,6 +93,19 @@ builds:
         -X github.com/jeeftor/audiobook-organizer/cmd.buildVersion={{.Version}}
         -X github.com/jeeftor/audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
         -X github.com/jeeftor/audiobook-organizer/cmd.buildTime={{.Date}}
+    overrides:
+      - goos: linux
+        tags:
+          - desktop
+          - production
+          - gui
+          - webkit2_41
+        ldflags:
+          - >
+            -s -w
+            -X github.com/jeeftor/audiobook-organizer/cmd.buildVersion={{.Version}}
+            -X github.com/jeeftor/audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
+            -X github.com/jeeftor/audiobook-organizer/cmd.buildTime={{.Date}}
 
 archives:
   # CLI Archives
