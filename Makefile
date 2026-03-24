@@ -82,6 +82,8 @@ gui-build:
 # Build a single unified binary where 'audiobook-organizer gui' opens the window.
 # The frontend must be built against the guiapp package bindings (not main).
 gui-unified:
+	@echo "Installing frontend dependencies..."
+	cd audiobook-organizer-gui/frontend && npm install
 	@echo "Building frontend (guiapp bindings)..."
 	cd audiobook-organizer-gui/frontend && npm run build
 	@echo "Copying dist to internal/guiapp/frontend/dist..."

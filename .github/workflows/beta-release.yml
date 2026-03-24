@@ -45,16 +45,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
-          # Wails v2 looks for webkit2gtk-4.0; create a compat shim pointing to 4.1
-          # (Ubuntu 24.04 ships 4.1 only)
-          PC=/usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.1.pc
-          SHIM=/usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.0.pc
-          sudo cp "$PC" "$SHIM"
-          sudo sed -i 's/webkit2gtk-4\.1/webkit2gtk-4.0/g; s/javascriptcoregtk-4\.1/javascriptcoregtk-4.0/g' "$SHIM"
-          sudo cp /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.1.pc \
-                  /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.0.pc
-          sudo sed -i 's/javascriptcoregtk-4\.1/javascriptcoregtk-4.0/g' \
-                  /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.0.pc
+          # Wails v2 hardcodes webkit2gtk-4.0; Ubuntu 24.04 only ships 4.1.
+          # Create pkg-config shims and library symlinks so the build/link succeeds.
+          PKGDIR=/usr/lib/x86_64-linux-gnu/pkgconfig
+          LIBDIR=/usr/lib/x86_64-linux-gnu
+          for pkg in webkit2gtk javascriptcoregtk; do
+            sudo cp "$PKGDIR/${pkg}-4.1.pc" "$PKGDIR/${pkg}-4.0.pc"
+            sudo sed -i "s/${pkg}-4\.1/${pkg}-4.0/g" "$PKGDIR/${pkg}-4.0.pc"
+          done
+          # Linker symlinks: -lwebkit2gtk-4.0 / -ljavascriptcoregtk-4.0
+          sudo ln -sf "$LIBDIR/libwebkit2gtk-4.1.so.0"       "$LIBDIR/libwebkit2gtk-4.0.so"
+          sudo ln -sf "$LIBDIR/libjavascriptcoregtk-4.1.so.0" "$LIBDIR/libjavascriptcoregtk-4.0.so"
 
       - name: Install npm dependencies (for GUI)
         working-directory: audiobook-organizer-gui/frontend

@@ -89,10 +89,18 @@ builds:
     ldflags:
       - >
         -s -w
-        -extldflags '-framework UniformTypeIdentifiers'
         -X github.com/jeeftor/audiobook-organizer/cmd.buildVersion={{.Version}}
         -X github.com/jeeftor/audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
         -X github.com/jeeftor/audiobook-organizer/cmd.buildTime={{.Date}}
+    overrides:
+      - goos: darwin
+        ldflags:
+          - >
+            -s -w
+            -extldflags '-framework UniformTypeIdentifiers'
+            -X github.com/jeeftor/audiobook-organizer/cmd.buildVersion={{.Version}}
+            -X github.com/jeeftor/audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
+            -X github.com/jeeftor/audiobook-organizer/cmd.buildTime={{.Date}}
 
 archives:
   # CLI Archives
