@@ -42,7 +42,19 @@ jobs:
 
       - name: Install Linux GUI dependencies (webkit2gtk)
         if: matrix.goos == 'linux'
-        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+          # Wails v2 looks for webkit2gtk-4.0; create a compat shim pointing to 4.1
+          # (Ubuntu 24.04 ships 4.1 only)
+          PC=/usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.1.pc
+          SHIM=/usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.0.pc
+          sudo cp "$PC" "$SHIM"
+          sudo sed -i 's/webkit2gtk-4\.1/webkit2gtk-4.0/g; s/javascriptcoregtk-4\.1/javascriptcoregtk-4.0/g' "$SHIM"
+          sudo cp /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.1.pc \
+                  /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.0.pc
+          sudo sed -i 's/javascriptcoregtk-4\.1/javascriptcoregtk-4.0/g' \
+                  /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.0.pc
 
       - name: Install npm dependencies (for GUI)
         working-directory: audiobook-organizer-gui/frontend
