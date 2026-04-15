@@ -153,3 +153,11 @@ export function UpdateScanMode(arg1) {
 export function UpdateSettings(arg1) {
   return window['go']['guiapp']['App']['UpdateSettings'](arg1);
 }
+
+export function GetCoverArt(arg1) {
+  return window['go']['guiapp']['App']['GetCoverArt'](arg1);
+}
+
+export function GetValidationWarnings() {
+  return window['go']['guiapp']['App']['GetValidationWarnings']();
+}

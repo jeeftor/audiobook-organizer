@@ -1,7 +1,9 @@
 package main
 
 import (
+	"archive/zip"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	tag "github.com/dhowden/tag"
 	"github.com/jeeftor/audiobook-organizer/pkg/organizer"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -1348,6 +1351,212 @@ func (a *App) GetAvailableTemplateFields() []map[string]string {
 // Greet returns a greeting (keeping for backwards compatibility with template)
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s! Ready to organize some audiobooks? 📚", name)
+}
+
+// GetCoverArt returns a base64 data URL for the cover art of the book at bookIdx
+// in lastScanResults. Returns an empty string if no cover art is found or the
+// index is out of bounds.
+func (a *App) GetCoverArt(bookIdx int) string {
+	if bookIdx < 0 || bookIdx >= len(lastScanResults) {
+		return ""
+	}
+	book := lastScanResults[bookIdx]
+
+	switch book.SourceType {
+	case "audio":
+		f, err := os.Open(book.SourcePath)
+		if err != nil {
+			return ""
+		}
+		defer f.Close()
+
+		m, err := tag.ReadFrom(f)
+		if err != nil {
+			return ""
+		}
+		pic := m.Picture()
+		if pic == nil || len(pic.Data) == 0 {
+			return ""
+		}
+		mimeType := pic.MIMEType
+		if mimeType == "" {
+			mimeType = "image/jpeg"
+		}
+		encoded := base64.StdEncoding.EncodeToString(pic.Data)
+		return "data:" + mimeType + ";base64," + encoded
+
+	case "epub":
+		zr, err := zip.OpenReader(book.SourcePath)
+		if err != nil {
+			return ""
+		}
+		defer zr.Close()
+
+		// Helper: read a zip file entry and return a data URL.
+		readEntry := func(f *zip.File, mimeType string) string {
+			rc, err := f.Open()
+			if err != nil {
+				return ""
+			}
+			defer rc.Close()
+			data, err := io.ReadAll(rc)
+			if err != nil || len(data) == 0 {
+				return ""
+			}
+			encoded := base64.StdEncoding.EncodeToString(data)
+			return "data:" + mimeType + ";base64," + encoded
+		}
+
+		mimeForExt := func(name string) string {
+			switch strings.ToLower(filepath.Ext(name)) {
+			case ".jpg", ".jpeg":
+				return "image/jpeg"
+			case ".png":
+				return "image/png"
+			case ".gif":
+				return "image/gif"
+			case ".webp":
+				return "image/webp"
+			default:
+				return "image/jpeg"
+			}
+		}
+
+		// First pass: look for OPF manifest entries with cover-image properties/id.
+		for _, f := range zr.File {
+			name := strings.ToLower(filepath.Base(f.Name))
+			ext := strings.ToLower(filepath.Ext(f.Name))
+			isImage := ext == ".jpg" || ext == ".jpeg" || ext == ".png" ||
+				ext == ".gif" || ext == ".webp"
+			if !isImage {
+				continue
+			}
+			// Match common cover naming conventions used in OPF manifests.
+			if name == "cover.jpg" || name == "cover.jpeg" || name == "cover.png" ||
+				strings.HasPrefix(name, "cover-image") ||
+				strings.HasPrefix(name, "cover_image") {
+				if result := readEntry(f, mimeForExt(f.Name)); result != "" {
+					return result
+				}
+			}
+		}
+
+		// Second pass: any image file with "cover" in the path.
+		for _, f := range zr.File {
+			ext := strings.ToLower(filepath.Ext(f.Name))
+			isImage := ext == ".jpg" || ext == ".jpeg" || ext == ".png" ||
+				ext == ".gif" || ext == ".webp"
+			if !isImage {
+				continue
+			}
+			if strings.Contains(strings.ToLower(f.Name), "cover") {
+				if result := readEntry(f, mimeForExt(f.Name)); result != "" {
+					return result
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
+// ValidationWarning describes a potential metadata or path problem for a single book.
+type ValidationWarning struct {
+	BookIndex int    `json:"book_index"`
+	BookTitle string `json:"book_title"`
+	Type      string `json:"type"` // "missing_author", "missing_title", "duplicate_path"
+	Message   string `json:"message"`
+	Severity  string `json:"severity"` // "error", "warning"
+}
+
+// GetValidationWarnings inspects lastScanResults and returns any metadata or path
+// warnings. The returned slice is never nil — callers can rely on an empty slice
+// meaning no warnings.
+func (a *App) GetValidationWarnings() []ValidationWarning {
+	warnings := []ValidationWarning{}
+
+	if len(lastScanResults) == 0 {
+		return warnings
+	}
+
+	// Check per-book metadata quality.
+	for i, book := range lastScanResults {
+		bookTitle := book.Title
+		if bookTitle == "" {
+			bookTitle = book.Album
+		}
+		if bookTitle == "" {
+			bookTitle = fmt.Sprintf("Book #%d", i)
+		}
+
+		// Missing author: Authors slice is empty or all entries are empty strings.
+		hasAuthor := false
+		for _, a := range book.Authors {
+			if strings.TrimSpace(a) != "" {
+				hasAuthor = true
+				break
+			}
+		}
+		if !hasAuthor {
+			warnings = append(warnings, ValidationWarning{
+				BookIndex: i,
+				BookTitle: bookTitle,
+				Type:      "missing_author",
+				Message:   "Missing author",
+				Severity:  "warning",
+			})
+		}
+
+		// Missing title: both Title and Album are empty.
+		if strings.TrimSpace(book.Title) == "" && strings.TrimSpace(book.Album) == "" {
+			warnings = append(warnings, ValidationWarning{
+				BookIndex: i,
+				BookTitle: bookTitle,
+				Type:      "missing_title",
+				Message:   "Missing title",
+				Severity:  "error",
+			})
+		}
+	}
+
+	// Duplicate output-path detection — only when an output directory is configured.
+	outputDir := a.config.OutputDir
+	if outputDir != "" {
+		pathCount := make(map[string][]int)
+		for i := range lastScanResults {
+			item, err := a.GetLivePreviewPath(i, outputDir)
+			if err != nil || item.To == "" {
+				continue
+			}
+			cleanPath := filepath.Clean(item.To)
+			pathCount[cleanPath] = append(pathCount[cleanPath], i)
+		}
+
+		for path, indices := range pathCount {
+			if len(indices) <= 1 {
+				continue
+			}
+			for _, i := range indices {
+				book := lastScanResults[i]
+				bookTitle := book.Title
+				if bookTitle == "" {
+					bookTitle = book.Album
+				}
+				if bookTitle == "" {
+					bookTitle = fmt.Sprintf("Book #%d", i)
+				}
+				warnings = append(warnings, ValidationWarning{
+					BookIndex: i,
+					BookTitle: bookTitle,
+					Type:      "duplicate_path",
+					Message:   "Duplicate output path: " + path,
+					Severity:  "error",
+				})
+			}
+		}
+	}
+
+	return warnings
 }
 
 // OrganizeFiles executes the organization process for selected files ONLY

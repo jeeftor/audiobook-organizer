@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Toolbar } from './components/Toolbar'
 import { StatisticsBar } from './components/StatisticsBar'
 import { GroupedFileList } from './components/GroupedFileList'
@@ -7,7 +7,8 @@ import { OutputPreviewSimple } from './components/OutputPreviewSimple'
 import { OptionsPanel } from './components/OptionsPanel'
 import { ExecutionPreview } from './components/ExecutionPreview'
 import { ExecutionResults } from './components/ExecutionResults'
-import { GetInitialDirectories, ScanDirectory, ExecuteFileOperations } from '../wailsjs/go/main/App'
+import { GetInitialDirectories, ScanDirectory, ExecuteFileOperations, UndoLastOperation } from '../wailsjs/go/main/App'
+import { ThemeProvider } from './contexts/ThemeContext'
 import { organizer } from '../wailsjs/go/models'
 import { EventsOn } from '../wailsjs/runtime/runtime'
 
@@ -18,6 +19,7 @@ function App() {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(false)
+  const [scanVersion, setScanVersion] = useState(0)
   const [currentView, setCurrentView] = useState<'editing' | 'preview' | 'results'>('editing')
   const [executionResults, setExecutionResults] = useState<{
     success: boolean
@@ -63,6 +65,7 @@ function App() {
       .then((result) => {
         console.log(`[App] Scan completed, found ${result?.length || 0} audiobooks`)
         setBooks(result || [])
+        setScanVersion(v => v + 1)
 
         if (result && result.length > 0 && preserveSelection && currentPaths.length > 0) {
           // Restore all selected indices
@@ -178,7 +181,75 @@ function App() {
     }
   }, [isResizingLeft, isResizingRight])
 
+  // Global keyboard shortcuts
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    const isMeta = e.metaKey || e.ctrlKey
+
+    // Cmd/Ctrl+E — go to preview if in editing view with selections
+    if (isMeta && e.key === 'e') {
+      e.preventDefault()
+      if (currentView === 'editing' && selectedIndices.size > 0) {
+        setCurrentView('preview')
+      }
+      return
+    }
+
+    // Cmd/Ctrl+Z — undo last operation if in results view
+    if (isMeta && e.key === 'z') {
+      e.preventDefault()
+      if (currentView === 'results') {
+        UndoLastOperation().then((result) => {
+          setExecutionResults({
+            success: result.success || false,
+            filesProcessed: result.filesRestored || 0,
+            skippedCount: 0,
+            errors: result.errors || [],
+          })
+          if (inputDir) {
+            scanDirectory(inputDir, false)
+          }
+        }).catch((err) => {
+          console.error('Undo failed:', err)
+          setExecutionResults({
+            success: false,
+            filesProcessed: 0,
+            skippedCount: 0,
+            errors: [String(err)],
+          })
+        })
+      }
+      return
+    }
+
+    // Cmd/Ctrl+A — select all books
+    if (isMeta && e.key === 'a') {
+      e.preventDefault()
+      if (books.length > 0) {
+        setSelectedIndices(new Set(books.map((_, i) => i)))
+        setSelectedIndex(0)
+      }
+      return
+    }
+
+    // Escape — return to editing view
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      if (currentView !== 'editing') {
+        setCurrentView('editing')
+      }
+      return
+    }
+  }, [currentView, selectedIndices, books, inputDir])
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [handleKeyDown])
+
   return (
+    <ThemeProvider>
     <div className="flex flex-col h-screen bg-background">
       {/* Top Toolbar */}
       <Toolbar
@@ -313,6 +384,7 @@ function App() {
             book={selectedBook}
             bookIdx={selectedIndex}
             outputDir={outputDir}
+            scanVersion={scanVersion}
           />
         </div>
       </div>
@@ -346,7 +418,6 @@ function App() {
             }}
             onUndo={async () => {
               try {
-                const { UndoLastOperation } = await import('../wailsjs/go/main/App')
                 const result = await UndoLastOperation()
                 console.log('Undo result:', result)
 
@@ -413,6 +484,7 @@ function App() {
         </div>
       )}
     </div>
+    </ThemeProvider>
   )
 }
 

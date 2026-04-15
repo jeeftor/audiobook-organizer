@@ -4,15 +4,19 @@ import { GetLivePreviewPath } from '../../wailsjs/go/main/App'
 import { ArrowRight } from 'lucide-react'
 import { RenameTemplateBuilder } from './RenameTemplateBuilder'
 import { ColoredPath } from './ColoredPath'
+import { CoverArt } from './CoverArt'
+import { ValidationPanel } from './ValidationPanel'
 import { useSettings } from '../contexts/SettingsContext'
 
 interface OutputPreviewSimpleProps {
   book: organizer.Metadata | null
   bookIdx: number | null
   outputDir: string
+  showCoverArt?: boolean
+  scanVersion?: number
 }
 
-export function OutputPreviewSimple({ book, bookIdx, outputDir }: OutputPreviewSimpleProps) {
+export function OutputPreviewSimple({ book, bookIdx, outputDir, showCoverArt = true, scanVersion = 0 }: OutputPreviewSimpleProps) {
   const [preview, setPreview] = useState<main.PreviewItem | null>(null)
   const { settings } = useSettings()
 
@@ -34,8 +38,18 @@ export function OutputPreviewSimple({ book, bookIdx, outputDir }: OutputPreviewS
 
   if (!book || !preview) {
     return (
-      <div className="p-4 text-center text-sm text-muted-foreground">
-        Select a file to preview output path
+      <div className="space-y-0">
+        {showCoverArt && (
+          <div className="p-4 pb-2">
+            <CoverArt bookIdx={bookIdx} />
+          </div>
+        )}
+        <div className="p-4 text-center text-sm text-muted-foreground">
+          Select a file to preview output path
+        </div>
+        <div className="border-t border-border">
+          <ValidationPanel scanVersion={scanVersion} />
+        </div>
       </div>
     )
   }
@@ -55,6 +69,13 @@ export function OutputPreviewSimple({ book, bookIdx, outputDir }: OutputPreviewS
 
   return (
     <div className="p-4 space-y-3">
+      {/* Cover Art */}
+      {showCoverArt && (
+        <div className="pb-1">
+          <CoverArt bookIdx={bookIdx} />
+        </div>
+      )}
+
       {/* Before → After */}
       <div className="space-y-2">
         <div>
@@ -111,6 +132,11 @@ export function OutputPreviewSimple({ book, bookIdx, outputDir }: OutputPreviewS
 
       {/* Rename Template Builder */}
       <RenameTemplateBuilder book={book} />
+
+      {/* Validation Panel */}
+      <div className="border-t border-border -mx-4 mt-2">
+        <ValidationPanel scanVersion={scanVersion} />
+      </div>
 
     </div>
   )

@@ -78,3 +78,7 @@ export function UpdateRenameConfig(arg1:main.RenameConfig):Promise<void>;
 export function UpdateScanMode(arg1:string):Promise<void>;
 
 export function UpdateSettings(arg1:organizer.OrganizerConfig):Promise<void>;
+
+export function GetCoverArt(arg1:number):Promise<string>;
+
+export function GetValidationWarnings():Promise<Array<main.ValidationWarning>>;

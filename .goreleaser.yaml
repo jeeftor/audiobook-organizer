@@ -60,11 +60,7 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - >
-        -s -w
-        -X github.com/jeeftor/audiobook-organizer/cmd.buildVersion={{.Version}}
-        -X github.com/jeeftor/audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
-        -X github.com/jeeftor/audiobook-organizer/cmd.buildTime={{.Date}}
+      - -s -w
 
   # Unified binary: CLI + GUI in one (audiobook-organizer gui launches the window)
   - id: cli-gui
@@ -94,6 +90,16 @@ builds:
         -X github.com/jeeftor/audiobook-organizer/cmd.buildTime={{.Date}}
     overrides:
       - goos: darwin
+        goarch: amd64
+        ldflags:
+          - >
+            -s -w
+            -extldflags '-framework UniformTypeIdentifiers'
+            -X github.com/jeeftor/audiobook-organizer/cmd.buildVersion={{.Version}}
+            -X github.com/jeeftor/audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
+            -X github.com/jeeftor/audiobook-organizer/cmd.buildTime={{.Date}}
+      - goos: darwin
+        goarch: arm64
         ldflags:
           - >
             -s -w
@@ -105,7 +111,7 @@ builds:
 archives:
   # CLI Archives
   - id: cli-archive
-    builds:
+    ids:
       - cli
     formats:
       - tar.gz
@@ -121,7 +127,7 @@ archives:
 
   # Unified CLI+GUI Archives
   - id: cli-gui-archive
-    builds:
+    ids:
       - cli-gui
     formats:
       - tar.gz
@@ -137,7 +143,7 @@ archives:
 
   # GUI Archives (standalone Wails binary)
   - id: gui-archive
-    builds:
+    ids:
       - gui
     formats:
       - tar.gz
@@ -170,7 +176,7 @@ sboms:
 
 nfpms:
   - id: cli-packages
-    builds:
+    ids:
       - cli
     package_name: audiobook-organizer
     vendor: jeeftor
@@ -191,21 +197,6 @@ nfpms:
         dst: /usr/share/doc/audiobook-organizer/README.md
     file_name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ if eq .Arch "arm" }}armv{{ .Arm }}{{ else }}{{ .Arch }}{{ end }}'
 
-brews:
-  - name: audiobook-organizer
-    ids:
-      - cli-archive
-    repository:
-      owner: jeeftor
-      name: homebrew-tap
-    directory: Formula
-    homepage: https://github.com/jeeftor/audiobook-organizer
-    description: Audiobook Organizer Tool (CLI/TUI)
-    license: MIT
-    test: |
-      system "#{bin}/audiobook-organizer version -s"
-    install: |
-      bin.install "audiobook-organizer"
 
 checksum:
   name_template: checksums.txt

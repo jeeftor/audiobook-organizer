@@ -1,6 +1,7 @@
-import { FolderOpen } from 'lucide-react'
+import { FolderOpen, Moon, Sun } from 'lucide-react'
 import { Button } from './ui/button'
 import { SelectDirectory } from '../../wailsjs/go/main/App'
+import { useTheme } from '../contexts/ThemeContext'
 
 interface ToolbarProps {
   inputDir: string
@@ -19,6 +20,7 @@ export function Toolbar({
   onScan,
   loading,
 }: ToolbarProps) {
+  const { theme, toggleTheme } = useTheme()
   const handleSelectInputDir = async () => {
     try {
       const dir = await SelectDirectory('')
@@ -77,6 +79,21 @@ export function Toolbar({
             </button>
           </div>
         </div>
+
+        {/* Theme Toggle — far right */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          className="ml-auto flex-shrink-0"
+        >
+          {theme === 'dark' ? (
+            <Sun className="h-4 w-4" />
+          ) : (
+            <Moon className="h-4 w-4" />
+          )}
+        </Button>
       </div>
     </div>
   )

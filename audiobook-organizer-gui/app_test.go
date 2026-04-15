@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"context"
 	"encoding/json"
 	"os"
@@ -965,5 +966,241 @@ func TestApp_PreviewChanges_SetsAllowedSourcePaths(t *testing.T) {
 	gotPath := app.config.AllowedSourcePaths[0]
 	if gotPath != wantDir {
 		t.Errorf("AllowedSourcePaths[0] = %q, want %q", gotPath, wantDir)
+	}
+}
+
+// TestApp_GetCoverArt verifies that GetCoverArt returns "" for boundary conditions
+// and for files that cannot be parsed as audio or epub.
+func TestApp_GetCoverArt(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(t *testing.T) []organizer.Metadata
+		idx   int
+		want  string
+	}{
+		{
+			name: "empty results",
+			setup: func(t *testing.T) []organizer.Metadata {
+				return nil
+			},
+			idx:  0,
+			want: "",
+		},
+		{
+			name: "out of bounds",
+			setup: func(t *testing.T) []organizer.Metadata {
+				return []organizer.Metadata{
+					{Title: "Only Book", SourcePath: "/fake/path.m4b", SourceType: "audio"},
+				}
+			},
+			idx:  5,
+			want: "",
+		},
+		{
+			name: "audio no cover - tag parse fails gracefully",
+			setup: func(t *testing.T) []organizer.Metadata {
+				// Write minimal bytes that are not a valid audio file so tag.ReadFrom
+				// returns an error and GetCoverArt returns "".
+				f, err := os.CreateTemp(t.TempDir(), "*.mp3")
+				if err != nil {
+					t.Fatalf("failed to create temp file: %v", err)
+				}
+				if _, err := f.Write([]byte{0x00, 0x01, 0x02, 0x03}); err != nil {
+					t.Fatalf("failed to write temp file: %v", err)
+				}
+				f.Close()
+				return []organizer.Metadata{
+					{Title: "Bad Audio", SourcePath: f.Name(), SourceType: "audio"},
+				}
+			},
+			idx:  0,
+			want: "",
+		},
+		{
+			name: "epub no cover image - graceful failure",
+			setup: func(t *testing.T) []organizer.Metadata {
+				// Build a minimal zip archive (EPUB) that contains only an OPF
+				// file and no image entries — GetCoverArt should return "".
+				tmpDir := t.TempDir()
+				epubPath := filepath.Join(tmpDir, "book.epub")
+				f, err := os.Create(epubPath)
+				if err != nil {
+					t.Fatalf("failed to create epub file: %v", err)
+				}
+				zw := zip.NewWriter(f)
+				opf, err := zw.Create("content.opf")
+				if err != nil {
+					t.Fatalf("failed to create OPF entry: %v", err)
+				}
+				if _, err := opf.Write([]byte(`<?xml version="1.0"?><package/>`)); err != nil {
+					t.Fatalf("failed to write OPF content: %v", err)
+				}
+				if err := zw.Close(); err != nil {
+					t.Fatalf("failed to close zip writer: %v", err)
+				}
+				f.Close()
+				return []organizer.Metadata{
+					{Title: "No Cover EPUB", SourcePath: epubPath, SourceType: "epub"},
+				}
+			},
+			idx:  0,
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lastScanResults = tt.setup(t)
+			t.Cleanup(func() { lastScanResults = nil })
+
+			app := NewApp()
+			got := app.GetCoverArt(tt.idx)
+			if got != tt.want {
+				t.Errorf("GetCoverArt(%d) = %q, want %q", tt.idx, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestApp_GetValidationWarnings verifies per-book metadata checks and duplicate-path
+// detection.
+func TestApp_GetValidationWarnings(t *testing.T) {
+	tests := []struct {
+		name         string
+		books        []organizer.Metadata
+		outputDir    string
+		wantLen      int
+		wantTypes    []string          // expected Type values in order (subset check)
+		wantSeverity map[string]string // type -> severity
+	}{
+		{
+			name:      "empty - no scan results",
+			books:     nil,
+			wantLen:   0,
+			wantTypes: nil,
+		},
+		{
+			name: "all valid",
+			books: []organizer.Metadata{
+				{Title: "Book", Authors: []string{"Author"}},
+			},
+			wantLen:   0,
+			wantTypes: nil,
+		},
+		{
+			name: "missing author",
+			books: []organizer.Metadata{
+				{Title: "No Author Book", Authors: []string{""}},
+			},
+			wantLen:      1,
+			wantTypes:    []string{"missing_author"},
+			wantSeverity: map[string]string{"missing_author": "warning"},
+		},
+		{
+			name: "missing title",
+			books: []organizer.Metadata{
+				{Title: "", Album: "", Authors: []string{"Some Author"}},
+			},
+			wantLen:      1,
+			wantTypes:    []string{"missing_title"},
+			wantSeverity: map[string]string{"missing_title": "error"},
+		},
+		{
+			name: "both missing",
+			books: []organizer.Metadata{
+				{Title: "", Album: "", Authors: nil},
+			},
+			wantLen:   2,
+			wantTypes: []string{"missing_author", "missing_title"},
+		},
+		{
+			name: "duplicate paths",
+			books: []organizer.Metadata{
+				{
+					Title:   "Same Book",
+					Authors: []string{"Same Author"},
+					Series:  []string{},
+					// SourceType "json" triggers dir-level (not file-level) target path,
+					// so both books resolve to the same output directory.
+					SourcePath: "/input/group1/metadata.json",
+					SourceType: "json",
+				},
+				{
+					Title:      "Same Book",
+					Authors:    []string{"Same Author"},
+					Series:     []string{},
+					SourcePath: "/input/group2/metadata.json",
+					SourceType: "json",
+				},
+			},
+			// outputDir set dynamically in test body below
+			wantLen:      2,
+			wantTypes:    []string{"duplicate_path", "duplicate_path"},
+			wantSeverity: map[string]string{"duplicate_path": "error"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lastScanResults = tt.books
+			t.Cleanup(func() { lastScanResults = nil })
+
+			app := NewApp()
+			app.config.Flat = true // use flat mode so SourcePath is treated as the file
+
+			if tt.name == "duplicate paths" {
+				tt.outputDir = t.TempDir()
+			}
+			if tt.outputDir != "" {
+				app.config.OutputDir = tt.outputDir
+			}
+
+			got := app.GetValidationWarnings()
+
+			// Result must never be nil.
+			if got == nil {
+				t.Fatal("GetValidationWarnings() returned nil, want non-nil slice")
+			}
+
+			if len(got) != tt.wantLen {
+				t.Errorf(
+					"GetValidationWarnings() returned %d warnings, want %d: %+v",
+					len(got),
+					tt.wantLen,
+					got,
+				)
+			}
+
+			// Verify all expected types are present.
+			typeSet := make(map[string]int)
+			for _, w := range got {
+				typeSet[w.Type]++
+			}
+			for _, wantType := range tt.wantTypes {
+				if typeSet[wantType] == 0 {
+					t.Errorf(
+						"GetValidationWarnings() missing warning of type %q; got %v",
+						wantType,
+						got,
+					)
+				}
+			}
+
+			// Verify severities for the types we care about.
+			if tt.wantSeverity != nil {
+				for _, w := range got {
+					if wantSev, ok := tt.wantSeverity[w.Type]; ok {
+						if w.Severity != wantSev {
+							t.Errorf(
+								"warning type=%q has Severity=%q, want %q",
+								w.Type,
+								w.Severity,
+								wantSev,
+							)
+						}
+					}
+				}
+			}
+		})
 	}
 }
