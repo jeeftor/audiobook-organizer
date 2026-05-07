@@ -32,8 +32,12 @@ The GUI offers several advantages over the CLI and TUI modes:
 brew install --cask audiobook-organizer-gui
 ```
 
-**Run the app:**
+**Launch the GUI:**
 ```bash
+# Using unified binary (v0.12.0+)
+audiobook-organizer gui
+
+# Or standalone GUI binary
 audiobook-organizer-gui
 ```
 
@@ -80,10 +84,12 @@ To try pre-release features from `feature/*` branches:
 When you launch the GUI for the first time:
 
 ```bash
-audiobook-organizer-gui
+audiobook-organizer gui
 ```
 
 You'll see the **Directory Picker** screen where you select input and output directories.
+
+> **Note:** Starting with v0.12.0, use `audiobook-organizer gui` from the unified binary. The standalone `audiobook-organizer-gui` remains available for backward compatibility.
 
 ### CLI Integration
 
@@ -91,6 +97,9 @@ You can pre-populate directories via command-line flags to skip the picker scree
 
 ```bash
 # Auto-advance to book list with directories set
+audiobook-organizer gui --input=/path/to/audiobooks --output=/path/to/organized
+
+# Or with standalone GUI binary
 audiobook-organizer-gui --dir=/path/to/audiobooks --out=/path/to/organized
 ```
 
@@ -385,13 +394,13 @@ The GUI accepts all standard command-line flags:
 
 ```bash
 # Pre-populate directories
-audiobook-organizer-gui --dir=/books --out=/organized
+audiobook-organizer gui --input=/books --output=/organized
 
 # Set default layout
-audiobook-organizer-gui --layout=author-title
+audiobook-organizer gui --layout=author-title
 
-# Enable verbose logging
-audiobook-organizer-gui --verbose
+# Enable verbose logging and developer tools
+audiobook-organizer gui --verbose --devtools
 ```
 
 **Note:** CLI flags set initial values but can be changed in the GUI.
@@ -548,7 +557,7 @@ Currently, the GUI is primarily mouse-driven. Future versions may add:
 
 When reporting GUI issues, please include:
 - Operating system and version
-- GUI version (`audiobook-organizer-gui --version`)
+- Version (`audiobook-organizer version`)
 - Steps to reproduce
 - Screenshots if applicable
 - Console output if available (`--verbose` flag)

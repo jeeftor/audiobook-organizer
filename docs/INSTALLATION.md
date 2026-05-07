@@ -4,10 +4,18 @@ Complete installation instructions for all platforms and modes (GUI, TUI, CLI).
 
 ## Overview
 
-The Audiobook Organizer is available in two binaries:
+Starting with v0.12.0, Audiobook Organizer uses a **unified binary** that includes all three modes:
 
-1. **`audiobook-organizer`** - CLI and TUI modes (command-line and interactive terminal)
-2. **`audiobook-organizer-gui`** - Desktop GUI application (graphical interface)
+| Command | Mode | Description |
+|---------|------|-------------|
+| `audiobook-organizer gui` | Desktop GUI | Modern desktop interface (requires GUI-enabled build) |
+| `audiobook-organizer tui` | Interactive Terminal | Keyboard-driven terminal UI |
+| `audiobook-organizer` | CLI | Command-line automation and scripting |
+
+**Downloads:**
+- **Unified builds** (`audiobook-organizer-*-unified.*`) include the GUI - recommended for most users
+- **CLI-only builds** (`audiobook-organizer_*.*`) are smaller but lack GUI support
+- **Standalone GUI** (`audiobook-organizer-gui*.*`) available for backward compatibility
 
 Choose the installation method that fits your platform and preferred interface.
 
@@ -17,31 +25,51 @@ Choose the installation method that fits your platform and preferred interface.
 
 ### macOS
 
+**Unified binary (GUI + CLI + TUI):**
 ```bash
-# CLI/TUI via Homebrew
+# Download the unified DMG from releases (includes GUI)
+# Or use Homebrew for CLI/TUI only
 brew tap jeeftor/tap
 brew install audiobook-organizer
+```
 
-# GUI via Homebrew Cask (coming soon)
-brew install --cask audiobook-organizer-gui
+**Launch modes:**
+```bash
+audiobook-organizer gui        # Desktop GUI
+audiobook-organizer tui        # Interactive terminal
+audiobook-organizer --dir=...  # CLI mode
 ```
 
 ### Linux (Debian/Ubuntu)
 
+**Unified binary (recommended):**
 ```bash
-# CLI/TUI
-sudo apt install audiobook-organizer
+# Download unified .deb from releases (includes GUI support)
+wget https://github.com/jeeftor/audiobook-organizer/releases/latest/download/audiobook-organizer-unified_*_amd64.deb
+sudo dpkg -i audiobook-organizer-unified_*.deb
 
-# GUI
-sudo dpkg -i audiobook-organizer-gui_*.deb
+# Launch GUI
+audiobook-organizer gui
+```
+
+**CLI/TUI only (smaller, no GUI):**
+```bash
+sudo apt install audiobook-organizer
 ```
 
 ### Windows
 
+**Unified binary (recommended):**
 ```powershell
-# Download installer from GitHub Releases:
-# - audiobook-organizer-gui-setup.exe (GUI)
-# - audiobook-organizer-windows-amd64.zip (CLI/TUI)
+# Download from releases:
+# - audiobook-organizer-unified-windows-amd64.zip (GUI + CLI + TUI)
+# Extract and run: audiobook-organizer.exe gui
+```
+
+**Standalone options:**
+```powershell
+# GUI only: audiobook-organizer-gui-setup.exe
+# CLI/TUI only: audiobook-organizer-windows-amd64.zip
 ```
 
 ### Docker
@@ -58,19 +86,23 @@ The **Desktop GUI** provides a visual point-and-click interface. Available for m
 
 ### macOS
 
-#### Option 1: Homebrew Cask (Recommended)
+#### Option 1: Unified Binary DMG (Recommended)
 
-```bash
-# Coming soon
-brew install --cask audiobook-organizer-gui
-```
-
-#### Option 2: DMG Download
-
-1. Download `audiobook-organizer-gui-darwin-universal.dmg` from [GitHub Releases](https://github.com/jeeftor/audiobook-organizer/releases)
+1. Download `audiobook-organizer-universal.dmg` from [GitHub Releases](https://github.com/jeeftor/audiobook-organizer/releases)
 2. Open the DMG file
 3. Drag `Audiobook Organizer.app` to Applications folder
 4. **First launch:** Right-click → Open (to bypass Gatekeeper)
+
+**Launch the GUI:**
+```bash
+audiobook-organizer gui
+```
+
+#### Option 2: Homebrew Cask (Coming Soon)
+
+```bash
+brew install --cask audiobook-organizer
+```
 
 **Troubleshooting macOS:**
 - If you see "unidentified developer" warning: Right-click → Open
@@ -78,40 +110,46 @@ brew install --cask audiobook-organizer-gui
 
 ### Linux
 
-#### Debian/Ubuntu (.deb)
+#### Debian/Ubuntu - Unified Binary (Recommended)
 
 ```bash
-# Download .deb file from releases
-wget https://github.com/jeeftor/audiobook-organizer/releases/latest/download/audiobook-organizer-gui_*_amd64.deb
+# Download unified .deb file from releases (includes GUI, CLI, and TUI)
+wget https://github.com/jeeftor/audiobook-organizer/releases/latest/download/audiobook-organizer-unified_*_amd64.deb
 
 # Install
-sudo dpkg -i audiobook-organizer-gui_*_amd64.deb
+sudo dpkg -i audiobook-organizer-unified_*.deb
 
 # Install dependencies if needed
 sudo apt install -f
+
+# Launch GUI
+audiobook-organizer gui
 ```
 
-#### RedHat/Fedora (.rpm)
+#### RedHat/Fedora - Unified Binary
 
 ```bash
-# Download .rpm file from releases
-wget https://github.com/jeeftor/audiobook-organizer/releases/latest/download/audiobook-organizer-gui_*.rpm
+# Download unified .rpm from releases
+wget https://github.com/jeeftor/audiobook-organizer/releases/latest/download/audiobook-organizer-unified_*.rpm
 
 # Install
-sudo rpm -i audiobook-organizer-gui_*.rpm
+sudo rpm -i audiobook-organizer-unified_*.rpm
+
+# Launch GUI
+audiobook-organizer gui
 ```
 
 #### Universal AppImage (All Distros)
 
 ```bash
-# Download AppImage
-wget https://github.com/jeeftor/audiobook-organizer/releases/latest/download/audiobook-organizer-gui_*.AppImage
+# Download unified AppImage (includes all modes)
+wget https://github.com/jeeftor/audiobook-organizer/releases/latest/download/audiobook-organizer-unified_*.AppImage
 
 # Make executable
-chmod +x audiobook-organizer-gui_*.AppImage
+chmod +x audiobook-organizer-unified_*.AppImage
 
-# Run
-./audiobook-organizer-gui_*.AppImage
+# Run GUI
+./audiobook-organizer-unified_*.AppImage gui
 ```
 
 **Dependencies:**
@@ -131,18 +169,18 @@ sudo pacman -S webkit2gtk
 
 ### Windows
 
-#### Option 1: MSI Installer (Recommended)
+#### Option 1: Unified Installer (Recommended)
 
-1. Download `audiobook-organizer-gui-setup.exe` from [GitHub Releases](https://github.com/jeeftor/audiobook-organizer/releases)
+1. Download `audiobook-organizer-unified-setup.exe` from [GitHub Releases](https://github.com/jeeftor/audiobook-organizer/releases)
 2. Double-click the installer
 3. Follow installation wizard
-4. Launch from Start Menu or Desktop shortcut
+4. Launch GUI from Start Menu or run `audiobook-organizer.exe gui`
 
 #### Option 2: Portable ZIP
 
-1. Download `audiobook-organizer-gui-windows-amd64.zip` from [GitHub Releases](https://github.com/jeeftor/audiobook-organizer/releases)
+1. Download `audiobook-organizer-unified-windows-amd64.zip` from [GitHub Releases](https://github.com/jeeftor/audiobook-organizer/releases)
 2. Extract to desired location
-3. Run `audiobook-organizer-gui.exe`
+3. Run `audiobook-organizer.exe gui`
 
 **Dependencies:**
 
@@ -155,11 +193,18 @@ Windows 10/11 includes WebView2 by default. If you encounter issues on Windows 1
 
 ```bash
 # Check version
-audiobook-organizer-gui --version
+audiobook-organizer version
 
 # Launch GUI
-audiobook-organizer-gui
+audiobook-organizer gui
+
+# Test all modes
+audiobook-organizer gui --help      # GUI options
+audiobook-organizer tui --help      # TUI options
+audiobook-organizer --help          # CLI options
 ```
+
+> **Standalone GUI (Backward Compatibility):** The separate `audiobook-organizer-gui` binary is still available for users who prefer it, but the unified binary is recommended for new installations.
 
 ---
 
