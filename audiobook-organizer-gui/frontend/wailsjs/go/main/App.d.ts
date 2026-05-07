@@ -3,8 +3,6 @@
 import {main} from '../models';
 import {organizer} from '../models';
 
-export function LogEvent(arg1:string):Promise<void>;
-
 export function ExecuteFileOperations(arg1:Array<main.FileOperation>,arg2:boolean):Promise<organizer.Summary>;
 
 export function ExecuteOrganize(arg1:boolean):Promise<organizer.Summary>;
@@ -16,6 +14,8 @@ export function GetAvailableScanModes():Promise<Array<main.ScanMode>>;
 export function GetAvailableTemplateFields():Promise<Array<Record<string, string>>>;
 
 export function GetBatchPreview(arg1:Array<number>,arg2:string):Promise<Array<main.PreviewItem>>;
+
+export function GetCoverArt(arg1:number):Promise<string>;
 
 export function GetCurrentAuthorFormat():Promise<string>;
 
@@ -49,6 +49,8 @@ export function GetSettings():Promise<organizer.OrganizerConfig>;
 
 export function GetUndoInfo():Promise<Record<string, any>>;
 
+export function GetValidationWarnings():Promise<Array<main.ValidationWarning>>;
+
 export function Greet(arg1:string):Promise<string>;
 
 export function OrganizeFiles(arg1:Array<string>,arg2:string,arg3:boolean):Promise<Record<string, any>>;
@@ -78,7 +80,3 @@ export function UpdateRenameConfig(arg1:main.RenameConfig):Promise<void>;
 export function UpdateScanMode(arg1:string):Promise<void>;
 
 export function UpdateSettings(arg1:organizer.OrganizerConfig):Promise<void>;
-
-export function GetCoverArt(arg1:number):Promise<string>;
-
-export function GetValidationWarnings():Promise<Array<main.ValidationWarning>>;

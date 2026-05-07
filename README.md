@@ -31,7 +31,7 @@ Pick the mode that fits your workflow:
 
 | Mode | Best For | How to Launch |
 |------|----------|---------------|
-| **🖥️ GUI (Desktop App)** | First-time users, visual configuration, exploring metadata | `audiobook-organizer-gui` |
+| **🖥️ GUI (Desktop App)** | First-time users, visual configuration, exploring metadata | `audiobook-organizer gui` |
 | **⌨️ TUI (Interactive Terminal)** | Power users who prefer keyboard, SSH sessions | `audiobook-organizer tui` |
 | **💻 CLI (Command Line)** | Automation, scripts, CI/CD, batch processing | `audiobook-organizer --dir=/path` |
 
@@ -151,12 +151,17 @@ The **Audiobook Organizer GUI** provides a modern desktop interface with:
 
 **Launch the GUI:**
 ```bash
-# Standard launch (native file dialogs)
-audiobook-organizer-gui
+# Using unified binary (v0.12.0+)
+audiobook-organizer gui
 
 # Pre-populate directories (auto-advances to book list)
-audiobook-organizer-gui --dir=/path/to/audiobooks --out=/path/to/organized
+audiobook-organizer gui --input=/path/to/audiobooks --output=/path/to/organized
+
+# With developer tools enabled
+audiobook-organizer gui --devtools
 ```
+
+> **Note:** The standalone `audiobook-organizer-gui` binary is still available for backward compatibility.
 
 **Screenshot:** [Main book list screen showing metadata preview and layout options]
 

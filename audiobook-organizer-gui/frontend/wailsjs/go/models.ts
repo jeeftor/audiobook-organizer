@@ -233,27 +233,6 @@ export namespace main {
 	    }
 	}
 
-	export class ValidationWarning {
-	    book_index: number;
-	    book_title: string;
-	    type: string;
-	    message: string;
-	    severity: string;
-
-	    static createFrom(source: any = {}) {
-	        return new ValidationWarning(source);
-	    }
-
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.book_index = source["book_index"];
-	        this.book_title = source["book_title"];
-	        this.type = source["type"];
-	        this.message = source["message"];
-	        this.severity = source["severity"];
-	    }
-	}
-
 	export class RenameConfig {
 	    enabled: boolean;
 	    template: string;
@@ -333,6 +312,26 @@ export namespace main {
 		    }
 		    return a;
 		}
+	}
+	export class ValidationWarning {
+	    book_index: number;
+	    book_title: string;
+	    type: string;
+	    message: string;
+	    severity: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ValidationWarning(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.book_index = source["book_index"];
+	        this.book_title = source["book_title"];
+	        this.type = source["type"];
+	        this.message = source["message"];
+	        this.severity = source["severity"];
+	    }
 	}
 
 }
