@@ -4,6 +4,7 @@ set -eu
 ROOT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 STAGING_ROOT="${ABS_FIXTURE_CACHE_DIR:-$ROOT_DIR/staging-data}"
+REPO_ROOT=$(CDPATH='' cd -- "$ROOT_DIR/../.." && pwd)
 CLEAR_STAGING=0
 EMPTY_RUNTIME=0
 
@@ -145,11 +146,15 @@ mkdir -p \
 	"$ROOT_DIR/runtime/plain/audiobooks" \
 	"$ROOT_DIR/runtime/plain/books" \
 	"$ROOT_DIR/runtime/metadata/audiobooks" \
-	"$ROOT_DIR/runtime/metadata/books"
+	"$ROOT_DIR/runtime/metadata/books" \
+	"$ROOT_DIR/runtime/import-input/audiobooks" \
+	"$ROOT_DIR/runtime/import-input/books"
 : > "$ROOT_DIR/runtime/plain/audiobooks/.gitkeep"
 : > "$ROOT_DIR/runtime/plain/books/.gitkeep"
 : > "$ROOT_DIR/runtime/metadata/audiobooks/.gitkeep"
 : > "$ROOT_DIR/runtime/metadata/books/.gitkeep"
+: > "$ROOT_DIR/runtime/import-input/audiobooks/.gitkeep"
+: > "$ROOT_DIR/runtime/import-input/books/.gitkeep"
 
 if [ "$EMPTY_RUNTIME" -eq 1 ]; then
 	detail "Runtime libraries left empty for ABS setup."
@@ -180,6 +185,15 @@ copy_fixture "$carol_audio" "$ROOT_DIR/runtime/metadata/audiobooks/loose/holiday
 copy_fixture "$alice_book" "$ROOT_DIR/runtime/metadata/books/imported/ebook-001.epub"
 copy_fixture "$frankenstein_book" "$ROOT_DIR/runtime/metadata/books/random/shelley-book.epub"
 copy_fixture "$pride_book" "$ROOT_DIR/runtime/metadata/books/to-sort/austen.epub"
+
+copy_fixture \
+	"$REPO_ROOT/testdata/m4b/strange_audiobook_5_Mystery_Series_Mystery_of_the_Lost_City_Jane_Doe.m4b" \
+	"$ROOT_DIR/runtime/import-input/audiobooks/dropbox/jane-doe-mess/source.m4b"
+detail "embedded import fixture: dropbox/jane-doe-mess/source.m4b"
+copy_fixture \
+	"$REPO_ROOT/testdata/m4b/strange_audiobook_20_Saga_of_Endless_Horizons_The_Epic_Tale_That_Spans_Generations_Alexander_von_Longname.m4b" \
+	"$ROOT_DIR/runtime/import-input/audiobooks/dropbox/longname-mess/source.m4b"
+detail "embedded import fixture: dropbox/longname-mess/source.m4b"
 
 write_metadata \
 	"$ROOT_DIR/runtime/metadata/audiobooks/unsorted-audio/drop-001" \
