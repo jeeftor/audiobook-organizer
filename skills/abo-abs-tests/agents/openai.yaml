@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO ABS Tests"
+  short_description: "Validate ABS workflows"
+  default_prompt: "Use $abo-abs-tests to validate Audiobookshelf behavior."

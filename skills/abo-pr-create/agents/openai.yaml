@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO PR Create"
+  short_description: "Create draft PRs"
+  default_prompt: "Use $abo-pr-create to commit, push, and open a draft PR."

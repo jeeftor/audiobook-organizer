@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO Updater"
+  short_description: "Update dependencies"
+  default_prompt: "Use $abo-updater to update selected Go or web UI dependencies."

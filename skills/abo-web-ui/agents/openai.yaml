@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO Web UI"
+  short_description: "Work on the new web UI"
+  default_prompt: "Use $abo-web-ui to work on the current local browser UI."

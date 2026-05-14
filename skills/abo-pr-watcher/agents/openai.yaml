@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO PR Watcher"
+  short_description: "Watch PR CI and reviews"
+  default_prompt: "Use $abo-pr-watcher to inspect PR checks, comments, and next steps."

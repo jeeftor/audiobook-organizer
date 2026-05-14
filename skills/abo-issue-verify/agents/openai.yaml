@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO Issue Verify"
+  short_description: "Verify issue completion"
+  default_prompt: "Use $abo-issue-verify to check whether this issue is complete."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO PR"
+  short_description: "Route PR workflows"
+  default_prompt: "Use $abo-pr to route this Audiobook Organizer pull request work."

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Repo-local AI skills**: Added `abo-*` agent skills for issue workflow, PR workflow, testing, ABS validation, web UI work, and dependency audit/update tasks.
 - **Local web UI foundation**: `audiobook-organizer web` starts a browser-based UI from the same binary as the CLI and TUI. `audiobook-organizer gui` remains as a compatibility alias.
 - **Embedded web assets**: Release builds now compile the Vue frontend into the Go binary so the app can serve its own UI.
 - **Web API surface**: Added initial local REST endpoints for health, initial configuration, option lists, organize preview, rename preview, Audiobookshelf libraries, ABS path mapping tests, ABS item loading, and ABS scan triggers.
