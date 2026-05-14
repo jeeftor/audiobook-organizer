@@ -14,6 +14,7 @@ sub-issues:
 | [#30](https://github.com/jeeftor/audiobook-organizer/issues/30) | Smoke and reset contract | H1 |
 | [#31](https://github.com/jeeftor/audiobook-organizer/issues/31) | `metadata.json` lifecycle | M1A-M1D |
 | [#32](https://github.com/jeeftor/audiobook-organizer/issues/32) | Embedded metadata lifecycle | M2A-M2D |
+| [#35](https://github.com/jeeftor/audiobook-organizer/issues/35) | Embedded audiobook import lifecycle | M2C |
 | [#28](https://github.com/jeeftor/audiobook-organizer/issues/28) | Flat mode lifecycle | M3A-M3D |
 | [#29](https://github.com/jeeftor/audiobook-organizer/issues/29) | ABS API metadata mode | A1-A6 |
 
@@ -72,6 +73,13 @@ Initial expected item counts after reset and scan:
 The plain runtime has no `metadata.json` sidecars. The metadata-enabled runtime
 has `metadata.json` sidecars next to the messy fixture files.
 
+Reset also rebuilds ignored import-only source folders that are not mounted into
+ABS:
+
+| Source path | Fixture source | Purpose |
+| --- | --- | --- |
+| `test/abs/runtime/import-input/audiobooks` | committed `testdata/m4b` files | Hierarchical embedded metadata import into ABS. |
+
 ## Test Axes
 
 Primary axes:
@@ -113,7 +121,7 @@ specifically about series layout. It gives stable, easy-to-assert paths:
 | M1D | `metadata.json` negative control | plain | Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestABSMatrixTODO_MetadataJSONBooksLifecycle -count=1 -v` | Stubbed and intentionally failing. Build after audiobook lifecycle coverage is stable. |
 | M2A | Embedded metadata, already indexed | plain | Audiobooks | `go run . --dir test/abs/runtime/plain/audiobooks --use-embedded-metadata --layout author-title` | Current-code coverage only. Moves already-indexed audiobook directories using embedded M4B metadata. Longer term, this workflow should use ABS metadata instead. |
 | M2B | Embedded metadata, already indexed | plain | Ebooks | `go run . --dir test/abs/runtime/plain/books --use-embedded-metadata --layout author-title` | Current-code coverage only. Moves already-indexed EPUB directories using embedded EPUB metadata. Longer term, this workflow should use ABS metadata instead. |
-| M2C | Embedded import, hierarchical | plain | Audiobooks | `go run . --dir test/abs/runtime/import-input/audiobooks --out test/abs/runtime/plain/audiobooks --use-embedded-metadata --layout author-title` | New fixture needed. Imports hierarchical audiobook directories from outside ABS into the ABS-mounted audiobook library; ABS scan should add imported items. |
+| M2C | Embedded import, hierarchical | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestEmbeddedMetadataImport_AudiobooksLifecycle -count=1 -v` | Implemented. Imports hierarchical M4B directories from `runtime/import-input/audiobooks` into the ABS-mounted audiobook library; verifies source files moved, organized author/title folders exist, ABS scan adds the imported items, and missing count remains `0`. |
 | M2D | Embedded import, hierarchical | plain | Ebooks | `go run . --dir test/abs/runtime/import-input/books --out test/abs/runtime/plain/books --use-embedded-metadata --layout author-title` | New fixture needed. Imports hierarchical EPUB directories from outside ABS into the ABS-mounted ebook library; ABS scan should add imported items. |
 | M3A | Flat mechanics, non-ABS output | plain source | Audiobooks | `go run . --dir test/abs/runtime/plain/audiobooks --out <tmp>/flat-audiobooks --flat --layout author-title` | Processes supported files individually across nested messy folders and writes organized files to a temporary output directory. This proves flat mechanics, but does not test ABS path updates because output is outside the mounted ABS library. |
 | M3B | Flat mechanics, non-ABS output | plain source | Ebooks | `go run . --dir test/abs/runtime/plain/books --out <tmp>/flat-books --flat --layout author-title` | Processes loose EPUB files individually across nested messy folders and writes organized files to a temporary output directory. This proves flat mechanics, but does not test ABS path updates. |
@@ -226,9 +234,11 @@ test/abs/runtime/flat-input/audiobooks/
 test/abs/runtime/flat-input/books/
 ```
 
-Those directories should be rebuilt from `staging-data/` during reset but should
-not be mounted into ABS. Flat import tests then use `--out` to place organized
-files into `/audiobooks` or `/books`, trigger ABS scan, and assert new ABS items.
+Those directories should be rebuilt from committed `testdata` fixtures during
+reset but should not be mounted into ABS. Flat import tests then use `--out` to
+place organized files into `/audiobooks` or `/books`, trigger ABS scan, and
+assert new ABS items. Because the source files were outside ABS before the
+organizer run, these tests should not create missing ABS rows.
 
 ## ABS Mode Gaps
 
