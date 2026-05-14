@@ -1,6 +1,6 @@
 ---
 name: abo-issue-closeout
-description: Finish Audiobook Organizer issue hygiene: verify completion, update changelog/docs/test notes, comment status, and close only when appropriate.
+description: Close out Audiobook Organizer issues with verification, status comments, and PR-aware hygiene.
 metadata:
   short-description: Close out ABO issues
 ---
