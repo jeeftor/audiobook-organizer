@@ -980,7 +980,7 @@ fi
 
 ## See Also
 
-- [GUI.md](GUI.md) - Desktop GUI guide
+- [GUI.md](GUI.md) - Local Web UI guide
 - [TUI.md](TUI.md) - Terminal User Interface guide
 - [METADATA.md](METADATA.md) - Metadata extraction guide
 - [LAYOUTS.md](LAYOUTS.md) - Directory layout options
