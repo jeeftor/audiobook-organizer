@@ -64,6 +64,10 @@ jobs:
     name: ABS metadata lifecycle
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      ABS_IMAGE: ghcr.io/advplyr/audiobookshelf:latest
+      ABS_FIXTURE_CACHE_DIR: test/abs/.cache/staging-data
+      ABS_IMAGE_TAR: test/abs/.cache/docker/audiobookshelf-latest.tar
 
     steps:
     - name: Checkout code
@@ -79,17 +83,31 @@ jobs:
     - name: Cache ABS public-domain fixtures
       uses: actions/cache@v4
       with:
-        path: |
-          test/abs/staging-data/audiobooks
-          test/abs/staging-data/books
-        key: ${{ runner.os }}-abs-fixtures-v1-${{ hashFiles('test/abs/scripts/seed-public-domain.sh') }}
+        path: test/abs/.cache/staging-data
+        key: ${{ runner.os }}-abs-fixtures-v2-${{ hashFiles('test/abs/scripts/seed-public-domain.sh') }}
         restore-keys: |
-          ${{ runner.os }}-abs-fixtures-v1-
+          ${{ runner.os }}-abs-fixtures-v2-
+
+    - name: Cache ABS Docker image
+      uses: actions/cache@v4
+      with:
+        path: test/abs/.cache/docker/audiobookshelf-latest.tar
+        key: ${{ runner.os }}-abs-docker-image-latest-v1
 
     - name: Show Docker version
       run: |
         docker version
         docker compose version
+
+    - name: Load or pull ABS Docker image
+      run: |
+        mkdir -p test/abs/.cache/docker
+        if [ -s "$ABS_IMAGE_TAR" ]; then
+          docker load -i "$ABS_IMAGE_TAR"
+        else
+          docker pull "$ABS_IMAGE"
+          docker save -o "$ABS_IMAGE_TAR" "$ABS_IMAGE"
+        fi
 
     - name: Install ABS test dependencies
       run: |
