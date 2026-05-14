@@ -1398,7 +1398,8 @@ func (m *RenameFieldMappingModel) View() string {
 				BorderForeground(lipgloss.Color("#444444")).
 				Width(boxWidth)
 
-			sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Top,
+			sb.WriteString(lipgloss.JoinHorizontal(
+				lipgloss.Top,
 				box.Render(meta1),
 				box.Render(meta2),
 				box.Render(meta3),
@@ -1415,7 +1416,8 @@ func (m *RenameFieldMappingModel) View() string {
 				BorderForeground(lipgloss.Color("#444444")).
 				Width(boxWidth)
 
-			sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Top,
+			sb.WriteString(lipgloss.JoinHorizontal(
+				lipgloss.Top,
 				box.Render(meta1),
 				box.Render(meta2),
 			) + "\n\n")
@@ -1533,12 +1535,14 @@ func (m *RenameFieldMappingModel) View() string {
 		// Show: number. filename → proposed_name
 		sb.WriteString(
 			numberStyle.Render(fmt.Sprintf("%2d. ", i+1)) +
-				coloredOutput + "\n")
+				coloredOutput + "\n",
+		)
 	}
 
 	// Controls
-	sb.WriteString("\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).
-		Render("t: Title | s: Series | a: Author | o: Track | p: Template | m: Mode | ←→: Samples | c: Continue | Q: Back"),
+	sb.WriteString(
+		"\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#888888")).
+			Render("t: Title | s: Series | a: Author | o: Track | p: Template | m: Mode | ←→: Samples | c: Continue | Q: Back"),
 	)
 
 	return sb.String()

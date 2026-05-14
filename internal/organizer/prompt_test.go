@@ -106,7 +106,8 @@ func TestPromptConfirmation(t *testing.T) {
 					OutputDir:    "",
 					ReplaceSpace: "",
 					Prompt:       true,
-				})
+				},
+			)
 			if err != nil {
 				t.Fatalf("NewOrganizer() error = %v", err)
 			}

@@ -26,7 +26,16 @@ func TestEmbeddedAlreadyIndexed_AudiobooksCurrentBehavior(t *testing.T) {
 			"test", "abs", "runtime", "plain", "audiobooks",
 		},
 		oldFiles: [][]string{
-			{"test", "abs", "runtime", "plain", "audiobooks", "unsorted-audio", "drop-001", "not-alice.m4b"},
+			{
+				"test",
+				"abs",
+				"runtime",
+				"plain",
+				"audiobooks",
+				"unsorted-audio",
+				"drop-001",
+				"not-alice.m4b",
+			},
 			{"test", "abs", "runtime", "plain", "audiobooks", "loose", "holiday_story_final.m4b"},
 		},
 		absentFiles: [][]string{
@@ -71,10 +80,16 @@ func runEmbeddedAlreadyIndexedCurrentBehavior(t *testing.T, tc embeddedAlreadyIn
 			"--layout", "author-title",
 		)
 		if !strings.Contains(output, "Metadata files found: 0") {
-			t.Fatalf("expected organizer to find no metadata rows in current already-indexed mode\noutput:\n%s", output)
+			t.Fatalf(
+				"expected organizer to find no metadata rows in current already-indexed mode\noutput:\n%s",
+				output,
+			)
 		}
 		if !strings.Contains(output, "Moves planned/executed: 0") {
-			t.Fatalf("expected organizer to leave already-indexed files in place\noutput:\n%s", output)
+			t.Fatalf(
+				"expected organizer to leave already-indexed files in place\noutput:\n%s",
+				output,
+			)
 		}
 	})
 

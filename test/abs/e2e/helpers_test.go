@@ -62,7 +62,10 @@ func TestMain(m *testing.M) {
 func acquireABSRunLock() (func(), error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:23378")
 	if err != nil {
-		return nil, fmt.Errorf("another ABS E2E run appears to be active; stop it before running this matrix again: %w", err)
+		return nil, fmt.Errorf(
+			"another ABS E2E run appears to be active; stop it before running this matrix again: %w",
+			err,
+		)
 	}
 	return func() {
 		_ = listener.Close()
@@ -100,7 +103,13 @@ func runOrganizer(t *testing.T, args ...string) string {
 	t.Helper()
 	output, err := runCommand(repoRootPath, 2*time.Minute, binaryPath, args...)
 	if err != nil {
-		t.Fatalf("organizer command failed: %v\ncommand: %s %s\n%s", err, binaryPath, strings.Join(args, " "), output)
+		t.Fatalf(
+			"organizer command failed: %v\ncommand: %s %s\n%s",
+			err,
+			binaryPath,
+			strings.Join(args, " "),
+			output,
+		)
 	}
 	return output
 }
@@ -119,7 +128,8 @@ func runCommand(dir string, timeout time.Duration, name string, args ...string) 
 
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(),
+	cmd.Env = append(
+		os.Environ(),
 		"ABS_ENV_FILE=test/abs/.env.testing",
 		"NO_COLOR=1",
 		"TERM=dumb",
@@ -153,7 +163,14 @@ func assertNotExists(t *testing.T, path string) {
 	}
 }
 
-func assertLibraryStable(t *testing.T, dbPath string, folderPath string, expectedCount int, wantContains []string, wantAbsent []string) {
+func assertLibraryStable(
+	t *testing.T,
+	dbPath string,
+	folderPath string,
+	expectedCount int,
+	wantContains []string,
+	wantAbsent []string,
+) {
 	t.Helper()
 
 	deadline := time.Now().Add(2 * time.Minute)
@@ -189,7 +206,12 @@ func assertLibraryStable(t *testing.T, dbPath string, folderPath string, expecte
 	)
 }
 
-func assertLibraryContains(t *testing.T, dbPath string, folderPath string, wantContains []string) libraryState {
+func assertLibraryContains(
+	t *testing.T,
+	dbPath string,
+	folderPath string,
+	wantContains []string,
+) libraryState {
 	t.Helper()
 
 	deadline := time.Now().Add(2 * time.Minute)
@@ -204,7 +226,11 @@ func assertLibraryContains(t *testing.T, dbPath string, folderPath string, wantC
 
 		if containsAll(state.Paths, wantContains) {
 			if state.Missing > 0 {
-				t.Logf("ABS library %s has %d missing item(s) after scan; post-move reconciliation is still pending", folderPath, state.Missing)
+				t.Logf(
+					"ABS library %s has %d missing item(s) after scan; post-move reconciliation is still pending",
+					folderPath,
+					state.Missing,
+				)
 			}
 			return state
 		}
@@ -254,7 +280,10 @@ func readLibraryState(dbPath string, folderPath string) (libraryState, error) {
 		return libraryState{}, fmt.Errorf("count items for %s: %w", folderPath, err)
 	}
 
-	rows, err := db.Query(`select path from libraryItems where libraryId = ? order by path`, libraryID)
+	rows, err := db.Query(
+		`select path from libraryItems where libraryId = ? order by path`,
+		libraryID,
+	)
 	if err != nil {
 		return libraryState{}, fmt.Errorf("list paths for %s: %w", folderPath, err)
 	}

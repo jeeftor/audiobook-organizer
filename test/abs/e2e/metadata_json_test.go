@@ -49,12 +49,47 @@ func metadataJSONAudiobookCases() []metadataJSONLifecycleCase {
 				"test", "abs", "runtime", "metadata", "audiobooks",
 			},
 			oldFiles: [][]string{
-				{"test", "abs", "runtime", "metadata", "audiobooks", "unsorted-audio", "drop-001", "not-alice.m4b"},
-				{"test", "abs", "runtime", "metadata", "audiobooks", "loose", "holiday_story_final.m4b"},
+				{
+					"test",
+					"abs",
+					"runtime",
+					"metadata",
+					"audiobooks",
+					"unsorted-audio",
+					"drop-001",
+					"not-alice.m4b",
+				},
+				{
+					"test",
+					"abs",
+					"runtime",
+					"metadata",
+					"audiobooks",
+					"loose",
+					"holiday_story_final.m4b",
+				},
 			},
 			newFiles: [][]string{
-				{"test", "abs", "runtime", "metadata", "audiobooks", "Lewis Carroll", "Alice's Adventures in Wonderland (Abridged)", "not-alice.m4b"},
-				{"test", "abs", "runtime", "metadata", "audiobooks", "Charles Dickens", "A Christmas Carol", "holiday_story_final.m4b"},
+				{
+					"test",
+					"abs",
+					"runtime",
+					"metadata",
+					"audiobooks",
+					"Lewis Carroll",
+					"Alice's Adventures in Wonderland (Abridged)",
+					"not-alice.m4b",
+				},
+				{
+					"test",
+					"abs",
+					"runtime",
+					"metadata",
+					"audiobooks",
+					"Charles Dickens",
+					"A Christmas Carol",
+					"holiday_story_final.m4b",
+				},
 			},
 			logFile: []string{
 				"test", "abs", "runtime", "metadata", "audiobooks", ".abook-org.log",
@@ -78,8 +113,25 @@ func metadataJSONAudiobookCases() []metadataJSONLifecycleCase {
 				"test", "abs", "runtime", "plain", "audiobooks",
 			},
 			oldFiles: [][]string{
-				{"test", "abs", "runtime", "plain", "audiobooks", "unsorted-audio", "drop-001", "not-alice.m4b"},
-				{"test", "abs", "runtime", "plain", "audiobooks", "loose", "holiday_story_final.m4b"},
+				{
+					"test",
+					"abs",
+					"runtime",
+					"plain",
+					"audiobooks",
+					"unsorted-audio",
+					"drop-001",
+					"not-alice.m4b",
+				},
+				{
+					"test",
+					"abs",
+					"runtime",
+					"plain",
+					"audiobooks",
+					"loose",
+					"holiday_story_final.m4b",
+				},
 			},
 			newFiles: [][]string{
 				{"test", "abs", "runtime", "plain", "audiobooks", "Lewis Carroll"},
@@ -114,9 +166,36 @@ func metadataJSONBookCases() []metadataJSONLifecycleCase {
 				{"test", "abs", "runtime", "metadata", "books", "to-sort", "austen.epub"},
 			},
 			newFiles: [][]string{
-				{"test", "abs", "runtime", "metadata", "books", "Lewis Carroll", "Alice's Adventures in Wonderland", "ebook-001.epub"},
-				{"test", "abs", "runtime", "metadata", "books", "Mary Wollstonecraft Shelley", "Frankenstein; or, The Modern Prometheus", "shelley-book.epub"},
-				{"test", "abs", "runtime", "metadata", "books", "Jane Austen", "Pride and Prejudice", "austen.epub"},
+				{
+					"test",
+					"abs",
+					"runtime",
+					"metadata",
+					"books",
+					"Lewis Carroll",
+					"Alice's Adventures in Wonderland",
+					"ebook-001.epub",
+				},
+				{
+					"test",
+					"abs",
+					"runtime",
+					"metadata",
+					"books",
+					"Mary Wollstonecraft Shelley",
+					"Frankenstein; or, The Modern Prometheus",
+					"shelley-book.epub",
+				},
+				{
+					"test",
+					"abs",
+					"runtime",
+					"metadata",
+					"books",
+					"Jane Austen",
+					"Pride and Prejudice",
+					"austen.epub",
+				},
 			},
 			logFile: []string{
 				"test", "abs", "runtime", "metadata", "books", ".abook-org.log",
@@ -205,14 +284,18 @@ func runMetadataJSONLifecycle(t *testing.T, tc metadataJSONLifecycleCase) {
 	})
 
 	if tc.expectMove {
-		step(t, "06 assert ABS marks old paths missing and adds organized paths", func(t *testing.T) {
-			waitForABSState(t, ctx, absStateExpectation{
-				expectedCount:   tc.expectedCount * 2,
-				missingCount:    len(tc.oldAPIPaths),
-				activeContains:  tc.newAPIPaths,
-				missingContains: tc.oldAPIPaths,
-			})
-		})
+		step(
+			t,
+			"06 assert ABS marks old paths missing and adds organized paths",
+			func(t *testing.T) {
+				waitForABSState(t, ctx, absStateExpectation{
+					expectedCount:   tc.expectedCount * 2,
+					missingCount:    len(tc.oldAPIPaths),
+					activeContains:  tc.newAPIPaths,
+					missingContains: tc.oldAPIPaths,
+				})
+			},
+		)
 
 		step(t, "07 clean ABS library issues", func(t *testing.T) {
 			cleanMissingABSItems(t, ctx, tc.oldAPIPaths)
