@@ -14,8 +14,10 @@ LDFLAGS := -ldflags "-s -w $(VERSION_FLAGS)"
 # Test packages
 UNIT_TEST_PKGS = ./...
 INTEGRATION_TEST_PKGS = $(shell go list ./... | grep -v '/integration$$')
+ABS_TEST_RUN ?= Test(MetadataJSONMode|EmbeddedAlreadyIndexed|EmbeddedMetadataImport|FlatModeImport|RESTHarness_(MetadataJSONMode|EmbeddedMetadataImport|FlatModeImport)Lifecycle)
+ABS_REST_TEST_RUN ?= TestRESTHarness_(MetadataJSONMode|EmbeddedMetadataImport|FlatModeImport)Lifecycle
 
-.PHONY: all build clean dev dev-linux-amd64 web-install web-build web-dev abs-dev-seed abs-dev-init abs-dev-configure abs-dev-up abs-dev-down abs-dev-reset abs-dev-reset-all abs-dev-scan abs-dev-reset-scan abs-ci-smoke abs-test-metadata abs-test-matrix abs-test-e2e abs-dev-capture-baseline abs-dev-restore-baseline abs-dev-wait release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help scp-dev
+.PHONY: all build clean dev dev-linux-amd64 web-install web-build web-dev gui-rest-test gui-test gui-test-headed gui-test-ui abs-dev-seed abs-dev-init abs-dev-configure abs-dev-up abs-dev-down abs-dev-reset abs-dev-reset-all abs-dev-scan abs-dev-reset-scan abs-ci-smoke abs-test-metadata abs-test-rest abs-test-matrix abs-test-e2e abs-dev-capture-baseline abs-dev-restore-baseline abs-dev-wait release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help scp-dev
 
 # Default target - show help
 all: help
@@ -30,22 +32,25 @@ help:
 	@printf "    %-26s %s\n" "web-install" "Install web frontend dependencies"
 	@printf "    %-26s %s\n" "web-build" "Build embedded web frontend assets"
 	@printf "    %-26s %s\n" "web-dev" "Run the web frontend dev server"
+	@printf "    %-26s %s\n" "gui-rest-test" "Run local web UI REST endpoint tests"
+	@printf "    %-26s %s\n" "gui-test" "Run local web UI Playwright tests"
+	@printf "    %-26s %s\n" "gui-test-headed" "Run local web UI Playwright tests headed"
+	@printf "    %-26s %s\n" "gui-test-ui" "Open Playwright UI runner for local web UI tests"
+	@printf "    %-26s %s\n" "scp-dev" "Copy linux-amd64 binary to remote server"
+	@echo ""
+	@echo "  ABS Development:"
 	@printf "    %-26s %s\n" "abs-dev-seed" "Download public-domain ABS test media"
 	@printf "    %-26s %s\n" "abs-dev-init" "Reset ABS and start with empty libraries for setup"
 	@printf "    %-26s %s\n" "abs-dev-configure" "Configure empty ABS test servers through the API"
 	@printf "    %-26s %s\n" "abs-dev-up" "Start local Audiobookshelf test server"
+	@printf "    %-26s %s\n" "abs-dev-wait" "Start ABS and wait until services respond"
 	@printf "    %-26s %s\n" "abs-dev-down" "Stop local Audiobookshelf test server"
 	@printf "    %-26s %s\n" "abs-dev-reset" "Restore baseline, stage books, start ABS"
 	@printf "    %-26s %s\n" "abs-dev-reset-all" "Reset ABS state and clear staged media"
 	@printf "    %-26s %s\n" "abs-dev-scan" "Trigger scans for configured ABS libraries"
 	@printf "    %-26s %s\n" "abs-dev-reset-scan" "Reset ABS, start it, and trigger scans"
-	@printf "    %-26s %s\n" "abs-ci-smoke" "CI-style seed, restore baseline, and scan"
-	@printf "    %-26s %s\n" "abs-test-metadata" "Run ABS metadata.json E2E tests"
-	@printf "    %-26s %s\n" "abs-test-matrix" "Run implemented ABS matrix E2E tests"
-	@printf "    %-26s %s\n" "abs-test-e2e" "Run all ABS E2E tests"
 	@printf "    %-26s %s\n" "abs-dev-capture-baseline" "Capture ABS baseline config fixture"
 	@printf "    %-26s %s\n" "abs-dev-restore-baseline" "Restore ABS baseline config fixture"
-	@printf "    %-26s %s\n" "scp-dev" "Copy linux-amd64 binary to remote server"
 	@echo ""
 	@echo "  Build:"
 	@printf "    %-26s %s\n" "build" "Build for distribution (goreleaser)"
@@ -59,6 +64,13 @@ help:
 	@printf "    %-26s %s\n" "test-all" "Run all tests"
 	@printf "    %-26s %s\n" "coverage" "Run tests with coverage"
 	@printf "    %-26s %s\n" "coverage-html" "Generate HTML coverage report"
+	@echo ""
+	@echo "  ABS Testing:"
+	@printf "    %-26s %s\n" "abs-ci-smoke" "CI-style seed, restore baseline, and scan"
+	@printf "    %-26s %s\n" "abs-test-metadata" "Run ABS metadata.json E2E tests"
+	@printf "    %-26s %s\n" "abs-test-rest" "Run Docker-backed REST ABS E2E tests"
+	@printf "    %-26s %s\n" "abs-test-matrix" "Run implemented ABS matrix E2E tests"
+	@printf "    %-26s %s\n" "abs-test-e2e" "Run all ABS E2E tests"
 	@echo ""
 	@echo "  Code Quality:"
 	@printf "    %-26s %s\n" "lint" "Run all linting (vet + fmt-check)"
@@ -86,6 +98,22 @@ web-build:
 # Run the web frontend development server
 web-dev:
 	cd web && npm run dev
+
+# Run local web UI REST endpoint tests
+gui-rest-test:
+	GOCACHE=$${TMPDIR:-/tmp}/audiobook-organizer-go-build go test ./internal/app ./internal/server
+
+# Run local web UI Playwright tests
+gui-test:
+	cd web && npm run test:e2e
+
+# Run local web UI Playwright tests in headed mode
+gui-test-headed:
+	cd web && npm run test:e2e:headed
+
+# Open the Playwright UI runner for local web UI tests
+gui-test-ui:
+	cd web && npm run test:e2e:ui
 
 # Download public-domain media fixtures for the local ABS test server
 abs-dev-seed:
@@ -143,10 +171,15 @@ abs-test-metadata:
 	@test/abs/scripts/seed-public-domain.sh
 	go test -tags=abs_e2e ./test/abs/e2e -run TestMetadataJSONMode -count=1 -v
 
+# Run Docker-backed REST E2E tests. Tests reset ABS before each case.
+abs-test-rest:
+	@test/abs/scripts/seed-public-domain.sh
+	go test -tags=abs_e2e ./test/abs/e2e -run '$(ABS_REST_TEST_RUN)' -count=1 -v
+
 # Run implemented ABS matrix E2E tests. Tests reset ABS before each case.
 abs-test-matrix:
 	@test/abs/scripts/seed-public-domain.sh
-	go test -tags=abs_e2e ./test/abs/e2e -run 'Test(MetadataJSONMode|EmbeddedAlreadyIndexed|EmbeddedMetadataImport|FlatModeImport)' -count=1 -v
+	go test -tags=abs_e2e ./test/abs/e2e -run '$(ABS_TEST_RUN)' -count=1 -v
 
 # Run all ABS E2E tests. Tests reset ABS before each case.
 abs-test-e2e:

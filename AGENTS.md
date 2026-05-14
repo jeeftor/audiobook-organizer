@@ -31,8 +31,6 @@ The project ships one `audiobook-organizer` binary with CLI, TUI, rename, Audiob
 - `internal/organizer/integration/`: integration tests
 - `test/abs/`: Audiobookshelf test harness and E2E tests
 
-`audiobook-organizer-gui-old/` and other legacy GUI code should not be modified unless the task clearly requires it.
-
 ## GitHub Workflow
 
 - Track non-trivial code and documentation changes with a GitHub issue before editing files.

@@ -44,7 +44,7 @@ jobs:
       - name: Run pre-commit
         run: pre-commit run --all-files
 
-  # Build on each platform (CLI + GUI native compilation)
+  # Build on each platform
   build:
     needs: [pre-commit]
     strategy:
@@ -77,28 +77,22 @@ jobs:
         with:
           go-version: 'stable'
           cache: true
-          cache-dependency-path: |
-            go.sum
-            audiobook-organizer-gui/go.sum
+          cache-dependency-path: go.sum
 
-      - name: Set up Node.js (for GUI)
+      - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '20'
 
-      - name: Install npm dependencies (for GUI)
-        working-directory: audiobook-organizer-gui/frontend
-        run: npm install
-
-      - name: Build frontend (for GUI embed)
-        working-directory: audiobook-organizer-gui/frontend
-        run: npm run build
+      - name: Build web frontend
+        working-directory: web
+        run: |
+          npm install
+          npm run build
 
       - name: Build with goreleaser (single platform)
         run: |
           go run github.com/goreleaser/goreleaser/v2@latest build --single-target --snapshot --clean
-        env:
-          CGO_ENABLED: 1
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -121,11 +115,6 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: 'stable'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '20'
 
       # Download all platform artifacts
       - name: Download Linux artifacts
@@ -165,11 +154,6 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      # Install frontend dependencies (goreleaser continue --merge uses pre-built binaries; no frontend build needed here)
-      - name: Install frontend dependencies
-        working-directory: audiobook-organizer-gui/frontend
-        run: npm install
 
       # Run GoReleaser to create archives and release (skip build since we have pre-built binaries)
       - name: GoReleaser

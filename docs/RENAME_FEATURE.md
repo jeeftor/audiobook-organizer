@@ -42,12 +42,12 @@ audiobook-organizer rename --dir=/path/to/audiobooks --undo
 - `--prompt` - Prompt before renaming each file
 - `--dry-run` - Preview changes without executing
 
-### `rename-explore` - TUI Command
+### `rename-tui` - TUI Command
 
 Interactive terminal UI for building and testing rename templates with live preview.
 
 ```bash
-audiobook-organizer rename-explore --dir=/path/to/audiobooks
+audiobook-organizer rename-tui --dir=/path/to/audiobooks
 ```
 
 #### Features
@@ -79,13 +79,13 @@ audiobook-organizer rename-explore --dir=/path/to/audiobooks
 **Process Screen:**
 - `Q` - Exit after completion
 
-### `GUI Rename` - Desktop Application
+### Web UI Rename
 
-Visual desktop interface for exploring metadata and renaming files with real-time preview.
+Browser-based interface for exploring metadata and renaming files with real-time preview.
 
 ```bash
-# Launch GUI
-audiobook-organizer-gui
+# Launch Web UI
+audiobook-organizer web
 ```
 
 #### Features
@@ -325,7 +325,7 @@ go test ./internal/organizer/template*.go -v
 go test ./internal/organizer/author_formatter*.go -v
 
 # Test with sample data
-./bin/audiobook-organizer rename-explore --dir=./testdata/m4b --dry-run
+./bin/audiobook-organizer rename-tui --dir=./testdata/m4b
 ```
 
 ## Best Practices
@@ -335,7 +335,7 @@ go test ./internal/organizer/author_formatter*.go -v
    audiobook-organizer rename --dir=/path --dry-run
    ```
 
-2. **Use rename-explore for complex templates**
+2. **Use rename-tui for complex templates**
    - See live preview as you type
    - View actual metadata from your files
    - Test before committing
@@ -350,6 +350,6 @@ go test ./internal/organizer/author_formatter*.go -v
    - Simple collections: `{author} - {title}`
 
 5. **Check metadata quality**
-   - Use F2 in rename-explore to view metadata
+   - Use F2 in rename-tui to view metadata
    - Fix source metadata if needed
    - Use field mapping for non-standard fields

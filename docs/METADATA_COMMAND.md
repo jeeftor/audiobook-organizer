@@ -73,13 +73,13 @@ The **Source** field shows where the metadata came from:
 - `audio` - From embedded audio tags (MP3, M4B, M4A, etc.)
 - `epub` - From EPUB file metadata
 
-## GUI Metadata Viewer
+## Web UI Metadata Viewer
 
-The desktop GUI provides visual metadata exploration on the **Book List Screen**.
+The local web UI provides visual metadata exploration in the browser.
 
 ```bash
-# Launch GUI
-audiobook-organizer-gui
+# Launch Web UI
+audiobook-organizer web
 ```
 
 ### Features
@@ -116,7 +116,7 @@ audiobook-organizer-gui
    - Visual indicators: 📁 for JSON fields, 🎵 for embedded fields
    - Demonstrates automatic merging of book-level and track-level metadata
 
-**See also:** [GUI.md](GUI.md) for complete GUI documentation with screenshots
+**See also:** [GUI.md](GUI.md) for complete Web UI documentation
 
 ## Available Template Fields
 
