@@ -18,7 +18,7 @@ GUI_LDFLAGS := -ldflags "-s -w -extldflags '-framework UniformTypeIdentifiers' $
 UNIT_TEST_PKGS = ./...
 INTEGRATION_TEST_PKGS = $(shell go list ./... | grep -v '/integration$$')
 
-.PHONY: all build clean dev gui-dev gui-dev1 gui-dev2 gui-build gui-install gui-unified gui-unified-dev release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help
+.PHONY: all build clean dev dev-linux-amd64 gui-dev gui-dev1 gui-dev2 gui-build gui-install gui-unified gui-unified-dev release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help scp-dev
 
 # Default target - show help
 all: help
@@ -28,11 +28,13 @@ help:
 	@echo "Available targets:"
 	@echo ""
 	@echo "  Development:"
-	@echo "    dev              Build CLI/TUI binary"
+	@echo "    dev              Build CLI/TUI binary (native platform)"
+	@echo "    dev-linux-amd64  Build for Linux AMD64 (cross-compile)"
 	@echo "    gui-dev          Start GUI in dev mode (copies books to gui-books)"
 	@echo "    gui-dev1         Start GUI dev with ./books as input"
 	@echo "    gui-dev2         Start GUI dev with ./books-meta as input"
 	@echo "    gui-install      Install GUI frontend dependencies"
+	@echo "    scp-dev          Copy linux-amd64 binary to remote server"
 	@echo ""
 	@echo "  Build:"
 	@echo "    build            Build for distribution (goreleaser)"
@@ -59,6 +61,11 @@ help:
 # Development build (CLI/TUI only, no CGO needed)
 dev:
 	go build $(LDFLAGS) -o bin/audiobook-organizer
+
+# Cross-compile for Linux AMD64 (for remote ABS servers)
+# CGO disabled for cross-compilation compatibility
+dev-linux-amd64:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o bin/audiobook-organizer-linux-amd64
 
 # Start GUI in development mode (uses wails dev for hot reload)
 gui-dev:
@@ -186,3 +193,21 @@ fmt-check:
 # Run all linting checks (vet + fmt-check)
 lint: vet fmt-check
 	@echo "All linting checks passed!"
+
+# Deployment to remote ABS server (for testing)
+# Usage: make scp-dev REMOTE_HOST=user@nas.local REMOTE_PATH=/usr/local/bin
+.PHONY: scp-dev
+scp-dev: dev-linux-amd64
+	@if [ -z "$(REMOTE_HOST)" ]; then \
+		echo "Error: REMOTE_HOST not set"; \
+		echo "Usage: make scp-dev REMOTE_HOST=user@server REMOTE_PATH=/usr/local/bin"; \
+		exit 1; \
+	fi
+	@if [ -z "$(REMOTE_PATH)" ]; then \
+		echo "Error: REMOTE_PATH not set"; \
+		echo "Usage: make scp-dev REMOTE_HOST=user@server REMOTE_PATH=/usr/local/bin"; \
+		exit 1; \
+	fi
+	@echo "Copying linux-amd64 binary to $(REMOTE_HOST):$(REMOTE_PATH)/audiobook-organizer..."
+	scp bin/audiobook-organizer-linux-amd64 $(REMOTE_HOST):$(REMOTE_PATH)/audiobook-organizer
+	@echo "Done! Test with: ssh $(REMOTE_HOST) '$(REMOTE_PATH)/audiobook-organizer version'"
