@@ -3,6 +3,7 @@ set -eu
 
 ROOT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
+STAGING_ROOT="${ABS_FIXTURE_CACHE_DIR:-$ROOT_DIR/staging-data}"
 CLEAR_STAGING=0
 EMPTY_RUNTIME=0
 
@@ -104,13 +105,13 @@ detail "metadata-enabled metadata cache: $ROOT_DIR/state/metadata-enabled/metada
 
 if [ "$CLEAR_STAGING" -eq 1 ]; then
 	section "Clearing staged fixture cache"
-	rm -rf "$ROOT_DIR/staging-data/audiobooks" "$ROOT_DIR/staging-data/books"
-	mkdir -p "$ROOT_DIR/staging-data/audiobooks" "$ROOT_DIR/staging-data/books"
-	: > "$ROOT_DIR/staging-data/audiobooks/.gitkeep"
-	: > "$ROOT_DIR/staging-data/books/.gitkeep"
+	rm -rf "$STAGING_ROOT/audiobooks" "$STAGING_ROOT/books"
+	mkdir -p "$STAGING_ROOT/audiobooks" "$STAGING_ROOT/books"
+	: > "$STAGING_ROOT/audiobooks/.gitkeep"
+	: > "$STAGING_ROOT/books/.gitkeep"
 else
 	section "Preserving staged fixture cache"
-	detail "$ROOT_DIR/staging-data"
+	detail "$STAGING_ROOT"
 fi
 
 section "Rebuilding runtime library folders"
@@ -132,11 +133,11 @@ if [ "$EMPTY_RUNTIME" -eq 1 ]; then
 	exit 0
 fi
 
-alice_audio="$ROOT_DIR/staging-data/audiobooks/Lewis Carroll/Alice's Adventures in Wonderland (Abridged)/Alice's Adventures in Wonderland (Abridged).m4b"
-carol_audio="$ROOT_DIR/staging-data/audiobooks/Charles Dickens/A Christmas Carol/A Christmas Carol.m4b"
-alice_book="$ROOT_DIR/staging-data/books/Lewis Carroll/Alice's Adventures in Wonderland/Alice's Adventures in Wonderland.epub"
-frankenstein_book="$ROOT_DIR/staging-data/books/Mary Shelley/Frankenstein/Frankenstein.epub"
-pride_book="$ROOT_DIR/staging-data/books/Jane Austen/Pride and Prejudice/Pride and Prejudice.epub"
+alice_audio="$STAGING_ROOT/audiobooks/Lewis Carroll/Alice's Adventures in Wonderland (Abridged)/Alice's Adventures in Wonderland (Abridged).m4b"
+carol_audio="$STAGING_ROOT/audiobooks/Charles Dickens/A Christmas Carol/A Christmas Carol.m4b"
+alice_book="$STAGING_ROOT/books/Lewis Carroll/Alice's Adventures in Wonderland/Alice's Adventures in Wonderland.epub"
+frankenstein_book="$STAGING_ROOT/books/Mary Shelley/Frankenstein/Frankenstein.epub"
+pride_book="$STAGING_ROOT/books/Jane Austen/Pride and Prejudice/Pride and Prejudice.epub"
 
 copy_fixture "$alice_audio" "$ROOT_DIR/runtime/plain/audiobooks/unsorted-audio/drop-001/not-alice.m4b"
 detail "plain audiobook fixture: unsorted-audio/drop-001/not-alice.m4b"
