@@ -3,6 +3,20 @@
 This document defines the planned Audiobookshelf integration test coverage for
 Audiobook Organizer.
 
+## GitHub Tracking
+
+The automated matrix work is tracked by parent issue
+[#27](https://github.com/jeeftor/audiobook-organizer/issues/27) and these
+sub-issues:
+
+| Issue | Area | Matrix rows |
+| --- | --- | --- |
+| [#30](https://github.com/jeeftor/audiobook-organizer/issues/30) | Smoke and reset contract | H1 |
+| [#31](https://github.com/jeeftor/audiobook-organizer/issues/31) | `metadata.json` lifecycle | M1A-M1D |
+| [#32](https://github.com/jeeftor/audiobook-organizer/issues/32) | Embedded metadata lifecycle | M2A-M2D |
+| [#28](https://github.com/jeeftor/audiobook-organizer/issues/28) | Flat mode lifecycle | M3A-M3D |
+| [#29](https://github.com/jeeftor/audiobook-organizer/issues/29) | ABS API metadata mode | A1-A6 |
+
 ## Reset Contract
 
 Each destructive test must start from the same ABS state:
