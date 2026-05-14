@@ -141,7 +141,11 @@ else
 fi
 
 section "Rebuilding runtime library folders"
-remove_path "$ROOT_DIR/runtime/plain" "$ROOT_DIR/runtime/metadata"
+remove_path \
+	"$ROOT_DIR/runtime/plain" \
+	"$ROOT_DIR/runtime/metadata" \
+	"$ROOT_DIR/runtime/import-input" \
+	"$ROOT_DIR/runtime/flat-input"
 mkdir -p \
 	"$ROOT_DIR/runtime/plain/audiobooks" \
 	"$ROOT_DIR/runtime/plain/books" \
