@@ -16,6 +16,7 @@ sub-issues:
 | [#32](https://github.com/jeeftor/audiobook-organizer/issues/32) | Embedded metadata lifecycle | M2A-M2D |
 | [#35](https://github.com/jeeftor/audiobook-organizer/issues/35) | Embedded audiobook import lifecycle | M2C |
 | [#28](https://github.com/jeeftor/audiobook-organizer/issues/28) | Flat mode lifecycle | M3A-M3D |
+| [#36](https://github.com/jeeftor/audiobook-organizer/issues/36) | Flat audiobook import lifecycle | M3C |
 | [#29](https://github.com/jeeftor/audiobook-organizer/issues/29) | ABS API metadata mode | A1-A6 |
 
 ## Reset Contract
@@ -79,6 +80,7 @@ ABS:
 | Source path | Fixture source | Purpose |
 | --- | --- | --- |
 | `test/abs/runtime/import-input/audiobooks` | committed `testdata/m4b` files | Hierarchical embedded metadata import into ABS. |
+| `test/abs/runtime/flat-input/audiobooks` | committed `testdata/mp3flat` files | Loose-file flat import into ABS. |
 
 ## Test Axes
 
@@ -125,7 +127,7 @@ specifically about series layout. It gives stable, easy-to-assert paths:
 | M2D | Embedded import, hierarchical | plain | Ebooks | `go run . --dir test/abs/runtime/import-input/books --out test/abs/runtime/plain/books --use-embedded-metadata --layout author-title` | New fixture needed. Imports hierarchical EPUB directories from outside ABS into the ABS-mounted ebook library; ABS scan should add imported items. |
 | M3A | Flat mechanics, non-ABS output | plain source | Audiobooks | `go run . --dir test/abs/runtime/plain/audiobooks --out <tmp>/flat-audiobooks --flat --layout author-title` | Processes supported files individually across nested messy folders and writes organized files to a temporary output directory. This proves flat mechanics, but does not test ABS path updates because output is outside the mounted ABS library. |
 | M3B | Flat mechanics, non-ABS output | plain source | Ebooks | `go run . --dir test/abs/runtime/plain/books --out <tmp>/flat-books --flat --layout author-title` | Processes loose EPUB files individually across nested messy folders and writes organized files to a temporary output directory. This proves flat mechanics, but does not test ABS path updates. |
-| M3C | Flat import into ABS | plain | Audiobooks | `go run . --dir test/abs/runtime/flat-input/audiobooks --out test/abs/runtime/plain/audiobooks --flat --layout author-title` | New fixture needed. Imports loose files from outside ABS into the ABS-mounted audiobook library. ABS scan should add imported items. |
+| M3C | Flat import into ABS | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestFlatModeImport_AudiobooksLifecycle -count=1 -v` | Implemented. Imports loose MP3 files from `runtime/flat-input/audiobooks` into the ABS-mounted audiobook library; verifies per-file author/title folders, ABS scan adds the imported items, and missing count remains `0`. |
 | M3D | Flat import into ABS | plain | Ebooks | `go run . --dir test/abs/runtime/flat-input/books --out test/abs/runtime/plain/books --flat --layout author-title` | New fixture needed. Imports loose EPUB files from outside ABS into the ABS-mounted ebook library. ABS scan should add imported items. |
 | A1 | ABS discovery | plain | both | `go run . abs scan --abs-url http://localhost:13378 --abs-token <token>` | Works today. Lists both libraries and item counts. Does not move files. |
 | A2 | ABS manual path mapping | plain | Audiobooks | `go run . abs scan --abs-url http://localhost:13378 --abs-token <token> --abs-library Audiobooks --abs-path-map "/audiobooks:<abs>/test/abs/runtime/plain/audiobooks" --dir <abs>/test/abs/runtime/plain/audiobooks --check-files` | Works today as preview/connectivity coverage. It fetches ABS metadata, maps ABS paths to host paths, checks files, and calculates target paths. It does not perform organization. |
@@ -215,30 +217,34 @@ Embedded metadata should primarily cover files that are not yet in ABS:
 This applies to both hierarchical embedded mode and flat mode. Once a file is
 already indexed in ABS, the preferred future metadata source is ABS itself.
 
-## Flat Mode Fixture Gap
+## Flat Mode Import Fixtures
 
-Current fixtures can test flat mode mechanics only when the output directory is
-outside the ABS-mounted library. If `--out` is omitted, flat mode organizes each
-file relative to that file's current bad directory. If `--out` is the ABS library
-root while the source is already under that same root, flat mode skips the
-source because it avoids processing files inside its output directory.
+Flat mode import uses loose files under `test/abs/runtime/flat-input/**`, which
+is rebuilt from committed `testdata` fixtures during reset and is not mounted
+into ABS. The organizer writes output into the ABS-mounted library root with
+`--out`.
 
-That means current fixtures do not cleanly test the common import workflow where
-loose files start outside ABS and organizer moves them into an ABS-mounted
-library.
+If `--out` is omitted, flat mode organizes each file relative to that file's
+current bad directory. If `--out` is the ABS library root while the source is
+already under that same root, flat mode skips the source because it avoids
+processing files inside its output directory.
 
-Add later:
+Current audiobook flat import source:
 
 ```text
 test/abs/runtime/flat-input/audiobooks/
+```
+
+Future ebook flat import source:
+
+```text
 test/abs/runtime/flat-input/books/
 ```
 
-Those directories should be rebuilt from committed `testdata` fixtures during
-reset but should not be mounted into ABS. Flat import tests then use `--out` to
-place organized files into `/audiobooks` or `/books`, trigger ABS scan, and
-assert new ABS items. Because the source files were outside ABS before the
-organizer run, these tests should not create missing ABS rows.
+Flat import tests use `--out` to place organized files into `/audiobooks` or
+`/books`, trigger ABS scan, and assert new ABS items. Because the source files
+were outside ABS before the organizer run, these tests should not create missing
+ABS rows.
 
 ## ABS Mode Gaps
 
