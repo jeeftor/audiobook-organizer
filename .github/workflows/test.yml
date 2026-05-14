@@ -12,15 +12,15 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: 'stable'
 
     - name: Cache Go modules
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/go-build
@@ -38,7 +38,7 @@ jobs:
         $(go env GOPATH)/bin/gotestsum --format=testname -- -coverprofile=coverage.out ./...
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v6
       with:
         files: coverage.out
         flags: unittests
@@ -51,7 +51,7 @@ jobs:
         path-to-lcov: coverage.out
 
     - name: Upload coverage artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: coverage
         path: coverage.out
@@ -71,17 +71,17 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: 'stable'
         cache: true
         cache-dependency-path: go.sum
 
     - name: Cache ABS public-domain fixtures
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: test/abs/.cache/staging-data
         key: ${{ runner.os }}-abs-fixtures-v2-${{ hashFiles('test/abs/scripts/seed-public-domain.sh') }}
@@ -89,7 +89,7 @@ jobs:
           ${{ runner.os }}-abs-fixtures-v2-
 
     - name: Cache ABS Docker image
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: test/abs/.cache/docker/audiobookshelf-latest.tar
         key: ${{ runner.os }}-abs-docker-image-latest-v1
@@ -123,7 +123,7 @@ jobs:
 
     - name: Upload ABS logs on failure
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: abs-e2e-state
         path: |
