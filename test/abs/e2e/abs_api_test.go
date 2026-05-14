@@ -35,6 +35,10 @@ var (
 		name:       "Audiobooks",
 		folderPath: "/audiobooks",
 	}
+	booksLibrary = absLibrary{
+		name:       "Ebooks",
+		folderPath: "/books",
+	}
 )
 
 type absScenarioContext struct {
