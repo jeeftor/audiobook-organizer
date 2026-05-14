@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO Issue Create"
+  short_description: "Create issues and branches"
+  default_prompt: "Use $abo-issue-create to create or reuse an issue and prepare a branch."

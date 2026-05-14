@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO Docs"
+  short_description: "Maintain docs and changelog"
+  default_prompt: "Use $abo-docs to update Audiobook Organizer docs or changelog."

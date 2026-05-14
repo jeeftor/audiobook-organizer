@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO Issue Closeout"
+  short_description: "Finish issue hygiene"
+  default_prompt: "Use $abo-issue-closeout to finish issue hygiene and closeout."

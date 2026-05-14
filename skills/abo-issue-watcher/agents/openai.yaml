@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO Issue Watcher"
+  short_description: "Watch issue status"
+  default_prompt: "Use $abo-issue-watcher to inspect the issue status and next steps."

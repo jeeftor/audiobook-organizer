@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO Feature"
+  short_description: "Implement focused features"
+  default_prompt: "Use $abo-feature to implement this Audiobook Organizer feature."

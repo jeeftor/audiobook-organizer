@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO PR Writer"
+  short_description: "Write PR descriptions"
+  default_prompt: "Use $abo-pr-writer to draft the PR description."
