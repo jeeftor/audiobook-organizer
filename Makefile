@@ -14,7 +14,8 @@ LDFLAGS := -ldflags "-s -w $(VERSION_FLAGS)"
 # Test packages
 UNIT_TEST_PKGS = ./...
 INTEGRATION_TEST_PKGS = $(shell go list ./... | grep -v '/integration$$')
-ABS_TEST_RUN ?= Test(MetadataJSONMode|EmbeddedAlreadyIndexed|EmbeddedMetadataImport|FlatModeImport|RESTHarness_MetadataJSONModeLifecycle)
+ABS_TEST_RUN ?= Test(MetadataJSONMode|EmbeddedAlreadyIndexed|EmbeddedMetadataImport|FlatModeImport|RESTHarness_(MetadataJSONMode|EmbeddedMetadataImport|FlatModeImport)Lifecycle)
+ABS_REST_TEST_RUN ?= TestRESTHarness_(MetadataJSONMode|EmbeddedMetadataImport|FlatModeImport)Lifecycle
 
 .PHONY: all build clean dev dev-linux-amd64 web-install web-build web-dev gui-rest-test gui-test gui-test-headed gui-test-ui abs-dev-seed abs-dev-init abs-dev-configure abs-dev-up abs-dev-down abs-dev-reset abs-dev-reset-all abs-dev-scan abs-dev-reset-scan abs-ci-smoke abs-test-metadata abs-test-rest abs-test-matrix abs-test-e2e abs-dev-capture-baseline abs-dev-restore-baseline abs-dev-wait release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help scp-dev
 
@@ -173,7 +174,7 @@ abs-test-metadata:
 # Run Docker-backed REST E2E tests. Tests reset ABS before each case.
 abs-test-rest:
 	@test/abs/scripts/seed-public-domain.sh
-	go test -tags=abs_e2e ./test/abs/e2e -run TestRESTHarness_MetadataJSONModeLifecycle -count=1 -v
+	go test -tags=abs_e2e ./test/abs/e2e -run '$(ABS_REST_TEST_RUN)' -count=1 -v
 
 # Run implemented ABS matrix E2E tests. Tests reset ABS before each case.
 abs-test-matrix:
