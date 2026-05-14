@@ -16,6 +16,7 @@ sub-issues:
 | [#37](https://github.com/jeeftor/audiobook-organizer/issues/37) | `metadata.json` ebook lifecycle | M1B, M1D |
 | [#32](https://github.com/jeeftor/audiobook-organizer/issues/32) | Embedded metadata lifecycle | M2A-M2D |
 | [#35](https://github.com/jeeftor/audiobook-organizer/issues/35) | Embedded audiobook import lifecycle | M2C |
+| [#38](https://github.com/jeeftor/audiobook-organizer/issues/38) | Embedded ebook import lifecycle | M2D |
 | [#28](https://github.com/jeeftor/audiobook-organizer/issues/28) | Flat mode lifecycle | M3A-M3D |
 | [#36](https://github.com/jeeftor/audiobook-organizer/issues/36) | Flat audiobook import lifecycle | M3C |
 | [#29](https://github.com/jeeftor/audiobook-organizer/issues/29) | ABS API metadata mode | A1-A6 |
@@ -81,6 +82,7 @@ ABS:
 | Source path | Fixture source | Purpose |
 | --- | --- | --- |
 | `test/abs/runtime/import-input/audiobooks` | committed `testdata/m4b` files | Hierarchical embedded metadata import into ABS. |
+| `test/abs/runtime/import-input/books` | committed `testdata/epub` files | Hierarchical embedded metadata ebook import into ABS. |
 | `test/abs/runtime/flat-input/audiobooks` | committed `testdata/mp3flat` files | Loose-file flat import into ABS. |
 
 ## Test Axes
@@ -125,7 +127,7 @@ specifically about series layout. It gives stable, easy-to-assert paths:
 | M2A | Embedded metadata, already indexed | plain | Audiobooks | `go run . --dir test/abs/runtime/plain/audiobooks --use-embedded-metadata --layout author-title` | Current-code coverage only. Moves already-indexed audiobook directories using embedded M4B metadata. Longer term, this workflow should use ABS metadata instead. |
 | M2B | Embedded metadata, already indexed | plain | Ebooks | `go run . --dir test/abs/runtime/plain/books --use-embedded-metadata --layout author-title` | Current-code coverage only. Moves already-indexed EPUB directories using embedded EPUB metadata. Longer term, this workflow should use ABS metadata instead. |
 | M2C | Embedded import, hierarchical | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestEmbeddedMetadataImport_AudiobooksLifecycle -count=1 -v` | Implemented. Imports hierarchical M4B directories from `runtime/import-input/audiobooks` into the ABS-mounted audiobook library; verifies source files moved, organized author/title folders exist, ABS scan adds the imported items, and missing count remains `0`. |
-| M2D | Embedded import, hierarchical | plain | Ebooks | `go run . --dir test/abs/runtime/import-input/books --out test/abs/runtime/plain/books --use-embedded-metadata --layout author-title` | New fixture needed. Imports hierarchical EPUB directories from outside ABS into the ABS-mounted ebook library; ABS scan should add imported items. |
+| M2D | Embedded import, hierarchical | plain | Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestEmbeddedMetadataImport_BooksLifecycle -count=1 -v` | Implemented. Imports hierarchical EPUB directories from `runtime/import-input/books` into the ABS-mounted ebook library; verifies source files moved, organized author/title folders exist, ABS scan adds the imported items, and missing count remains `0`. |
 | M3A | Flat mechanics, non-ABS output | plain source | Audiobooks | `go run . --dir test/abs/runtime/plain/audiobooks --out <tmp>/flat-audiobooks --flat --layout author-title` | Processes supported files individually across nested messy folders and writes organized files to a temporary output directory. This proves flat mechanics, but does not test ABS path updates because output is outside the mounted ABS library. |
 | M3B | Flat mechanics, non-ABS output | plain source | Ebooks | `go run . --dir test/abs/runtime/plain/books --out <tmp>/flat-books --flat --layout author-title` | Processes loose EPUB files individually across nested messy folders and writes organized files to a temporary output directory. This proves flat mechanics, but does not test ABS path updates. |
 | M3C | Flat import into ABS | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestFlatModeImport_AudiobooksLifecycle -count=1 -v` | Implemented. Imports loose MP3 files from `runtime/flat-input/audiobooks` into the ABS-mounted audiobook library; verifies per-file author/title folders, ABS scan adds the imported items, and missing count remains `0`. |

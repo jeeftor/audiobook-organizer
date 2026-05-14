@@ -6,6 +6,7 @@ import "testing"
 
 type organizerImportCase struct {
 	name          string
+	library       absLibrary
 	sourceParts   []string
 	outputParts   []string
 	args          []string
@@ -13,12 +14,14 @@ type organizerImportCase struct {
 	newFiles      [][]string
 	logFile       []string
 	newAPIPaths   []string
+	initialCount  int
 	expectedCount int
 }
 
 func TestEmbeddedMetadataImport_AudiobooksLifecycle(t *testing.T) {
 	runOrganizerImportLifecycle(t, organizerImportCase{
-		name: "plain_audiobooks_imports_hierarchical_embedded_files",
+		name:    "plain_audiobooks_imports_hierarchical_embedded_files",
+		library: audiobooksLibrary,
 		sourceParts: []string{
 			"test", "abs", "runtime", "import-input", "audiobooks",
 		},
@@ -44,13 +47,49 @@ func TestEmbeddedMetadataImport_AudiobooksLifecycle(t *testing.T) {
 			"/audiobooks/Alexander von Longname/The Epic Tale That Spans Generations",
 			"/audiobooks/Jane Doe/Mystery of the Lost City",
 		},
+		initialCount:  2,
 		expectedCount: 4,
+	})
+}
+
+func TestEmbeddedMetadataImport_BooksLifecycle(t *testing.T) {
+	runOrganizerImportLifecycle(t, organizerImportCase{
+		name:    "plain_books_imports_hierarchical_embedded_epubs",
+		library: booksLibrary,
+		sourceParts: []string{
+			"test", "abs", "runtime", "import-input", "books",
+		},
+		outputParts: []string{
+			"test", "abs", "runtime", "plain", "books",
+		},
+		args: []string{
+			"--use-embedded-metadata",
+			"--layout", "author-title",
+		},
+		oldFiles: [][]string{
+			{"test", "abs", "runtime", "import-input", "books", "dropbox", "cool-stuff", "source.epub"},
+			{"test", "abs", "runtime", "import-input", "books", "dropbox", "testing-knowledge", "source.epub"},
+		},
+		newFiles: [][]string{
+			{"test", "abs", "runtime", "plain", "books", "Jeef of Github,Some random guy", "The book of cool stuff", "source.epub"},
+			{"test", "abs", "runtime", "plain", "books", "Jeef of Github,Some random guy", "First book of testing knowledge", "source.epub"},
+		},
+		logFile: []string{
+			"test", "abs", "runtime", "plain", "books", ".abook-org.log",
+		},
+		newAPIPaths: []string{
+			"/books/Jeef of Github,Some random guy/First book of testing knowledge",
+			"/books/Jeef of Github,Some random guy/The book of cool stuff",
+		},
+		initialCount:  3,
+		expectedCount: 5,
 	})
 }
 
 func TestFlatModeImport_AudiobooksLifecycle(t *testing.T) {
 	runOrganizerImportLifecycle(t, organizerImportCase{
-		name: "plain_audiobooks_imports_loose_flat_files",
+		name:    "plain_audiobooks_imports_loose_flat_files",
+		library: audiobooksLibrary,
 		sourceParts: []string{
 			"test", "abs", "runtime", "flat-input", "audiobooks",
 		},
@@ -79,6 +118,7 @@ func TestFlatModeImport_AudiobooksLifecycle(t *testing.T) {
 			"/audiobooks/H. P. Lovecraft/01 - Chapter 1_ A Result and a Prologue",
 			"/audiobooks/William Kenrick/01 - Act 1",
 		},
+		initialCount:  2,
 		expectedCount: 5,
 	})
 }
@@ -91,12 +131,12 @@ func runOrganizerImportLifecycle(t *testing.T, tc organizerImportCase) {
 	t.Run(tc.name, func(t *testing.T) {
 		step(t, "01 reset and initial ABS scan", func(t *testing.T) {
 			resetAndInitialScan(t)
-			ctx = newABSScenarioContext(t, plainInstance, audiobooksLibrary)
+			ctx = newABSScenarioContext(t, plainInstance, tc.library)
 		})
 
 		step(t, "02 assert ABS starts without imported paths", func(t *testing.T) {
 			waitForABSState(t, ctx, absStateExpectation{
-				expectedCount:  2,
+				expectedCount:  tc.initialCount,
 				missingCount:   0,
 				absentContains: tc.newAPIPaths,
 			})

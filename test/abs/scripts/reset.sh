@@ -198,6 +198,14 @@ copy_fixture \
 	"$REPO_ROOT/testdata/m4b/strange_audiobook_20_Saga_of_Endless_Horizons_The_Epic_Tale_That_Spans_Generations_Alexander_von_Longname.m4b" \
 	"$ROOT_DIR/runtime/import-input/audiobooks/dropbox/longname-mess/source.m4b"
 detail "embedded import fixture: dropbox/longname-mess/source.m4b"
+copy_fixture \
+	"$REPO_ROOT/testdata/epub/title-author.epub" \
+	"$ROOT_DIR/runtime/import-input/books/dropbox/cool-stuff/source.epub"
+detail "embedded ebook import fixture: dropbox/cool-stuff/source.epub"
+copy_fixture \
+	"$REPO_ROOT/testdata/epub/title-author-series1.epub" \
+	"$ROOT_DIR/runtime/import-input/books/dropbox/testing-knowledge/source.epub"
+detail "embedded ebook import fixture: dropbox/testing-knowledge/source.epub"
 
 copy_fixture \
 	"$REPO_ROOT/testdata/mp3flat/charlesdexterward_01_lovecraft_64kb.mp3" \
