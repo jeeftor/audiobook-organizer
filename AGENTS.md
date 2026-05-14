@@ -2,7 +2,7 @@
 
 This file is the single source of truth for AI coding agents working in this repository. Claude Code should read this file through the `CLAUDE.md` compatibility pointer.
 
-For task-specific workflow details, use the repo-local skills in `skills/abo-*`.
+For task-specific workflow details, use the repo-local skills in `.agents/skills/abo-*`.
 
 ## Project Summary
 
