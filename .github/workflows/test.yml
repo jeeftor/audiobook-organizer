@@ -61,9 +61,27 @@ jobs:
         go tool cover -func=coverage.out
 
   abs-e2e:
-    name: ABS implemented matrix
+    name: ABS matrix / ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: metadata-json
+            run_regex: TestMetadataJSONMode
+          - name: embedded-already-indexed
+            run_regex: TestEmbeddedAlreadyIndexed
+          - name: embedded-import
+            run_regex: TestEmbeddedMetadataImport
+          - name: flat-import
+            run_regex: TestFlatModeImport
+          - name: rest-metadata-json
+            run_regex: TestRESTHarness_MetadataJSONModeLifecycle
+          - name: rest-embedded-import
+            run_regex: TestRESTHarness_EmbeddedMetadataImportLifecycle
+          - name: rest-flat-import
+            run_regex: TestRESTHarness_FlatModeImportLifecycle
     env:
       ABS_IMAGE: ghcr.io/advplyr/audiobookshelf:latest
       ABS_FIXTURE_CACHE_DIR: test/abs/.cache/staging-data
@@ -114,8 +132,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y jq
 
-    - name: Run implemented ABS matrix tests
-      run: make abs-test-matrix
+    - name: Run ABS matrix row
+      run: make abs-test-matrix ABS_TEST_RUN='${{ matrix.run_regex }}'
 
     - name: Stop ABS containers
       if: always()
@@ -125,7 +143,7 @@ jobs:
       if: failure()
       uses: actions/upload-artifact@v7
       with:
-        name: abs-e2e-state
+        name: abs-e2e-state-${{ matrix.name }}
         path: |
           test/abs/state/**/metadata/logs/**
           test/abs/runtime/**/*.log
