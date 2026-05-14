@@ -15,6 +15,31 @@ detail() {
 	printf '    %s\n' "$1"
 }
 
+remove_with_sudo_fallback() {
+	if "$@"; then
+		return 0
+	fi
+
+	if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+		detail "normal cleanup hit protected Docker-owned files; retrying with sudo"
+		sudo "$@"
+		return $?
+	fi
+
+	printf 'Cleanup failed and passwordless sudo is unavailable. Stop ABS and fix ownership under %s.\n' "$ROOT_DIR" >&2
+	exit 1
+}
+
+remove_children() {
+	target_dir=$1
+
+	remove_with_sudo_fallback find "$target_dir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+}
+
+remove_path() {
+	remove_with_sudo_fallback rm -rf "$@"
+}
+
 usage() {
 	cat <<EOF
 Usage: $0 [--clear-staging] [--empty-runtime]
@@ -90,10 +115,10 @@ mkdir -p \
 	"$ROOT_DIR/state/plain/metadata" \
 	"$ROOT_DIR/state/metadata-enabled/config" \
 	"$ROOT_DIR/state/metadata-enabled/metadata"
-find "$ROOT_DIR/state/plain/config" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-find "$ROOT_DIR/state/plain/metadata" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-find "$ROOT_DIR/state/metadata-enabled/config" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-find "$ROOT_DIR/state/metadata-enabled/metadata" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+remove_children "$ROOT_DIR/state/plain/config"
+remove_children "$ROOT_DIR/state/plain/metadata"
+remove_children "$ROOT_DIR/state/metadata-enabled/config"
+remove_children "$ROOT_DIR/state/metadata-enabled/metadata"
 : > "$ROOT_DIR/state/plain/config/.gitkeep"
 : > "$ROOT_DIR/state/plain/metadata/.gitkeep"
 : > "$ROOT_DIR/state/metadata-enabled/config/.gitkeep"
@@ -105,7 +130,7 @@ detail "metadata-enabled metadata cache: $ROOT_DIR/state/metadata-enabled/metada
 
 if [ "$CLEAR_STAGING" -eq 1 ]; then
 	section "Clearing staged fixture cache"
-	rm -rf "$STAGING_ROOT/audiobooks" "$STAGING_ROOT/books"
+	remove_path "$STAGING_ROOT/audiobooks" "$STAGING_ROOT/books"
 	mkdir -p "$STAGING_ROOT/audiobooks" "$STAGING_ROOT/books"
 	: > "$STAGING_ROOT/audiobooks/.gitkeep"
 	: > "$STAGING_ROOT/books/.gitkeep"
@@ -115,7 +140,7 @@ else
 fi
 
 section "Rebuilding runtime library folders"
-rm -rf "$ROOT_DIR/runtime/plain" "$ROOT_DIR/runtime/metadata"
+remove_path "$ROOT_DIR/runtime/plain" "$ROOT_DIR/runtime/metadata"
 mkdir -p \
 	"$ROOT_DIR/runtime/plain/audiobooks" \
 	"$ROOT_DIR/runtime/plain/books" \
