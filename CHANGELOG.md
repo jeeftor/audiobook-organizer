@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Web API surface**: Added initial local REST endpoints for health, initial configuration, option lists, organize preview, rename preview, Audiobookshelf libraries, ABS path mapping tests, ABS item loading, and ABS scan triggers.
 - **Audiobookshelf web workflow**: The new web foundation treats ABS as a first-class source alongside local metadata and embedded metadata.
 - **Preview-oriented app service layer**: Added an internal application service that converts web requests into organizer, renamer, and ABS operations without coupling the HTTP layer to Cobra command handling.
+- **REST execution coverage for ABS workflows**: Added Docker-backed REST tests for `metadata.json`, embedded metadata import, and flat import workflows against real Audiobookshelf containers.
 
 ### Fixed
 
@@ -24,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed the deprecated GUI tree and release packaging. Releases now focus on one `audiobook-organizer` binary with CLI, TUI, ABS, and local web UI entrypoints.
 - Rewrote the root README for the single-binary web UI direction and current command surface.
+- Split the Audiobookshelf E2E matrix into parallel GitHub Actions jobs for faster feedback.
 
 ---
 
