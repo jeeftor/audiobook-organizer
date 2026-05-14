@@ -21,11 +21,14 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/config/initial", s.withAuth(s.handleInitialConfig))
 	mux.HandleFunc("/api/config/options", s.withAuth(s.handleOptions))
 	mux.HandleFunc("/api/organize/preview", s.withAuth(s.handleOrganizePreview))
+	mux.HandleFunc("/api/organize/run", s.withAuth(s.handleOrganizeRun))
 	mux.HandleFunc("/api/rename/preview", s.withAuth(s.handleRenamePreview))
 	mux.HandleFunc("/api/abs/libraries", s.withAuth(s.handleABSLibraries))
 	mux.HandleFunc("/api/abs/test-paths", s.withAuth(s.handleABSTestPaths))
 	mux.HandleFunc("/api/abs/items", s.withAuth(s.handleABSItems))
+	mux.HandleFunc("/api/abs/library-state", s.withAuth(s.handleABSLibraryState))
 	mux.HandleFunc("/api/abs/scan-trigger", s.withAuth(s.handleABSScanTrigger))
+	mux.HandleFunc("/api/abs/clean-missing", s.withAuth(s.handleABSCleanMissing))
 	mux.HandleFunc("/", s.handleStatic)
 
 	return mux
@@ -80,6 +83,23 @@ func (s *Server) handleOrganizePreview(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+func (s *Server) handleOrganizeRun(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, errors.New("method not allowed"))
+		return
+	}
+	var req app.OrganizeRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	resp, err := s.app.RunOrganize(r.Context(), req)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
 func (s *Server) handleRenamePreview(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeError(w, http.StatusMethodNotAllowed, errors.New("method not allowed"))
@@ -90,6 +110,23 @@ func (s *Server) handleRenamePreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp, err := s.app.PreviewRename(r.Context(), req)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (s *Server) handleABSCleanMissing(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, errors.New("method not allowed"))
+		return
+	}
+	var req app.ABSCleanMissingRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	resp, err := s.app.CleanABSMissing(r.Context(), req)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
@@ -141,6 +178,23 @@ func (s *Server) handleABSItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp, err := s.app.LoadABSItems(r.Context(), req)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (s *Server) handleABSLibraryState(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, errors.New("method not allowed"))
+		return
+	}
+	var req app.ABSLibraryStateRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	resp, err := s.app.LoadABSLibraryState(r.Context(), req)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
