@@ -133,7 +133,9 @@ specifically about series layout. It gives stable, easy-to-assert paths:
 | M3B | Flat mechanics, non-ABS output | plain source | Ebooks | `go run . --dir test/abs/runtime/plain/books --out <tmp>/flat-books --flat --layout author-title` | Processes loose EPUB files individually across nested messy folders and writes organized files to a temporary output directory. This proves flat mechanics, but does not test ABS path updates. |
 | M3C | Flat import into ABS | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestFlatModeImport_AudiobooksLifecycle -count=1 -v` | Implemented. Imports loose MP3 files from `runtime/flat-input/audiobooks` into the ABS-mounted audiobook library; verifies per-file author/title folders, ABS scan adds the imported items, and missing count remains `0`. |
 | M3D | Flat import into ABS | plain | Ebooks | `go run . --dir test/abs/runtime/flat-input/books --out test/abs/runtime/plain/books --flat --layout author-title` | New fixture needed. Imports loose EPUB files from outside ABS into the ABS-mounted ebook library. ABS scan should add imported items. |
-| R1 | REST harness, `metadata.json` lifecycle | both | both | `make abs-test-rest` | Implemented. Runs the real Docker-backed ABS reset, scan, organizer move, missing detection, cleanup, rescan, and final-state checks from the `metadata.json` matrix rows, but drives organizer and ABS operations through the local web REST API. |
+| R1 | REST harness, `metadata.json` lifecycle | both | both | `go test -tags=abs_e2e ./test/abs/e2e -run TestRESTHarness_MetadataJSONModeLifecycle -count=1 -v` | Implemented. Runs the real Docker-backed ABS reset, scan, organizer move, missing detection, cleanup, rescan, and final-state checks from the `metadata.json` matrix rows, but drives organizer and ABS operations through the local web REST API. |
+| R2 | REST harness, embedded import | plain | Audiobooks, Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestRESTHarness_EmbeddedMetadataImportLifecycle -count=1 -v` | Implemented. Imports hierarchical M4B and EPUB fixtures from outside ABS into mounted ABS libraries through `/api/organize/run`, scans through REST, and verifies imported paths are active with zero missing rows. |
+| R3 | REST harness, flat import | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestRESTHarness_FlatModeImportLifecycle -count=1 -v` | Implemented. Imports loose MP3 fixtures from outside ABS into the mounted audiobook library through `/api/organize/run`, scans through REST, and verifies imported flat-mode paths are active with zero missing rows. |
 | A1 | ABS discovery | plain | both | `go run . abs scan --abs-url http://localhost:13378 --abs-token <token>` | Works today. Lists both libraries and item counts. Does not move files. |
 | A2 | ABS manual path mapping | plain | Audiobooks | `go run . abs scan --abs-url http://localhost:13378 --abs-token <token> --abs-library Audiobooks --abs-path-map "/audiobooks:<abs>/test/abs/runtime/plain/audiobooks" --dir <abs>/test/abs/runtime/plain/audiobooks --check-files` | Works today as preview/connectivity coverage. It fetches ABS metadata, maps ABS paths to host paths, checks files, and calculates target paths. It does not perform organization. |
 | A3 | ABS all-libraries preview | plain | both | `go run . abs scan --abs-url http://localhost:13378 --abs-token <token> --abs-all-libraries --abs-path-map "/audiobooks:<abs>/test/abs/runtime/plain/audiobooks" --abs-path-map "/books:<abs>/test/abs/runtime/plain/books" --dir <abs>/test/abs/runtime/plain --check-files` | Works today if all-libraries mode handles both mappings. Confirms ABS metadata can be loaded across both libraries. Does not move files. |
@@ -181,12 +183,20 @@ cycle, so the fixed ABS ports do not conflict:
 | `embedded-import` | `TestEmbeddedMetadataImport` |
 | `flat-import` | `TestFlatModeImport` |
 | `rest-metadata-json` | `TestRESTHarness_MetadataJSONModeLifecycle` |
+| `rest-embedded-import` | `TestRESTHarness_EmbeddedMetadataImportLifecycle` |
+| `rest-flat-import` | `TestRESTHarness_FlatModeImportLifecycle` |
 
 Local `make abs-test-matrix` still runs all implemented rows serially. To run
 one row locally, pass the same regex:
 
 ```bash
 make abs-test-matrix ABS_TEST_RUN=TestRESTHarness_MetadataJSONModeLifecycle
+```
+
+To run the full REST-backed set locally:
+
+```bash
+make abs-test-rest
 ```
 
 ## Reset Per Test
