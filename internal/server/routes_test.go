@@ -70,7 +70,13 @@ func TestProtectedEndpointsAcceptSupportedTokenTransports(t *testing.T) {
 	})
 
 	t.Run("query string", func(t *testing.T) {
-		rec := performRequest(handler, http.MethodGet, "/api/config/options?token="+testToken, nil, "")
+		rec := performRequest(
+			handler,
+			http.MethodGet,
+			"/api/config/options?token="+testToken,
+			nil,
+			"",
+		)
 
 		assertStatus(t, rec, http.StatusOK)
 		assertJSONContainsOption(t, rec, "scan_modes", "abs")
@@ -106,7 +112,10 @@ func TestStaticRoutesServeIndexAndSPAFallback(t *testing.T) {
 			if !strings.Contains(rec.Body.String(), `<div id="app"></div>`) {
 				t.Fatalf("expected embedded app shell, got body:\n%s", rec.Body.String())
 			}
-			if contentType := rec.Header().Get("Content-Type"); !strings.HasPrefix(contentType, "text/html") {
+			if contentType := rec.Header().Get("Content-Type"); !strings.HasPrefix(
+				contentType,
+				"text/html",
+			) {
 				t.Fatalf("expected text/html content type, got %q", contentType)
 			}
 		})
@@ -118,11 +127,14 @@ func TestPostEndpointsRejectWrongMethodAndInvalidJSON(t *testing.T) {
 
 	tests := []string{
 		"/api/organize/preview",
+		"/api/organize/run",
 		"/api/rename/preview",
 		"/api/abs/libraries",
 		"/api/abs/test-paths",
 		"/api/abs/items",
+		"/api/abs/library-state",
 		"/api/abs/scan-trigger",
+		"/api/abs/clean-missing",
 	}
 
 	for _, path := range tests {
@@ -150,11 +162,15 @@ func TestOrganizePreviewEndpointReturnsDryRunSummary(t *testing.T) {
 
 	body := map[string]any{
 		"config": map[string]any{
-			"base_dir":      inputDir,
-			"output_dir":    outputDir,
-			"dry_run":       false,
-			"layout":        "author-series-title",
-			"field_mapping": map[string]any{"title_field": "title", "series_field": "series", "author_fields": []string{"authors"}},
+			"base_dir":   inputDir,
+			"output_dir": outputDir,
+			"dry_run":    false,
+			"layout":     "author-series-title",
+			"field_mapping": map[string]any{
+				"title_field":   "title",
+				"series_field":  "series",
+				"author_fields": []string{"authors"},
+			},
 		},
 	}
 
@@ -163,6 +179,35 @@ func TestOrganizePreviewEndpointReturnsDryRunSummary(t *testing.T) {
 	assertStatus(t, rec, http.StatusOK)
 	assertJSONArrayLength(t, rec, "summary.MetadataFound", 1)
 	assertJSONArrayLength(t, rec, "summary.Moves", 1)
+}
+
+func TestOrganizeRunEndpointMovesFiles(t *testing.T) {
+	handler := newTestHandler(t)
+	inputDir, outputDir := createOrganizerFixture(t)
+
+	body := map[string]any{
+		"config": map[string]any{
+			"base_dir":   inputDir,
+			"output_dir": outputDir,
+			"dry_run":    true,
+			"layout":     "author-title",
+			"field_mapping": map[string]any{
+				"title_field":   "title",
+				"series_field":  "series",
+				"author_fields": []string{"authors"},
+			},
+		},
+	}
+
+	rec := performRequest(handler, http.MethodPost, "/api/organize/run", body, testToken)
+
+	assertStatus(t, rec, http.StatusOK)
+	assertJSONArrayLength(t, rec, "summary.MetadataFound", 1)
+	assertJSONArrayLength(t, rec, "summary.Moves", 1)
+	assertFileExists(
+		t,
+		filepath.Join(outputDir, "REST Author", "REST Test Book", "audio.mp3"),
+	)
 }
 
 func TestRenamePreviewEndpointReturnsCandidates(t *testing.T) {
@@ -178,7 +223,11 @@ func TestRenamePreviewEndpointReturnsCandidates(t *testing.T) {
 			"recursive":             true,
 			"preserve_path":         true,
 			"use_embedded_metadata": false,
-			"field_mapping":         map[string]any{"title_field": "title", "series_field": "series", "author_fields": []string{"authors"}},
+			"field_mapping": map[string]any{
+				"title_field":   "title",
+				"series_field":  "series",
+				"author_fields": []string{"authors"},
+			},
 		},
 	}
 
@@ -224,14 +273,28 @@ func TestABSEndpointsReturnValidationErrorsBeforeDockerIsNeeded(t *testing.T) {
 			expectedError: "abs url is required",
 		},
 		{
-			name:          "items require path mappings",
-			path:          "/api/abs/items",
-			body:          map[string]any{"config": map[string]any{"url": "http://127.0.0.1", "token": "token"}},
+			name: "items require path mappings",
+			path: "/api/abs/items",
+			body: map[string]any{
+				"config": map[string]any{"url": "http://127.0.0.1", "token": "token"},
+			},
 			expectedError: "path mappings are required",
+		},
+		{
+			name:          "library state requires url",
+			path:          "/api/abs/library-state",
+			body:          map[string]any{"config": map[string]any{"token": "token"}},
+			expectedError: "abs url is required",
 		},
 		{
 			name:          "scan trigger requires url",
 			path:          "/api/abs/scan-trigger",
+			body:          map[string]any{"config": map[string]any{"token": "token"}},
+			expectedError: "abs url is required",
+		},
+		{
+			name:          "clean missing requires url",
+			path:          "/api/abs/clean-missing",
 			body:          map[string]any{"config": map[string]any{"token": "token"}},
 			expectedError: "abs url is required",
 		},
@@ -266,7 +329,12 @@ func newTestHandler(t *testing.T) http.Handler {
 	return srv.routes()
 }
 
-func performRequest(handler http.Handler, method, path string, body any, token string) *httptest.ResponseRecorder {
+func performRequest(
+	handler http.Handler,
+	method, path string,
+	body any,
+	token string,
+) *httptest.ResponseRecorder {
 	var reader *bytes.Reader
 	if body == nil {
 		reader = bytes.NewReader(nil)
@@ -304,7 +372,11 @@ func createOrganizerFixture(t *testing.T) (string, string) {
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		t.Fatalf("create output dir: %v", err)
 	}
-	writeFile(t, filepath.Join(bookDir, "metadata.json"), `{"title":"REST Test Book","authors":["REST Author"],"series":["REST Series #1"]}`)
+	writeFile(
+		t,
+		filepath.Join(bookDir, "metadata.json"),
+		`{"title":"REST Test Book","authors":["REST Author"],"series":["REST Series #1"]}`,
+	)
 	writeFile(t, filepath.Join(bookDir, "audio.mp3"), "fake audio")
 
 	return inputDir, outputDir
@@ -318,7 +390,11 @@ func createRenameFixture(t *testing.T) string {
 	if err := os.MkdirAll(bookDir, 0o755); err != nil {
 		t.Fatalf("create rename book dir: %v", err)
 	}
-	writeFile(t, filepath.Join(bookDir, "metadata.json"), `{"title":"Rename REST Book","authors":["Rename Author"]}`)
+	writeFile(
+		t,
+		filepath.Join(bookDir, "metadata.json"),
+		`{"title":"Rename REST Book","authors":["Rename Author"]}`,
+	)
 	writeFile(t, filepath.Join(bookDir, "audio.mp3"), "fake audio")
 
 	return root
@@ -328,6 +404,13 @@ func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func assertFileExists(t *testing.T, path string) {
+	t.Helper()
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("expected file to exist: %s\nstat error: %v", path, err)
 	}
 }
 

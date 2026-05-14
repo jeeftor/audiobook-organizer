@@ -16,6 +16,11 @@ type OrganizePreviewResponse struct {
 	Summary organizer.Summary `json:"summary"`
 }
 
+// OrganizeRunResponse contains an executed organization summary.
+type OrganizeRunResponse struct {
+	Summary organizer.Summary `json:"summary"`
+}
+
 // PreviewOrganize runs the organizer in dry-run mode.
 func (s *Service) PreviewOrganize(
 	ctx context.Context,
@@ -37,4 +42,27 @@ func (s *Service) PreviewOrganize(
 		return nil, err
 	}
 	return &OrganizePreviewResponse{Summary: org.GetSummary()}, nil
+}
+
+// RunOrganize runs the organizer with filesystem mutations enabled.
+func (s *Service) RunOrganize(
+	ctx context.Context,
+	req OrganizeRequest,
+) (*OrganizeRunResponse, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	config := req.Config.ToOrganizerConfig()
+	config.DryRun = false
+	org, err := organizer.NewOrganizer(&config)
+	if err != nil {
+		return nil, err
+	}
+	if err := org.Execute(); err != nil {
+		return nil, err
+	}
+	return &OrganizeRunResponse{Summary: org.GetSummary()}, nil
 }

@@ -41,6 +41,11 @@ func New(config Config, service *app.Service) (*Server, error) {
 	}, nil
 }
 
+// Handler returns the HTTP handler for tests and embedded callers.
+func (s *Server) Handler() http.Handler {
+	return s.routes()
+}
+
 // Serve runs the server on the provided listener until shutdown.
 func (s *Server) Serve(ctx context.Context, listener net.Listener) error {
 	httpServer := &http.Server{

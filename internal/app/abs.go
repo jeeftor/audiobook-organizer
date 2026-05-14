@@ -30,6 +30,28 @@ type ABSItemsResponse struct {
 	Items []organizer.Metadata `json:"items"`
 }
 
+// ABSLibraryStateRequest requests raw ABS library item state.
+type ABSLibraryStateRequest struct {
+	Config ABSConfigDTO `json:"config"`
+}
+
+// ABSLibraryStateResponse contains raw ABS item paths and missing status.
+type ABSLibraryStateResponse struct {
+	LibraryID string              `json:"library_id"`
+	Items     []ABSLibraryItemDTO `json:"items"`
+}
+
+// ABSLibraryItemDTO is the REST-safe subset needed by tests and the UI.
+type ABSLibraryItemDTO struct {
+	ID        string `json:"id"`
+	Path      string `json:"path"`
+	RelPath   string `json:"rel_path"`
+	IsMissing bool   `json:"is_missing"`
+	IsInvalid bool   `json:"is_invalid"`
+	MediaType string `json:"media_type"`
+	Title     string `json:"title,omitempty"`
+}
+
 // ABSScanTriggerRequest requests an ABS library scan.
 type ABSScanTriggerRequest struct {
 	Config ABSConfigDTO `json:"config"`
@@ -38,6 +60,17 @@ type ABSScanTriggerRequest struct {
 // ABSScanTriggerResponse reports scan trigger status.
 type ABSScanTriggerResponse struct {
 	Triggered bool   `json:"triggered"`
+	LibraryID string `json:"library_id"`
+}
+
+// ABSCleanMissingRequest requests cleanup of missing ABS library items.
+type ABSCleanMissingRequest struct {
+	Config ABSConfigDTO `json:"config"`
+}
+
+// ABSCleanMissingResponse reports missing-item cleanup status.
+type ABSCleanMissingResponse struct {
+	Cleaned   bool   `json:"cleaned"`
 	LibraryID string `json:"library_id"`
 }
 
@@ -131,6 +164,46 @@ func (s *Service) LoadABSItems(
 	return &ABSItemsResponse{Items: items}, nil
 }
 
+// LoadABSLibraryState loads raw ABS library item state.
+func (s *Service) LoadABSLibraryState(
+	ctx context.Context,
+	req ABSLibraryStateRequest,
+) (*ABSLibraryStateResponse, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+	client, err := s.NewABSClient(req.Config)
+	if err != nil {
+		return nil, err
+	}
+	libraryID := req.Config.LibraryID
+	if libraryID == "" {
+		libraryID = "main"
+	}
+	items, err := client.GetAllLibraryItems(libraryID)
+	if err != nil {
+		return nil, err
+	}
+	resp := &ABSLibraryStateResponse{
+		LibraryID: libraryID,
+		Items:     make([]ABSLibraryItemDTO, 0, len(items)),
+	}
+	for _, item := range items {
+		resp.Items = append(resp.Items, ABSLibraryItemDTO{
+			ID:        item.ID,
+			Path:      item.Path,
+			RelPath:   item.RelPath,
+			IsMissing: item.IsMissing,
+			IsInvalid: item.IsInvalid,
+			MediaType: item.MediaType,
+			Title:     item.Media.Metadata.Title,
+		})
+	}
+	return resp, nil
+}
+
 // TriggerABSScan triggers an ABS library scan.
 func (s *Service) TriggerABSScan(
 	ctx context.Context,
@@ -153,6 +226,30 @@ func (s *Service) TriggerABSScan(
 		return nil, err
 	}
 	return &ABSScanTriggerResponse{Triggered: true, LibraryID: libraryID}, nil
+}
+
+// CleanABSMissing removes library items ABS reports as missing or otherwise having issues.
+func (s *Service) CleanABSMissing(
+	ctx context.Context,
+	req ABSCleanMissingRequest,
+) (*ABSCleanMissingResponse, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+	client, err := s.NewABSClient(req.Config)
+	if err != nil {
+		return nil, err
+	}
+	libraryID := req.Config.LibraryID
+	if libraryID == "" {
+		libraryID = "main"
+	}
+	if err := client.RemoveLibraryItemsWithIssues(libraryID); err != nil {
+		return nil, err
+	}
+	return &ABSCleanMissingResponse{Cleaned: true, LibraryID: libraryID}, nil
 }
 
 func (s *Service) newABSProvider(cfg ABSConfigDTO) (*abs.MetadataProvider, error) {
