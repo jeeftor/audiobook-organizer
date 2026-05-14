@@ -133,6 +133,7 @@ specifically about series layout. It gives stable, easy-to-assert paths:
 | M3B | Flat mechanics, non-ABS output | plain source | Ebooks | `go run . --dir test/abs/runtime/plain/books --out <tmp>/flat-books --flat --layout author-title` | Processes loose EPUB files individually across nested messy folders and writes organized files to a temporary output directory. This proves flat mechanics, but does not test ABS path updates. |
 | M3C | Flat import into ABS | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestFlatModeImport_AudiobooksLifecycle -count=1 -v` | Implemented. Imports loose MP3 files from `runtime/flat-input/audiobooks` into the ABS-mounted audiobook library; verifies per-file author/title folders, ABS scan adds the imported items, and missing count remains `0`. |
 | M3D | Flat import into ABS | plain | Ebooks | `go run . --dir test/abs/runtime/flat-input/books --out test/abs/runtime/plain/books --flat --layout author-title` | New fixture needed. Imports loose EPUB files from outside ABS into the ABS-mounted ebook library. ABS scan should add imported items. |
+| R1 | REST harness, `metadata.json` lifecycle | both | both | `make abs-test-rest` | Implemented. Runs the real Docker-backed ABS reset, scan, organizer move, missing detection, cleanup, rescan, and final-state checks from the `metadata.json` matrix rows, but drives organizer and ABS operations through the local web REST API. |
 | A1 | ABS discovery | plain | both | `go run . abs scan --abs-url http://localhost:13378 --abs-token <token>` | Works today. Lists both libraries and item counts. Does not move files. |
 | A2 | ABS manual path mapping | plain | Audiobooks | `go run . abs scan --abs-url http://localhost:13378 --abs-token <token> --abs-library Audiobooks --abs-path-map "/audiobooks:<abs>/test/abs/runtime/plain/audiobooks" --dir <abs>/test/abs/runtime/plain/audiobooks --check-files` | Works today as preview/connectivity coverage. It fetches ABS metadata, maps ABS paths to host paths, checks files, and calculates target paths. It does not perform organization. |
 | A3 | ABS all-libraries preview | plain | both | `go run . abs scan --abs-url http://localhost:13378 --abs-token <token> --abs-all-libraries --abs-path-map "/audiobooks:<abs>/test/abs/runtime/plain/audiobooks" --abs-path-map "/books:<abs>/test/abs/runtime/plain/books" --dir <abs>/test/abs/runtime/plain --check-files` | Works today if all-libraries mode handles both mappings. Confirms ABS metadata can be loaded across both libraries. Does not move files. |
@@ -166,6 +167,27 @@ sqlite3 test/abs/state/plain/config/absdatabase.sqlite \
 
 Prefer API assertions where possible, but SQLite assertions are acceptable for
 path-level checks because the harness already owns the ABS database fixture.
+
+## GitHub Matrix
+
+GitHub Actions runs the implemented ABS matrix as parallel job rows. Each row
+gets its own runner, Docker daemon, ABS containers, fixture restore, and scan
+cycle, so the fixed ABS ports do not conflict:
+
+| Row | `ABS_TEST_RUN` |
+| --- | --- |
+| `metadata-json` | `TestMetadataJSONMode` |
+| `embedded-already-indexed` | `TestEmbeddedAlreadyIndexed` |
+| `embedded-import` | `TestEmbeddedMetadataImport` |
+| `flat-import` | `TestFlatModeImport` |
+| `rest-metadata-json` | `TestRESTHarness_MetadataJSONModeLifecycle` |
+
+Local `make abs-test-matrix` still runs all implemented rows serially. To run
+one row locally, pass the same regex:
+
+```bash
+make abs-test-matrix ABS_TEST_RUN=TestRESTHarness_MetadataJSONModeLifecycle
+```
 
 ## Reset Per Test
 

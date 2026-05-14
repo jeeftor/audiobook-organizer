@@ -14,8 +14,9 @@ LDFLAGS := -ldflags "-s -w $(VERSION_FLAGS)"
 # Test packages
 UNIT_TEST_PKGS = ./...
 INTEGRATION_TEST_PKGS = $(shell go list ./... | grep -v '/integration$$')
+ABS_TEST_RUN ?= Test(MetadataJSONMode|EmbeddedAlreadyIndexed|EmbeddedMetadataImport|FlatModeImport|RESTHarness_MetadataJSONModeLifecycle)
 
-.PHONY: all build clean dev dev-linux-amd64 web-install web-build web-dev gui-rest-test gui-test gui-test-headed gui-test-ui abs-dev-seed abs-dev-init abs-dev-configure abs-dev-up abs-dev-down abs-dev-reset abs-dev-reset-all abs-dev-scan abs-dev-reset-scan abs-ci-smoke abs-test-metadata abs-test-matrix abs-test-e2e abs-dev-capture-baseline abs-dev-restore-baseline abs-dev-wait release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help scp-dev
+.PHONY: all build clean dev dev-linux-amd64 web-install web-build web-dev gui-rest-test gui-test gui-test-headed gui-test-ui abs-dev-seed abs-dev-init abs-dev-configure abs-dev-up abs-dev-down abs-dev-reset abs-dev-reset-all abs-dev-scan abs-dev-reset-scan abs-ci-smoke abs-test-metadata abs-test-rest abs-test-matrix abs-test-e2e abs-dev-capture-baseline abs-dev-restore-baseline abs-dev-wait release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help scp-dev
 
 # Default target - show help
 all: help
@@ -66,6 +67,7 @@ help:
 	@echo "  ABS Testing:"
 	@printf "    %-26s %s\n" "abs-ci-smoke" "CI-style seed, restore baseline, and scan"
 	@printf "    %-26s %s\n" "abs-test-metadata" "Run ABS metadata.json E2E tests"
+	@printf "    %-26s %s\n" "abs-test-rest" "Run Docker-backed REST ABS E2E tests"
 	@printf "    %-26s %s\n" "abs-test-matrix" "Run implemented ABS matrix E2E tests"
 	@printf "    %-26s %s\n" "abs-test-e2e" "Run all ABS E2E tests"
 	@echo ""
@@ -168,10 +170,15 @@ abs-test-metadata:
 	@test/abs/scripts/seed-public-domain.sh
 	go test -tags=abs_e2e ./test/abs/e2e -run TestMetadataJSONMode -count=1 -v
 
+# Run Docker-backed REST E2E tests. Tests reset ABS before each case.
+abs-test-rest:
+	@test/abs/scripts/seed-public-domain.sh
+	go test -tags=abs_e2e ./test/abs/e2e -run TestRESTHarness_MetadataJSONModeLifecycle -count=1 -v
+
 # Run implemented ABS matrix E2E tests. Tests reset ABS before each case.
 abs-test-matrix:
 	@test/abs/scripts/seed-public-domain.sh
-	go test -tags=abs_e2e ./test/abs/e2e -run 'Test(MetadataJSONMode|EmbeddedAlreadyIndexed|EmbeddedMetadataImport|FlatModeImport)' -count=1 -v
+	go test -tags=abs_e2e ./test/abs/e2e -run '$(ABS_TEST_RUN)' -count=1 -v
 
 # Run all ABS E2E tests. Tests reset ABS before each case.
 abs-test-e2e:
