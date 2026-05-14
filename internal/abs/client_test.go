@@ -89,6 +89,13 @@ func mockABSServer() *httptest.Server {
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(map[string]string{"message": "Scan started"})
 
+		case "/api/libraries/lib_main/issues":
+			if r.Method != http.MethodDelete {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
+			json.NewEncoder(w).Encode(map[string]any{"success": true})
+
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -176,6 +183,41 @@ func TestClient_ScanLibrary(t *testing.T) {
 	err := client.ScanLibrary("lib_main")
 	if err != nil {
 		t.Fatalf("ScanLibrary failed: %v", err)
+	}
+}
+
+func TestClient_ScanLibraryForce(t *testing.T) {
+	var rawQuery string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer test-token" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if r.URL.Path != "/api/libraries/lib_main/scan" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		rawQuery = r.URL.RawQuery
+		json.NewEncoder(w).Encode(map[string]string{"message": "Scan started"})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "test-token")
+	if err := client.ScanLibraryForce("lib_main"); err != nil {
+		t.Fatalf("ScanLibraryForce failed: %v", err)
+	}
+	if rawQuery != "force=1" {
+		t.Fatalf("ScanLibraryForce query = %q, want force=1", rawQuery)
+	}
+}
+
+func TestClient_RemoveLibraryItemsWithIssues(t *testing.T) {
+	server := mockABSServer()
+	defer server.Close()
+
+	client := NewClient(server.URL, "test-token")
+	if err := client.RemoveLibraryItemsWithIssues("lib_main"); err != nil {
+		t.Fatalf("RemoveLibraryItemsWithIssues failed: %v", err)
 	}
 }
 

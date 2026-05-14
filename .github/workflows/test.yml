@@ -17,7 +17,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.24'
+        go-version: 'stable'
 
     - name: Cache Go modules
       uses: actions/cache@v4
@@ -59,3 +59,55 @@ jobs:
     - name: Display coverage summary
       run: |
         go tool cover -func=coverage.out
+
+  abs-e2e:
+    name: ABS metadata lifecycle
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 'stable'
+        cache: true
+        cache-dependency-path: go.sum
+
+    - name: Cache ABS public-domain fixtures
+      uses: actions/cache@v4
+      with:
+        path: |
+          test/abs/staging-data/audiobooks
+          test/abs/staging-data/books
+        key: ${{ runner.os }}-abs-fixtures-v1-${{ hashFiles('test/abs/scripts/seed-public-domain.sh') }}
+        restore-keys: |
+          ${{ runner.os }}-abs-fixtures-v1-
+
+    - name: Show Docker version
+      run: |
+        docker version
+        docker compose version
+
+    - name: Install ABS test dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq
+
+    - name: Run ABS metadata lifecycle tests
+      run: make abs-test-metadata
+
+    - name: Stop ABS containers
+      if: always()
+      run: docker compose -f test/abs/docker-compose.yml down --remove-orphans
+
+    - name: Upload ABS logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: abs-e2e-state
+        path: |
+          test/abs/state/**/metadata/logs/**
+          test/abs/runtime/**/*.log
