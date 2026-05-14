@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Repo-local AI skills**: Added `abo-*` agent skills for issue workflow, PR workflow, testing, ABS validation, web UI work, and dependency audit/update tasks.
 - **Unified binary**: `audiobook-organizer gui` now launches the full desktop GUI window from the same binary as the CLI and TUI. No separate download required.
 - **Native macOS directory dialog**: File picker uses a native `NSOpenPanel` dispatched on the main thread, preventing the dialog from being immediately dismissed when the app is not frontmost.
 - **WebKit developer tools**: Pass `--devtools` flag to enable right-click → Inspect and a _Developer_ menu with _Open Inspector_.

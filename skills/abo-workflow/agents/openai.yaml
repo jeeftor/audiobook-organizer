@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO Workflow"
+  short_description: "Route Audiobook Organizer work"
+  default_prompt: "Use $abo-workflow to route this Audiobook Organizer maintainer task."

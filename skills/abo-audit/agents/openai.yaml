@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO Audit"
+  short_description: "Audit dependencies"
+  default_prompt: "Use $abo-audit to audit Go and web UI dependencies."
