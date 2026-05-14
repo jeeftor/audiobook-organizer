@@ -15,6 +15,7 @@ sub-issues:
 | [#31](https://github.com/jeeftor/audiobook-organizer/issues/31) | `metadata.json` lifecycle | M1A-M1D |
 | [#37](https://github.com/jeeftor/audiobook-organizer/issues/37) | `metadata.json` ebook lifecycle | M1B, M1D |
 | [#32](https://github.com/jeeftor/audiobook-organizer/issues/32) | Embedded metadata lifecycle | M2A-M2D |
+| [#39](https://github.com/jeeftor/audiobook-organizer/issues/39) | Embedded already-indexed audiobook current behavior | M2A |
 | [#35](https://github.com/jeeftor/audiobook-organizer/issues/35) | Embedded audiobook import lifecycle | M2C |
 | [#38](https://github.com/jeeftor/audiobook-organizer/issues/38) | Embedded ebook import lifecycle | M2D |
 | [#28](https://github.com/jeeftor/audiobook-organizer/issues/28) | Flat mode lifecycle | M3A-M3D |
@@ -124,7 +125,7 @@ specifically about series layout. It gives stable, easy-to-assert paths:
 | M1B | `metadata.json` | metadata-enabled | Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestMetadataJSONMode_BooksLifecycle -count=1 -v` | Implemented as a table-driven lifecycle row. Moves ebook directories using sidecar metadata; verifies old files are gone and new files exist; scans ABS; verifies old ABS rows are missing and new organized rows are active; calls the ABS library issues cleanup endpoint; rescans; verifies final ABS state has 3 active organized items and 0 missing items. |
 | M1C | `metadata.json` negative control | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestMetadataJSONMode_AudiobooksLifecycle -count=1 -v` | Implemented as a table-driven lifecycle row. No `metadata.json` exists, so no files move. Old messy paths remain; ABS scan leaves 2 active original items and 0 missing items. |
 | M1D | `metadata.json` negative control | plain | Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestMetadataJSONMode_BooksLifecycle -count=1 -v` | Implemented as a table-driven lifecycle row. No `metadata.json` exists, so no files move. Old messy paths remain; ABS scan leaves 3 active original items and 0 missing items. |
-| M2A | Embedded metadata, already indexed | plain | Audiobooks | `go run . --dir test/abs/runtime/plain/audiobooks --use-embedded-metadata --layout author-title` | Current-code coverage only. Moves already-indexed audiobook directories using embedded M4B metadata. Longer term, this workflow should use ABS metadata instead. |
+| M2A | Embedded metadata, already indexed | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestEmbeddedAlreadyIndexed_AudiobooksCurrentBehavior -count=1 -v` | Implemented as current-code coverage only. The already-indexed nested audiobook library has no `metadata.json` sidecars, and embedded mode currently finds `0` metadata rows and performs `0` moves. The test verifies the original messy paths stay active and ABS remains clean after rescan. Longer term, this workflow should use ABS metadata instead. |
 | M2B | Embedded metadata, already indexed | plain | Ebooks | `go run . --dir test/abs/runtime/plain/books --use-embedded-metadata --layout author-title` | Current-code coverage only. Moves already-indexed EPUB directories using embedded EPUB metadata. Longer term, this workflow should use ABS metadata instead. |
 | M2C | Embedded import, hierarchical | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestEmbeddedMetadataImport_AudiobooksLifecycle -count=1 -v` | Implemented. Imports hierarchical M4B directories from `runtime/import-input/audiobooks` into the ABS-mounted audiobook library; verifies source files moved, organized author/title folders exist, ABS scan adds the imported items, and missing count remains `0`. |
 | M2D | Embedded import, hierarchical | plain | Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestEmbeddedMetadataImport_BooksLifecycle -count=1 -v` | Implemented. Imports hierarchical EPUB directories from `runtime/import-input/books` into the ABS-mounted ebook library; verifies source files moved, organized author/title folders exist, ABS scan adds the imported items, and missing count remains `0`. |
@@ -293,7 +294,7 @@ not write `metadata.json` sidecars, forcing the command to use ABS metadata.
 2. Add a post-move scan helper that waits for expected count and zero missing
    items, and can optionally retry one forced scan.
 3. Add metadata.json tests M1A-M1D.
-4. Add embedded already-indexed coverage M2A-M2B only as current-code coverage.
+4. Add embedded already-indexed coverage M2A-M2B only as current-code coverage. M2A is implemented.
 5. Add import fixtures and embedded hierarchical import tests M2C-M2D.
 6. Add flat mechanics tests M3A-M3B with temporary non-ABS output.
 7. Add flat import fixtures and tests M3C-M3D.

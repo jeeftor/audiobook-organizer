@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,9 +24,16 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	releaseLock, err := acquireABSRunLock()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "acquire ABS E2E run lock: %v\n", err)
+		os.Exit(1)
+	}
+
 	root, err := findRepoRoot()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "find repo root: %v\n", err)
+		releaseLock()
 		os.Exit(1)
 	}
 	repoRootPath = root
@@ -33,6 +41,7 @@ func TestMain(m *testing.M) {
 	binaryTmpDir, err = os.MkdirTemp("", "aobook-org-abs-e2e-*")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "create temp dir: %v\n", err)
+		releaseLock()
 		os.Exit(1)
 	}
 	binaryPath = filepath.Join(binaryTmpDir, "audiobook-organizer")
@@ -40,12 +49,24 @@ func TestMain(m *testing.M) {
 	if output, err := runCommand(root, 2*time.Minute, "go", "build", "-o", binaryPath, "."); err != nil {
 		fmt.Fprintf(os.Stderr, "build test binary: %v\n%s\n", err, output)
 		os.RemoveAll(binaryTmpDir)
+		releaseLock()
 		os.Exit(1)
 	}
 
 	code := m.Run()
 	os.RemoveAll(binaryTmpDir)
+	releaseLock()
 	os.Exit(code)
+}
+
+func acquireABSRunLock() (func(), error) {
+	listener, err := net.Listen("tcp", "127.0.0.1:23378")
+	if err != nil {
+		return nil, fmt.Errorf("another ABS E2E run appears to be active; stop it before running this matrix again: %w", err)
+	}
+	return func() {
+		_ = listener.Close()
+	}, nil
 }
 
 func findRepoRoot() (string, error) {
