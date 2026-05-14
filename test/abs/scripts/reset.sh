@@ -148,13 +148,17 @@ mkdir -p \
 	"$ROOT_DIR/runtime/metadata/audiobooks" \
 	"$ROOT_DIR/runtime/metadata/books" \
 	"$ROOT_DIR/runtime/import-input/audiobooks" \
-	"$ROOT_DIR/runtime/import-input/books"
+	"$ROOT_DIR/runtime/import-input/books" \
+	"$ROOT_DIR/runtime/flat-input/audiobooks" \
+	"$ROOT_DIR/runtime/flat-input/books"
 : > "$ROOT_DIR/runtime/plain/audiobooks/.gitkeep"
 : > "$ROOT_DIR/runtime/plain/books/.gitkeep"
 : > "$ROOT_DIR/runtime/metadata/audiobooks/.gitkeep"
 : > "$ROOT_DIR/runtime/metadata/books/.gitkeep"
 : > "$ROOT_DIR/runtime/import-input/audiobooks/.gitkeep"
 : > "$ROOT_DIR/runtime/import-input/books/.gitkeep"
+: > "$ROOT_DIR/runtime/flat-input/audiobooks/.gitkeep"
+: > "$ROOT_DIR/runtime/flat-input/books/.gitkeep"
 
 if [ "$EMPTY_RUNTIME" -eq 1 ]; then
 	detail "Runtime libraries left empty for ABS setup."
@@ -194,6 +198,19 @@ copy_fixture \
 	"$REPO_ROOT/testdata/m4b/strange_audiobook_20_Saga_of_Endless_Horizons_The_Epic_Tale_That_Spans_Generations_Alexander_von_Longname.m4b" \
 	"$ROOT_DIR/runtime/import-input/audiobooks/dropbox/longname-mess/source.m4b"
 detail "embedded import fixture: dropbox/longname-mess/source.m4b"
+
+copy_fixture \
+	"$REPO_ROOT/testdata/mp3flat/charlesdexterward_01_lovecraft_64kb.mp3" \
+	"$ROOT_DIR/runtime/flat-input/audiobooks/inbox/charlesdexterward_01_lovecraft_64kb.mp3"
+detail "flat import fixture: inbox/charlesdexterward_01_lovecraft_64kb.mp3"
+copy_fixture \
+	"$REPO_ROOT/testdata/mp3flat/falstaffswedding1766version_1_kenrick_64kb.mp3" \
+	"$ROOT_DIR/runtime/flat-input/audiobooks/inbox/falstaffswedding1766version_1_kenrick_64kb.mp3"
+detail "flat import fixture: inbox/falstaffswedding1766version_1_kenrick_64kb.mp3"
+copy_fixture \
+	"$REPO_ROOT/testdata/mp3flat/perouse_01_scott_64kb.mp3" \
+	"$ROOT_DIR/runtime/flat-input/audiobooks/inbox/perouse_01_scott_64kb.mp3"
+detail "flat import fixture: inbox/perouse_01_scott_64kb.mp3"
 
 write_metadata \
 	"$ROOT_DIR/runtime/metadata/audiobooks/unsorted-audio/drop-001" \

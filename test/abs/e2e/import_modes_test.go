@@ -48,6 +48,41 @@ func TestEmbeddedMetadataImport_AudiobooksLifecycle(t *testing.T) {
 	})
 }
 
+func TestFlatModeImport_AudiobooksLifecycle(t *testing.T) {
+	runOrganizerImportLifecycle(t, organizerImportCase{
+		name: "plain_audiobooks_imports_loose_flat_files",
+		sourceParts: []string{
+			"test", "abs", "runtime", "flat-input", "audiobooks",
+		},
+		outputParts: []string{
+			"test", "abs", "runtime", "plain", "audiobooks",
+		},
+		args: []string{
+			"--flat",
+			"--layout", "author-title",
+		},
+		oldFiles: [][]string{
+			{"test", "abs", "runtime", "flat-input", "audiobooks", "inbox", "charlesdexterward_01_lovecraft_64kb.mp3"},
+			{"test", "abs", "runtime", "flat-input", "audiobooks", "inbox", "falstaffswedding1766version_1_kenrick_64kb.mp3"},
+			{"test", "abs", "runtime", "flat-input", "audiobooks", "inbox", "perouse_01_scott_64kb.mp3"},
+		},
+		newFiles: [][]string{
+			{"test", "abs", "runtime", "plain", "audiobooks", "H. P. Lovecraft", "01 - Chapter 1_ A Result and a Prologue", "01 - charlesdexterward_01_lovecraft_64kb.mp3"},
+			{"test", "abs", "runtime", "plain", "audiobooks", "William Kenrick", "01 - Act 1", "01 - falstaffswedding1766version_1_kenrick_64kb.mp3"},
+			{"test", "abs", "runtime", "plain", "audiobooks", "Ernest Scott", "01 - Family, youth and influences", "01 - perouse_01_scott_64kb.mp3"},
+		},
+		logFile: []string{
+			"test", "abs", "runtime", "plain", "audiobooks", ".abook-org.log",
+		},
+		newAPIPaths: []string{
+			"/audiobooks/Ernest Scott/01 - Family, youth and influences",
+			"/audiobooks/H. P. Lovecraft/01 - Chapter 1_ A Result and a Prologue",
+			"/audiobooks/William Kenrick/01 - Act 1",
+		},
+		expectedCount: 5,
+	})
+}
+
 func runOrganizerImportLifecycle(t *testing.T, tc organizerImportCase) {
 	t.Helper()
 

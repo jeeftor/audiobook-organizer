@@ -8,10 +8,6 @@ func TestABSMatrixTODO_MetadataJSONBooksLifecycle(t *testing.T) {
 	t.Fatal("TODO: build the metadata.json books lifecycle after the audiobook lifecycle is stable")
 }
 
-func TestABSMatrixTODO_FlatModeLifecycle(t *testing.T) {
-	t.Fatal("TODO: build flat mode import lifecycle tests")
-}
-
 func TestABSMatrixTODO_ABSMetadataModeLifecycle(t *testing.T) {
 	t.Fatal("TODO: build ABS metadata mode lifecycle tests")
 }
