@@ -6,6 +6,9 @@
 # OS/editor noise.
 .DS_Store
 
+# CI/local cache scratch space.
+.cache/
+
 # Legacy local fixture area from older harness layouts.
 library/**
 !library/

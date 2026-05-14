@@ -2,8 +2,9 @@
 set -eu
 
 ROOT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
-STAGING_AUDIOBOOK_DIR="$ROOT_DIR/staging-data/audiobooks"
-STAGING_BOOK_DIR="$ROOT_DIR/staging-data/books"
+STAGING_ROOT="${ABS_FIXTURE_CACHE_DIR:-$ROOT_DIR/staging-data}"
+STAGING_AUDIOBOOK_DIR="$STAGING_ROOT/audiobooks"
+STAGING_BOOK_DIR="$STAGING_ROOT/books"
 PLAIN_AUDIOBOOK_DIR="$ROOT_DIR/runtime/plain/audiobooks"
 PLAIN_BOOK_DIR="$ROOT_DIR/runtime/plain/books"
 METADATA_AUDIOBOOK_DIR="$ROOT_DIR/runtime/metadata/audiobooks"
@@ -180,6 +181,6 @@ write_metadata \
 	"1813" \
 	"Public-domain Project Gutenberg EPUB for ABS integration tests."
 
-printf '\nSeed data is staged under %s\n' "$ROOT_DIR/staging-data"
+printf '\nSeed data is staged under %s\n' "$STAGING_ROOT"
 printf 'Plain runtime library refreshed under %s\n' "$ROOT_DIR/runtime/plain"
 printf 'Metadata runtime library refreshed under %s\n' "$ROOT_DIR/runtime/metadata"
