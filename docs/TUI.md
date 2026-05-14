@@ -636,7 +636,7 @@ Or use the preview screen to review operations before executing.
 
 ## See Also
 
-- [GUI.md](GUI.md) - Desktop GUI guide
+- [GUI.md](GUI.md) - Local Web UI guide
 - [CLI.md](CLI.md) - Command-line reference
 - [METADATA.md](METADATA.md) - Metadata extraction guide
 - [LAYOUTS.md](LAYOUTS.md) - Directory layout options

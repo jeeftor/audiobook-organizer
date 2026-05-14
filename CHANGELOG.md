@@ -9,27 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Unified binary**: `audiobook-organizer gui` now launches the full desktop GUI window from the same binary as the CLI and TUI. No separate download required.
-- **Native macOS directory dialog**: File picker uses a native `NSOpenPanel` dispatched on the main thread, preventing the dialog from being immediately dismissed when the app is not frontmost.
-- **WebKit developer tools**: Pass `--devtools` flag to enable right-click → Inspect and a _Developer_ menu with _Open Inspector_.
-- **Drag-and-drop**: Files and folders can be dragged onto the GUI window.
-- **CLI command in preview panel**: The Preview screen now shows the equivalent bash command for the planned operation, making it easy to script or audit changes.
-- **Book-grouped preview**: Preview screen groups file moves by book/album for easier review.
-- **Skipped-file report**: Files that were excluded from an operation are now reported separately so nothing is silently dropped.
-- **Undo support in GUI**: The Results screen includes an Undo button that reverses the last organization operation using the `.abook-org.log` file.
-- **Selection filtering**: Only checked/selected files are passed to the organizer — previously all scanned files could be processed regardless of selection state.
-- **macOS DMG artifact**: Beta releases now include a `.dmg` with a `README.txt` covering Gatekeeper and quarantine instructions.
+- **Local web UI foundation**: `audiobook-organizer web` starts a browser-based UI from the same binary as the CLI and TUI. `audiobook-organizer gui` remains as a compatibility alias.
+- **Embedded web assets**: Release builds now compile the Vue frontend into the Go binary so the app can serve its own UI.
+- **Web API surface**: Added initial local REST endpoints for health, initial configuration, option lists, organize preview, rename preview, Audiobookshelf libraries, ABS path mapping tests, ABS item loading, and ABS scan triggers.
+- **Audiobookshelf web workflow**: The new web foundation treats ABS as a first-class source alongside local metadata and embedded metadata.
+- **Preview-oriented app service layer**: Added an internal application service that converts web requests into organizer, renamer, and ABS operations without coupling the HTTP layer to Cobra command handling.
+- **REST execution coverage for ABS workflows**: Added Docker-backed REST tests for `metadata.json`, embedded metadata import, and flat import workflows against real Audiobookshelf containers.
 
 ### Fixed
 
-- Linux CI: `webkit2gtk-4.0` pkg-config shims and library symlinks added so Wails builds succeed on Ubuntu 24.04 (which ships only `webkit2gtk-4.1`).
-- macOS CI: `extldflags '-framework UniformTypeIdentifiers'` added to the darwin linker flags for the unified binary.
-- Frontend embed path resolved before goreleaser runs to prevent `all:frontend/dist` embed failures.
-- Various CI workflow failures across build, test, and release pipelines.
+- Frontend embed path is now stable for goreleaser by building into `internal/server/static`.
+- Release workflows build the web frontend before packaging the single binary.
 
 ### Changed
 
-- Beta releases now distribute the **unified CLI+GUI binary** (`audiobook-organizer`) instead of the standalone Wails binary (`audiobook-organizer-gui`).
+- Removed the deprecated GUI tree and release packaging. Releases now focus on one `audiobook-organizer` binary with CLI, TUI, ABS, and local web UI entrypoints.
+- Rewrote the root README for the single-binary web UI direction and current command surface.
+- Split the Audiobookshelf E2E matrix into parallel GitHub Actions jobs for faster feedback.
 
 ---
 
