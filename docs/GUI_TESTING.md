@@ -1,0 +1,62 @@
+# GUI Testing
+
+The GUI is the local Vue web UI served by `audiobook-organizer web`. GUI tests should exercise the real Go server whenever possible so authentication, embedded static assets, routing, and browser behavior are verified together.
+
+## Test Layers
+
+1. Go unit tests for `internal/app` and `internal/server`.
+2. Frontend type/build checks with `npm run build` in `web/`.
+3. Playwright E2E tests that start `go run . web --no-open`, parse the session token, and drive the rendered browser UI.
+4. ABS-backed GUI workflows once the UI is wired to real ABS actions.
+
+## Commands
+
+```bash
+# Install frontend dependencies
+make web-install
+
+# Run Go REST endpoint tests without Docker or a browser
+make gui-rest-test
+
+# Build Vue assets and run Playwright headless tests
+make gui-test
+
+# Run headed for local debugging
+make gui-test-headed
+
+# Open the Playwright UI runner
+make gui-test-ui
+```
+
+Direct npm equivalents:
+
+```bash
+cd web
+npm run test:e2e
+npm run test:e2e:headed
+npm run test:e2e:ui
+```
+
+## Current Coverage
+
+The initial suite covers:
+
+- REST tests for auth, config/options, static app serving, method validation, malformed JSON, organize preview, rename preview, and no-Docker ABS path mapping validation.
+- The local Go web server starts and serves embedded assets.
+- Authenticated API endpoints reject missing tokens and accept the generated session token.
+- The dashboard renders without browser console warnings or errors.
+- The health check changes the server status to connected.
+- Table selection updates the inspector.
+- The scan button writes a visible job-console event.
+
+## Expansion Plan
+
+As the GUI moves from scaffold to real workflows, add tests in this order:
+
+1. Real source/output configuration state.
+2. Organize preview API calls with fixture directories.
+3. Rename preview API calls with fixture files.
+4. ABS library discovery and path mapping using the local ABS harness.
+5. Scan-trigger and missing-item cleanup flows after organizer moves.
+6. Accessibility checks for keyboard navigation and visible focus states.
+7. Visual regression snapshots for the main desktop and mobile layouts.

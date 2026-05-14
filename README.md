@@ -1,313 +1,275 @@
 # Audiobook Organizer
 
-[![codecov](https://codecov.io/gh/jeeftor/audiobook-organizer/branch/main/graph/badge.svg)](https://codecov.io/gh/jeeftor/audiobook-organizer)
-[![Coverage Status](https://coveralls.io/repos/github/jeeftor/audiobook-organizer/badge.svg?branch=main)](https://coveralls.io/github/jeeftor/audiobook-organizer?branch=main)
+[![codecov](https://codecov.io/gh/jeeftor/audiobook-organizer/branch/master/graph/badge.svg)](https://codecov.io/gh/jeeftor/audiobook-organizer)
+[![Coverage Status](https://coveralls.io/repos/github/jeeftor/audiobook-organizer/badge.svg?branch=master)](https://coveralls.io/github/jeeftor/audiobook-organizer?branch=master)
 
-![docs/logo.png](docs/logo.png)
+![Audiobook Organizer logo](docs/logo.png)
 
-**A powerful tool to organize audiobooks by author, series, and title using metadata from multiple sources.**
+Audiobook Organizer is a single-binary tool for cleaning up audiobook libraries. It can preview and organize folders, rename files from metadata templates, inspect metadata, and connect to Audiobookshelf for library metadata and scan workflows.
 
-Supports three modes: **Desktop GUI**, **Interactive TUI**, and **CLI automation**.
+The project now ships one `audiobook-organizer` binary with:
 
----
+- a local browser UI: `audiobook-organizer web`
+- terminal workflows: `audiobook-organizer tui`, `rename-tui`, and `metadata`
+- scriptable CLI workflows: root organize command, `rename`, and `abs`
 
-## What Can It Do?
+`audiobook-organizer gui` remains as a compatibility alias for `audiobook-organizer web`.
 
-- 📚 **Organize audiobooks** into clean directory structures (Author/Series/Title)
-- 🏷️ **Extract metadata** from metadata.json, EPUB, MP3, M4B files
-- 🔄 **Rename files** using customizable templates
-- 📂 **Multiple layouts** (6 options from flat to deeply nested)
-- 🔍 **Preview changes** before execution with conflict detection
-- ↩️ **Undo operations** with full operation logging
-- 🎨 **Three interfaces** to match your workflow
-- 🎵 **Hybrid metadata mode** - Merges JSON book info with audio track numbers
-- 🎯 **Field mapping** - Handle non-standard MP3 metadata structures
-- 📡 **Audiobookshelf integration** - Sync with ABS server, trigger library scans, real-time events
+## What It Does
 
----
+- Organizes audiobooks into predictable directory layouts such as `Author/Series/Title`.
+- Reads metadata from `metadata.json`, EPUB, MP3, M4B, and Audiobookshelf.
+- Renames files with templates such as `{author} - {series} {series_number} - {title}`.
+- Supports dry-run previews before filesystem changes.
+- Logs organization and rename operations for undo.
+- Handles field mapping for non-standard metadata tags.
+- Provides local browser, terminal, and command-line interfaces.
+- Includes Audiobookshelf commands for library discovery, path mapping checks, item previews, scan triggers, and WebSocket scan event testing.
 
-## Choose Your Experience
+## Current Interfaces
 
-Pick the mode that fits your workflow:
-
-| Mode | Best For | How to Launch |
-|------|----------|---------------|
-| **🖥️ GUI (Desktop App)** | First-time users, visual configuration, exploring metadata | `audiobook-organizer gui` |
-| **⌨️ TUI (Interactive Terminal)** | Power users who prefer keyboard, SSH sessions | `audiobook-organizer tui` |
-| **💻 CLI (Command Line)** | Automation, scripts, CI/CD, batch processing | `audiobook-organizer --dir=/path` |
-
-### Feature Comparison
-
-| Feature | GUI | TUI | CLI |
-|---------|:---:|:---:|:---:|
-| Visual Interface | ✓ | ✓ | - |
-| Mouse Support | ✓ | - | - |
-| Keyboard Navigation | ✓ | ✓ | - |
-| Scriptable/Automatable | - | - | ✓ |
-| Live Metadata Preview | ✓ | ✓ | - |
-| Field Mapping UI | ✓ | ✓ | Config |
-| Color-Coded Paths | ✓ | ✓ | - |
-| Native File Dialogs | ✓ | - | - |
-| Template Builder UI | ✓ | ✓ | Flags |
-| Conflict Highlighting | ✓ | ✓ | Logs |
-| SSH/Remote Compatible | - | ✓ | ✓ |
-| Audiobookshelf Integration | - | - | ✓ |
-
----
+| Interface | Command | Best For | Status |
+| --- | --- | --- | --- |
+| Local web UI | `audiobook-organizer web` | Browser-based preview, configuration, rename preview, ABS connection workflows | Current GUI direction |
+| GUI alias | `audiobook-organizer gui` | Existing muscle memory/scripts | Alias for `web` |
+| Organize CLI | `audiobook-organizer --dir=/books` | Batch organization and automation | Stable |
+| Organization TUI | `audiobook-organizer tui` | Keyboard-first interactive organization | Stable |
+| Rename CLI | `audiobook-organizer rename --dir=/books` | Scriptable file renaming | Stable |
+| Rename TUI | `audiobook-organizer rename-tui --dir=/books` | Interactive rename previews | Stable |
+| Metadata TUI | `audiobook-organizer metadata --dir=/books` | Metadata inspection and template exploration | Stable |
+| Audiobookshelf CLI | `audiobook-organizer abs ...` | ABS discovery, path mapping, metadata previews, and scan triggers | Active development |
 
 ## Quick Start
 
-### Installation
+### Install
 
-Choose your platform:
+Homebrew:
 
-<details>
-<summary><b>macOS</b></summary>
-
-**Desktop GUI:**
-```bash
-# Coming soon: Homebrew Cask
-brew install --cask audiobook-organizer-gui
-
-# Or download DMG from releases
-```
-
-**CLI/TUI:**
 ```bash
 brew tap jeeftor/tap
 brew install audiobook-organizer
 ```
-</details>
 
-<details>
-<summary><b>Linux</b></summary>
+Go:
 
-**Desktop GUI:**
 ```bash
-# Download from releases:
-# - .deb for Debian/Ubuntu
-# - .rpm for RedHat/Fedora
-# - .AppImage for any distro
+go install github.com/jeeftor/audiobook-organizer@latest
 ```
 
-**CLI/TUI:**
-```bash
-# Debian/Ubuntu
-sudo apt install audiobook-organizer
-
-# RedHat/Fedora
-sudo yum install audiobook-organizer
-
-# Alpine
-sudo apk add audiobook-organizer
-```
-</details>
-
-<details>
-<summary><b>Windows</b></summary>
-
-**Desktop GUI:**
-```
-Download installer from releases page:
-- audiobook-organizer-gui-setup.exe
-```
-
-**CLI/TUI:**
-```
-Download from releases:
-- audiobook-organizer-windows-amd64.zip
-```
-</details>
-
-<details>
-<summary><b>Docker</b></summary>
+Docker:
 
 ```bash
 docker pull jeffsui/audiobook-organizer:latest
 ```
-</details>
 
-<details>
-<summary><b>Go Install</b></summary>
+Release archives and Linux packages are available from [GitHub Releases](https://github.com/jeeftor/audiobook-organizer/releases).
+
+See [docs/INSTALLATION.md](docs/INSTALLATION.md) for platform-specific installation notes.
+
+### Start The Browser UI
 
 ```bash
-# CLI/TUI only
-go install github.com/jeeftor/audiobook-organizer@latest
+audiobook-organizer web
 ```
-</details>
 
-**📖 Full installation guide:** [docs/INSTALLATION.md](docs/INSTALLATION.md)
+The web UI starts a local HTTP server, binds to `127.0.0.1` by default, generates a temporary session token, and opens your browser.
 
----
+Useful variants:
 
-## Usage Guides
-
-### 🖥️ GUI Mode (Desktop App)
-
-The **Audiobook Organizer GUI** provides a modern desktop interface with:
-- **Visual workflow** through 4 screens (Directory Picker → Book List → Preview → Complete)
-- **Live metadata preview** with color-coded field indicators
-- **Interactive field mapping** dialog for custom metadata sources
-- **Filename template builder** with visual interface
-- **Conflict detection** with visual highlighting
-
-**Launch the GUI:**
 ```bash
-# Using unified binary (v0.12.0+)
+# Pre-fill source and output directories
+audiobook-organizer web --input=/path/to/books --output=/path/to/organized
+
+# Choose a local port
+audiobook-organizer web --host=127.0.0.1 --port=8080
+
+# Print the URL without opening a browser
+audiobook-organizer web --no-open
+
+# Compatibility alias
 audiobook-organizer gui
-
-# Pre-populate directories (auto-advances to book list)
-audiobook-organizer gui --input=/path/to/audiobooks --output=/path/to/organized
-
-# With developer tools enabled
-audiobook-organizer gui --devtools
 ```
 
-> **Note:** The standalone `audiobook-organizer-gui` binary is still available for backward compatibility.
+The current web API supports preview-oriented organization and rename flows plus Audiobookshelf library, path mapping, item loading, and scan-trigger endpoints. Use the CLI or TUI for full filesystem execution when needed.
 
-**Screenshot:** [Main book list screen showing metadata preview and layout options]
+See [docs/GUI.md](docs/GUI.md) for the local web UI guide.
 
-![GUI Main Screen](docs/screenshots/gui-main-screen.png)
+### Preview And Organize From The CLI
 
-**📖 Full GUI guide with screenshots:** [docs/GUI.md](docs/GUI.md)
-
----
-
-### ⌨️ TUI Mode (Interactive Terminal)
-
-The **TUI (Text User Interface)** provides interactive keyboard navigation for:
-- **Organization workflow** with directory picker, book selection, settings, preview
-- **Rename workflow** with metadata viewer, field mapping, template builder
-- **Real-time filtering** and search as you type
-- **Visual progress** tracking with color-coded output
-
-**Launch Organization TUI:**
 ```bash
-# Interactive directory picker
+# Preview without moving files
+audiobook-organizer --dir=/path/to/books --out=/path/to/organized --dry-run
+
+# Organize to a separate output directory
+audiobook-organizer --dir=/path/to/books --out=/path/to/organized
+
+# Organize in place
+audiobook-organizer --dir=/path/to/books
+
+# Undo the previous organization operation
+audiobook-organizer --dir=/path/to/books --undo
+```
+
+Common organization flags:
+
+| Flag | Purpose |
+| --- | --- |
+| `--dir`, `--input` | Source directory |
+| `--out`, `--output` | Output directory; defaults to source |
+| `--dry-run` | Preview without changing files |
+| `--layout` | Directory layout |
+| `--use-embedded-metadata` | Use embedded EPUB/MP3/M4B metadata |
+| `--flat` | Process files individually; also enables embedded metadata |
+| `--remove-empty` | Remove empty source directories after moving |
+| `--skip-errors` | Continue past missing or invalid metadata |
+| `--author-fields`, `--title-field`, `--series-field`, `--track-field`, `--disc-field` | Field mapping overrides |
+
+See [docs/CLI.md](docs/CLI.md) for the full CLI reference.
+
+### Rename Files
+
+```bash
+# Preview renames
+audiobook-organizer rename --dir=/path/to/books --dry-run
+
+# Rename using a template
+audiobook-organizer rename \
+  --dir=/path/to/books \
+  --template="{author} - {series} {series_number} - {title}"
+
+# Rename from embedded metadata
+audiobook-organizer rename --dir=/path/to/books --use-embedded-metadata
+
+# Undo the previous rename operation
+audiobook-organizer rename --dir=/path/to/books --undo
+
+# Open the interactive rename TUI
+audiobook-organizer rename-tui --dir=/path/to/books
+```
+
+Template help:
+
+```bash
+audiobook-organizer rename help-template
+```
+
+See [docs/RENAME_FEATURE.md](docs/RENAME_FEATURE.md) for rename templates and examples.
+
+### Use The TUI
+
+```bash
+# Interactive organization workflow
 audiobook-organizer tui
 
-# Pre-selected directories
-audiobook-organizer tui --dir=/path/to/audiobooks --out=/path/to/organized
+# Start with paths pre-filled
+audiobook-organizer tui --dir=/path/to/books --out=/path/to/organized
+
+# Interactive rename workflow
+audiobook-organizer rename-tui --dir=/path/to/books
+
+# Metadata exploration workflow
+audiobook-organizer metadata --dir=/path/to/books
 ```
 
-**Launch Rename TUI:**
+See [docs/TUI.md](docs/TUI.md) and [docs/METADATA_COMMAND.md](docs/METADATA_COMMAND.md).
+
+## Audiobookshelf Workflows
+
+Audiobookshelf support is available in both the local web UI and the `abs` CLI command group.
+
+Current ABS command group:
+
 ```bash
-audiobook-organizer rename-tui --dir=/path/to/audiobooks
+# List/discover libraries and item counts
+audiobook-organizer abs scan \
+  --abs-url=http://localhost:13378 \
+  --abs-token="$ABS_TOKEN"
+
+# Preview ABS metadata with manual container-to-host path mapping
+audiobook-organizer abs scan \
+  --abs-url=http://localhost:13378 \
+  --abs-token="$ABS_TOKEN" \
+  --abs-library=Audiobooks \
+  --abs-path-map="/audiobooks:/mnt/media/audiobooks" \
+  --dir=/mnt/media/audiobooks \
+  --check-files
+
+# Test SQLite-backed path mapping discovery
+audiobook-organizer abs test-paths \
+  --abs-sqlite=/path/to/absdatabase.sqlite \
+  --dir=/mnt/media/audiobooks
+
+# Trigger an ABS library scan after filesystem changes
+audiobook-organizer abs scan-trigger \
+  --abs-url=http://localhost:13378 \
+  --abs-token="$ABS_TOKEN" \
+  --abs-library=Audiobooks
+
+# Listen for scan events over the ABS WebSocket API
+audiobook-organizer abs websocket-test \
+  --abs-url=http://localhost:13378 \
+  --abs-token="$ABS_TOKEN"
 ```
 
-**Keyboard shortcuts:** `↑/↓` navigate, `Enter` select, `Tab` switch widgets, `Ctrl+S` save, `q` back
+ABS metadata-driven organization is still being built out and validated through `test/abs/test-matrix.md`. For already indexed ABS libraries, prefer previewing path mappings and metadata first, then trigger an ABS scan after any filesystem move so ABS can reconcile missing and moved items.
 
-**📖 Full TUI guide:** [docs/TUI.md](docs/TUI.md)
+## Metadata Sources
 
----
+Audiobook Organizer can use:
 
-### 💻 CLI Mode (Command Line)
+1. `metadata.json` sidecars, including Audiobookshelf-style metadata.
+2. Embedded EPUB metadata.
+3. Embedded MP3 ID3 tags.
+4. Embedded M4B metadata.
+5. Audiobookshelf API metadata for ABS workflows.
 
-The **CLI** provides scriptable automation for:
-- **Batch processing** large libraries
-- **CI/CD integration** for automated workflows
-- **Cron jobs** for scheduled organization
-- **Docker containers** for isolated execution
+Processing modes:
 
-**Basic organization:**
+- Non-flat mode, the default, treats each directory as one book or album.
+- Flat mode processes each supported file independently and automatically enables embedded metadata.
+- Hybrid behavior can combine `metadata.json` book-level data with embedded track-level data when both are present.
+- Field mapping lets you choose which raw metadata fields should be treated as author, title, series, track, and disc.
+
+See [docs/METADATA.md](docs/METADATA.md).
+
+## Directory Layouts
+
+Supported layout values:
+
+| Layout | Example |
+| --- | --- |
+| `author-series-title` | `Author/Series/Title/` |
+| `author-series-title-number` | `Author/Series/#1 - Title/` |
+| `author-series` | `Author/Series/` |
+| `author-title` | `Author/Title/` |
+| `author-only` | `Author/` |
+| `series-title` | `Series/Title/` |
+| `series-title-number` | `Series/#1 - Title/` |
+
+Example:
+
 ```bash
-# Organize in place
-audiobook-organizer --dir=/path/to/audiobooks
-
-# Organize to separate output directory
-audiobook-organizer --dir=/source --out=/organized
-
-# Preview changes without moving files
-audiobook-organizer --dir=/source --out=/organized --dry-run
+audiobook-organizer \
+  --dir=/path/to/books \
+  --out=/path/to/organized \
+  --layout=author-title \
+  --dry-run
 ```
 
-**Rename files:**
-```bash
-# Rename with template
-audiobook-organizer rename --dir=/path --template="{author} - {series} {series_number} - {title}"
-
-# Preview renames
-audiobook-organizer rename --dir=/path --dry-run
-
-# Undo previous rename
-audiobook-organizer rename --dir=/path --undo
-```
-
-**Common flags:**
-- `--dir` / `--input` - Input directory (required)
-- `--out` / `--output` - Output directory (defaults to input)
-- `--dry-run` - Preview without executing
-- `--verbose` - Detailed output
-- `--layout` - Directory structure (see layouts guide)
-- `--use-embedded-metadata` - Extract from audio files
-- `--flat` - Process files individually
-
-**📖 Full CLI reference:** [docs/CLI.md](docs/CLI.md)
-
----
-
-## Common Tasks
-
-### Task 1: Organize Audiobooks by Metadata
-
-**Problem:** Your audiobooks are scattered in a flat directory or poorly organized.
-
-**Solution:** Use any mode to scan metadata and organize into `Author/Series/Title/` structure.
-
-- **GUI:** Launch → Select directories → Choose layout → Preview → Execute
-- **TUI:** `audiobook-organizer tui`
-- **CLI:** `audiobook-organizer --dir=/books --layout=author-series-title`
-
-### Task 2: Rename Files with Custom Template
-
-**Problem:** Filenames don't match your preferred pattern.
-
-**Solution:** Use rename mode with a custom template.
-
-- **GUI:** Preview screen → Enable "Rename Files" → Configure template
-- **TUI:** `audiobook-organizer rename-tui --dir=/books`
-- **CLI:** `audiobook-organizer rename --dir=/books --template="{author} - {title}"`
-
-### Task 3: Extract Metadata from MP3/M4B Files
-
-**Problem:** No metadata.json files, but audio files have embedded tags.
-
-**Solution:** Enable embedded metadata mode.
-
-- **GUI:** Book list screen → Select "embedded (directory)" or "embedded (file)"
-- **TUI:** Settings screen → Toggle "Use Embedded Metadata"
-- **CLI:** `audiobook-organizer --dir=/books --use-embedded-metadata`
-
-### Task 4: Handle Non-Standard MP3 Tags
-
-**Problem:** MP3 files use "album" field for title or "artist" for author.
-
-**Solution:** Configure field mapping.
-
-- **GUI:** Book list screen → "Configure Field Mapping" button
-- **TUI:** Field mapping screen in workflow
-- **CLI:** `--author-fields=artist,album_artist --title-field=album`
-
-### Task 5: Undo Previous Organization
-
-**Problem:** Need to revert file moves.
-
-**Solution:** Use undo mode (reads `.abook-org.log`).
-
-- **CLI:** `audiobook-organizer --dir=/books --undo`
-
----
+See [docs/LAYOUTS.md](docs/LAYOUTS.md).
 
 ## Configuration
 
-Configure via **config file**, **environment variables**, or **CLI flags**.
+Configuration can come from flags, environment variables, or YAML config.
 
-**Config file locations** (in order of precedence):
+Config lookup:
+
 1. `--config /custom/path.yaml`
-2. `./.audiobook-organizer.yaml` (current directory)
-3. `~/.audiobook-organizer.yaml` (home directory)
+2. `./.audiobook-organizer.yaml`
+3. `~/.audiobook-organizer.yaml`
 
-**Example config:**
+Example:
+
 ```yaml
 dir: "/path/to/audiobooks"
 out: "/path/to/organized"
@@ -315,192 +277,106 @@ layout: "author-series-title"
 use-embedded-metadata: true
 remove-empty: true
 author-fields: "authors,narrators,album_artist,artist"
-title-field: "album,title"
+title-field: "album"
 ```
 
-**Environment variables:**
+Environment examples:
+
 ```bash
 export AO_DIR="/path/to/audiobooks"
+export AO_OUTPUT="/path/to/organized"
 export AO_LAYOUT="author-series-title"
-export AO_AUTHOR_FIELDS="authors,narrators,album_artist,artist"
+export AO_USE_EMBEDDED_METADATA=true
 ```
 
-**Precedence:** Defaults < Config File < Environment Variables < CLI Flags
+Precedence is: defaults, config file, environment variables, CLI flags.
 
-**📖 Full configuration guide:** [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
-
----
-
-## Metadata Sources
-
-The organizer can extract metadata from:
-1. **metadata.json files** (Audiobookshelf format)
-2. **Embedded EPUB metadata** (Dublin Core)
-3. **Embedded MP3 tags** (ID3v2)
-4. **Embedded M4B tags** (iTunes-style)
-
-**Hybrid mode:** When metadata.json exists alongside audio files, book-level metadata (title, author) comes from JSON while track-level metadata (track numbers) comes from embedded tags.
-
-**Flat vs Non-Flat:**
-- **Flat mode** (`--flat`): Each file processed independently (good for single-file audiobooks)
-- **Non-flat mode** (default): All files in a directory treated as one book (good for multi-file albums)
-
-**📖 Metadata extraction guide:** [docs/METADATA.md](docs/METADATA.md)
-
----
-
-## Directory Layouts
-
-Six layout options to match your organization style:
-
-| Layout | Example Path | Use Case |
-|--------|--------------|----------|
-| `author-series-title` | `Author/Series/Title/` | Standard (default) |
-| `author-series-title-number` | `Author/Series/#1 - Title/` | Numbered series |
-| `author-series` | `Author/Series/` | Series-focused |
-| `author-title` | `Author/Title/` | No series |
-| `author-only` | `Author/` | Flat per author |
-| `series-title` | `Series/Title/` | Series without author |
-
-**📖 Layout comparison guide:** [docs/LAYOUTS.md](docs/LAYOUTS.md)
-
----
-
-## Updates
-
-Check for and install updates easily:
-
-```bash
-# Check for updates
-audiobook-organizer update --check
-
-# Update to latest version
-audiobook-organizer update
-```
-
-Automatically detects your installation method (Homebrew, APT, binary, etc.) and uses the appropriate update mechanism.
-
----
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ## Docker
 
-Run in a container for isolated execution:
-
 ```bash
-# Basic usage
-docker run -v /path/to/books:/books jeffsui/audiobook-organizer --dir=/books
+# Read/write organization inside one mounted library
+docker run --rm \
+  -v /media/audiobooks:/books \
+  jeffsui/audiobook-organizer --dir=/books --dry-run
 
-# Separate input/output
-docker run \
-  -v /source:/input:ro \
-  -v /dest:/output \
+# Separate read-only input and writable output
+docker run --rm \
+  -v /media/source:/input:ro \
+  -v /media/organized:/output \
   jeffsui/audiobook-organizer --dir=/input --out=/output
 
-# With environment variables
-docker run \
-  -v /books:/books \
+# Configure with environment variables
+docker run --rm \
+  -v /media/audiobooks:/books \
   -e AO_LAYOUT=author-series-title \
   -e AO_VERBOSE=true \
   jeffsui/audiobook-organizer --dir=/books
 ```
 
-**Docker Compose:**
-```yaml
-version: '3.8'
-services:
-  organizer:
-    image: jeffsui/audiobook-organizer:latest
-    volumes:
-      - /media/audiobooks:/input:ro
-      - /media/organized:/output
-    environment:
-      AO_LAYOUT: author-series-title
-      AO_VERBOSE: "true"
-    command: --dir=/input --out=/output
-```
+See [docs/CLI.md#docker-usage](docs/CLI.md).
 
-**📖 Full Docker guide:** [docs/CLI.md#docker-usage](docs/CLI.md)
+## Development
 
----
-
-## Audiobookshelf Integration
-
-### Prerequisites
-
-Configure Audiobookshelf to store `metadata.json` files in your audiobook directories:
-
-![Settings - metadata.json](docs/store_metadata.jpg)
-
-### Post-Organization
-
-After organizing, you may see "Missing" books in Audiobookshelf:
-
-![issue](docs/issues.jpg)
-
-**Solution:** Click **Issues** → **Remove All X Books** to clean up.
-
-![remove button](docs/remove_books.jpg)
-
-**Note:** The **Enable folder watcher for library** setting may help prevent this issue.
-
----
-
-## Documentation
-
-- **[Installation Guide](docs/INSTALLATION.md)** - Platform-specific installation instructions
-- **[GUI Guide](docs/GUI.md)** - Desktop application documentation with screenshots
-- **[TUI Guide](docs/TUI.md)** - Interactive terminal interface guide
-- **[CLI Reference](docs/CLI.md)** - Command-line flags and examples
-- **[Configuration](docs/CONFIGURATION.md)** - Config files, environment variables, precedence
-- **[Metadata Guide](docs/METADATA.md)** - Metadata sources, field mapping, hybrid mode
-- **[Layout Guide](docs/LAYOUTS.md)** - Directory structure options
-- **[Rename Feature](docs/RENAME_FEATURE.md)** - File renaming with templates
-- **[Metadata Command](docs/METADATA_COMMAND.md)** - Interactive metadata viewer
-
----
-
-## Contributing
-
-Contributions are welcome! Please:
-- Open an issue for bugs or feature requests
-- Submit pull requests with tests
-- Follow existing code style
-
-**Development:**
 ```bash
-# Clone repository
 git clone https://github.com/jeeftor/audiobook-organizer.git
 cd audiobook-organizer
 
-# Build CLI/TUI
+# Build the Go binary
 make dev
 
-# Build GUI
-cd audiobook-organizer-gui
-wails build
+# Install and build embedded web assets
+make web-install
+make web-build
 
-# Run tests
-make test
+# Run unit tests
+make test-unit
+
+# Run lint checks
+make lint
 ```
 
----
+ABS harness commands:
+
+```bash
+make abs-ci-smoke
+make abs-test-metadata
+make abs-test-e2e
+```
+
+New or changed ABS-facing features should be reflected in [test/abs/test-matrix.md](test/abs/test-matrix.md) and promoted into the ABS test workflow when implemented.
+
+## Documentation
+
+- [Installation Guide](docs/INSTALLATION.md)
+- [Local Web UI Guide](docs/GUI.md)
+- [TUI Guide](docs/TUI.md)
+- [CLI Reference](docs/CLI.md)
+- [Configuration](docs/CONFIGURATION.md)
+- [Metadata Guide](docs/METADATA.md)
+- [Layout Guide](docs/LAYOUTS.md)
+- [Rename Feature](docs/RENAME_FEATURE.md)
+- [Metadata Command](docs/METADATA_COMMAND.md)
+
+## Updates
+
+```bash
+# Check for updates
+audiobook-organizer update --check
+
+# Install the latest release when supported by the install method
+audiobook-organizer update
+```
 
 ## Support
 
-- **Bug reports:** [GitHub Issues](https://github.com/jeeftor/audiobook-organizer/issues)
-- **Feature requests:** [GitHub Discussions](https://github.com/jeeftor/audiobook-organizer/discussions)
-- **Questions:** [GitHub Discussions Q&A](https://github.com/jeeftor/audiobook-organizer/discussions/categories/q-a)
-
----
+- Bug reports: [GitHub Issues](https://github.com/jeeftor/audiobook-organizer/issues)
+- Feature requests and questions: [GitHub Discussions](https://github.com/jeeftor/audiobook-organizer/discussions)
+- Releases: [GitHub Releases](https://github.com/jeeftor/audiobook-organizer/releases)
+- Docker Hub: [jeffsui/audiobook-organizer](https://hub.docker.com/r/jeffsui/audiobook-organizer)
+- Homebrew Tap: [jeeftor/tap](https://github.com/jeeftor/homebrew-tap)
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file
-
----
-
-## Links
-
-- **Releases:** [GitHub Releases](https://github.com/jeeftor/audiobook-organizer/releases)
-- **Docker Hub:** [jeffsui/audiobook-organizer](https://hub.docker.com/r/jeffsui/audiobook-organizer)
-- **Homebrew Tap:** [jeeftor/tap](https://github.com/jeeftor/homebrew-tap)
+MIT License. See [LICENSE](LICENSE).
