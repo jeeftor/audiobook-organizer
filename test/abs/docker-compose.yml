@@ -1,0 +1,28 @@
+services:
+  abs-plain:
+    image: ${ABS_IMAGE:-ghcr.io/advplyr/audiobookshelf:latest}
+    container_name: audiobook-organizer-abs-plain
+    ports:
+      - "${ABS_PLAIN_PORT:-13378}:80"
+    volumes:
+      - ./runtime/plain/audiobooks:/audiobooks
+      - ./runtime/plain/books:/books
+      - ./state/plain/config:/config
+      - ./state/plain/metadata:/metadata
+    environment:
+      - TZ=${TZ:-America/Denver}
+    restart: unless-stopped
+
+  abs-metadata:
+    image: ${ABS_IMAGE:-ghcr.io/advplyr/audiobookshelf:latest}
+    container_name: audiobook-organizer-abs-metadata
+    ports:
+      - "${ABS_METADATA_PORT:-13379}:80"
+    volumes:
+      - ./runtime/metadata/audiobooks:/audiobooks
+      - ./runtime/metadata/books:/books
+      - ./state/metadata-enabled/config:/config
+      - ./state/metadata-enabled/metadata:/metadata
+    environment:
+      - TZ=${TZ:-America/Denver}
+    restart: unless-stopped

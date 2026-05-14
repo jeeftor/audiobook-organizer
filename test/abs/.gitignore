@@ -1,0 +1,62 @@
+# Local environment files. Commit .env.example and .env.testing, not real/generated tokens.
+.env
+.env.local
+.env.generated
+
+# OS/editor noise.
+.DS_Store
+
+# Legacy local fixture area from older harness layouts.
+library/**
+!library/
+!library/audiobooks/
+!library/audiobooks/.gitkeep
+!library/books/
+!library/books/.gitkeep
+
+# Durable local download cache. Keep directory scaffolding only; CI should seed
+# or cache this outside git.
+staging-data/**
+!staging-data/
+!staging-data/audiobooks/
+!staging-data/audiobooks/.gitkeep
+!staging-data/books/
+!staging-data/books/.gitkeep
+!staging-data/audiobooks-metadata/
+!staging-data/audiobooks-metadata/.gitkeep
+!staging-data/books-metadata/
+!staging-data/books-metadata/.gitkeep
+
+# Throwaway library copies mounted into ABS.
+runtime/**
+!runtime/
+!runtime/plain/
+!runtime/plain/audiobooks/
+!runtime/plain/audiobooks/.gitkeep
+!runtime/plain/books/
+!runtime/plain/books/.gitkeep
+!runtime/metadata/
+!runtime/metadata/audiobooks/
+!runtime/metadata/audiobooks/.gitkeep
+!runtime/metadata/books/
+!runtime/metadata/books/.gitkeep
+
+# Live ABS config, database, metadata cache, logs, backups, and scan output.
+state/**
+!state/
+!state/plain/
+!state/plain/config/
+!state/plain/config/.gitkeep
+!state/plain/metadata/
+!state/plain/metadata/.gitkeep
+!state/metadata-enabled/
+!state/metadata-enabled/config/
+!state/metadata-enabled/config/.gitkeep
+!state/metadata-enabled/metadata/
+!state/metadata-enabled/metadata/.gitkeep
+
+# Captured ABS baseline configs are intentional fixtures. They carry the
+# disposable root user, API key, library config, tags/settings, and metadata
+# behavior needed for repeatable local/CI tests. Keep them sanitized and do not
+# capture real personal library state.
+baseline-config/**/.DS_Store

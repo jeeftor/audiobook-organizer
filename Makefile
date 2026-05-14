@@ -11,14 +11,11 @@ VERSION_FLAGS := \
 # LDFLAGS for CLI-only builds (no CGO)
 LDFLAGS := -ldflags "-s -w $(VERSION_FLAGS)"
 
-# LDFLAGS for unified GUI builds (needs UniformTypeIdentifiers on macOS)
-GUI_LDFLAGS := -ldflags "-s -w -extldflags '-framework UniformTypeIdentifiers' $(VERSION_FLAGS)"
-
 # Test packages
 UNIT_TEST_PKGS = ./...
 INTEGRATION_TEST_PKGS = $(shell go list ./... | grep -v '/integration$$')
 
-.PHONY: all build clean dev dev-linux-amd64 gui-dev gui-dev1 gui-dev2 gui-build gui-install gui-unified gui-unified-dev release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help scp-dev
+.PHONY: all build clean dev dev-linux-amd64 web-install web-build web-dev abs-dev-seed abs-dev-init abs-dev-configure abs-dev-up abs-dev-down abs-dev-reset abs-dev-reset-all abs-dev-scan abs-dev-reset-scan abs-ci-smoke abs-test-metadata abs-test-e2e abs-dev-capture-baseline abs-dev-restore-baseline abs-dev-wait release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help scp-dev
 
 # Default target - show help
 all: help
@@ -28,35 +25,45 @@ help:
 	@echo "Available targets:"
 	@echo ""
 	@echo "  Development:"
-	@echo "    dev              Build CLI/TUI binary (native platform)"
-	@echo "    dev-linux-amd64  Build for Linux AMD64 (cross-compile)"
-	@echo "    gui-dev          Start GUI in dev mode (copies books to gui-books)"
-	@echo "    gui-dev1         Start GUI dev with ./books as input"
-	@echo "    gui-dev2         Start GUI dev with ./books-meta as input"
-	@echo "    gui-install      Install GUI frontend dependencies"
-	@echo "    scp-dev          Copy linux-amd64 binary to remote server"
+	@printf "    %-26s %s\n" "dev" "Build CLI/TUI binary (native platform)"
+	@printf "    %-26s %s\n" "dev-linux-amd64" "Build for Linux AMD64 (cross-compile)"
+	@printf "    %-26s %s\n" "web-install" "Install web frontend dependencies"
+	@printf "    %-26s %s\n" "web-build" "Build embedded web frontend assets"
+	@printf "    %-26s %s\n" "web-dev" "Run the web frontend dev server"
+	@printf "    %-26s %s\n" "abs-dev-seed" "Download public-domain ABS test media"
+	@printf "    %-26s %s\n" "abs-dev-init" "Reset ABS and start with empty libraries for setup"
+	@printf "    %-26s %s\n" "abs-dev-configure" "Configure empty ABS test servers through the API"
+	@printf "    %-26s %s\n" "abs-dev-up" "Start local Audiobookshelf test server"
+	@printf "    %-26s %s\n" "abs-dev-down" "Stop local Audiobookshelf test server"
+	@printf "    %-26s %s\n" "abs-dev-reset" "Restore baseline, stage books, start ABS"
+	@printf "    %-26s %s\n" "abs-dev-reset-all" "Reset ABS state and clear staged media"
+	@printf "    %-26s %s\n" "abs-dev-scan" "Trigger scans for configured ABS libraries"
+	@printf "    %-26s %s\n" "abs-dev-reset-scan" "Reset ABS, start it, and trigger scans"
+	@printf "    %-26s %s\n" "abs-ci-smoke" "CI-style seed, restore baseline, and scan"
+	@printf "    %-26s %s\n" "abs-test-metadata" "Run ABS metadata.json E2E tests"
+	@printf "    %-26s %s\n" "abs-test-e2e" "Run all ABS E2E tests"
+	@printf "    %-26s %s\n" "abs-dev-capture-baseline" "Capture ABS baseline config fixture"
+	@printf "    %-26s %s\n" "abs-dev-restore-baseline" "Restore ABS baseline config fixture"
+	@printf "    %-26s %s\n" "scp-dev" "Copy linux-amd64 binary to remote server"
 	@echo ""
 	@echo "  Build:"
-	@echo "    build            Build for distribution (goreleaser)"
-	@echo "    gui-build        Build standalone Wails GUI binary"
-	@echo "    gui-unified      Build single CLI+GUI binary ('gui' subcommand opens window)"
-	@echo "    gui-unified-dev  Build + launch GUI with devtools/inspect enabled"
-	@echo "    release          Create a release (requires GITHUB_TOKEN)"
-	@echo "    clean            Remove build artifacts"
+	@printf "    %-26s %s\n" "build" "Build for distribution (goreleaser)"
+	@printf "    %-26s %s\n" "release" "Create a release (requires GITHUB_TOKEN)"
+	@printf "    %-26s %s\n" "clean" "Remove build artifacts"
 	@echo ""
 	@echo "  Testing:"
-	@echo "    test             Run unit tests (default)"
-	@echo "    test-unit        Run unit tests only"
-	@echo "    test-integration Run integration tests"
-	@echo "    test-all         Run all tests"
-	@echo "    coverage         Run tests with coverage"
-	@echo "    coverage-html    Generate HTML coverage report"
+	@printf "    %-26s %s\n" "test" "Run unit tests (default)"
+	@printf "    %-26s %s\n" "test-unit" "Run unit tests only"
+	@printf "    %-26s %s\n" "test-integration" "Run integration tests"
+	@printf "    %-26s %s\n" "test-all" "Run all tests"
+	@printf "    %-26s %s\n" "coverage" "Run tests with coverage"
+	@printf "    %-26s %s\n" "coverage-html" "Generate HTML coverage report"
 	@echo ""
 	@echo "  Code Quality:"
-	@echo "    lint             Run all linting (vet + fmt-check)"
-	@echo "    vet              Run go vet"
-	@echo "    fmt              Format Go code"
-	@echo "    fmt-check        Check code formatting"
+	@printf "    %-26s %s\n" "lint" "Run all linting (vet + fmt-check)"
+	@printf "    %-26s %s\n" "vet" "Run go vet"
+	@printf "    %-26s %s\n" "fmt" "Format Go code"
+	@printf "    %-26s %s\n" "fmt-check" "Check code formatting"
 
 # Development build (CLI/TUI only, no CGO needed)
 dev:
@@ -67,60 +74,98 @@ dev:
 dev-linux-amd64:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o bin/audiobook-organizer-linux-amd64
 
-# Start GUI in development mode (uses wails dev for hot reload)
-gui-dev:
-	@echo "Starting GUI in development mode..."
-	@rm -rf gui-books output
-	@mkdir -p output
-	@cp -r books gui-books
-	cd audiobook-organizer-gui && wails dev -appargs "--dir=../gui-books --out=../output"
+# Install web frontend dependencies
+web-install:
+	cd web && npm install
 
-# Start GUI dev with ./books as input
-gui-dev1:
-	cd audiobook-organizer-gui && wails dev -appargs "--dir=../books --out=.. --flat"
+# Build embedded web frontend assets
+web-build:
+	cd web && npm run build
 
-# Start GUI dev with books-meta as input
-gui-dev2:
-	cd audiobook-organizer-gui && wails dev -appargs "--dir=../books-meta"
+# Run the web frontend development server
+web-dev:
+	cd web && npm run dev
 
-# Build standalone Wails GUI binary (separate binary, wails build)
-gui-build:
-	cd audiobook-organizer-gui && wails build
+# Download public-domain media fixtures for the local ABS test server
+abs-dev-seed:
+	@test/abs/scripts/seed-public-domain.sh
 
-# Build a single unified binary where 'audiobook-organizer gui' opens the window.
-# The frontend must be built against the guiapp package bindings (not main).
-gui-unified:
-	@echo "Installing frontend dependencies..."
-	cd audiobook-organizer-gui/frontend && npm install
-	@echo "Building frontend (guiapp bindings)..."
-	cd audiobook-organizer-gui/frontend && npm run build
-	@echo "Copying dist to internal/guiapp/frontend/dist..."
-	@mkdir -p internal/guiapp/frontend/dist
-	@rm -rf internal/guiapp/frontend/dist/*
-	@cp -r audiobook-organizer-gui/frontend/dist/. internal/guiapp/frontend/dist/
-	@echo "Building unified binary..."
-	CGO_ENABLED=1 go build -tags desktop,production,gui $(GUI_LDFLAGS) -o bin/audiobook-organizer .
-	@echo "Done: bin/audiobook-organizer (CLI + GUI)"
+# Reset ABS and start with empty mounted libraries for initial setup
+abs-dev-init:
+	@test/abs/scripts/reset.sh --empty-runtime
+	@docker compose -f test/abs/docker-compose.yml up -d --remove-orphans
+	@test/abs/scripts/wait-for-abs.sh
 
-# Build and immediately launch with devtools enabled (right-click → Inspect).
-# Uses the same production binary — no Vite server needed.
-gui-unified-dev: gui-unified
-	@echo ""
-	@echo "Launching with devtools enabled..."
-	bin/audiobook-organizer gui --devtools
+# Configure empty ABS test servers through the ABS API
+abs-dev-configure:
+	@test/abs/scripts/configure-from-api.sh
 
-# Install GUI frontend dependencies
-gui-install:
-	cd audiobook-organizer-gui/frontend && npm install
+# Start the local ABS test server
+abs-dev-up:
+	@docker compose -f test/abs/docker-compose.yml up -d --remove-orphans
+
+# Stop the local ABS test server
+abs-dev-down:
+	@docker compose -f test/abs/docker-compose.yml down --remove-orphans
+
+# Reset ABS to baseline config, restore runtime books, start, and wait
+abs-dev-reset:
+	@test/abs/scripts/reset.sh
+	@test/abs/scripts/restore-baseline.sh
+	@test/abs/scripts/wait-for-restored-config.sh
+	@docker compose -f test/abs/docker-compose.yml up -d --remove-orphans
+	@test/abs/scripts/wait-for-abs.sh
+
+# Reset ABS config, metadata, mounted books, and staged/downloaded books
+abs-dev-reset-all:
+	@test/abs/scripts/reset.sh --clear-staging
+
+# Trigger scans for all configured ABS libraries in both instances
+abs-dev-scan:
+	@test/abs/scripts/scan-libraries.sh
+
+# Reset ABS to baseline, start it, and trigger scans
+abs-dev-reset-scan: abs-dev-reset abs-dev-scan
+
+# Run the ABS harness the way GitHub Actions should: restore baseline fixture.
+abs-ci-smoke:
+	@test/abs/scripts/seed-public-domain.sh
+	@test/abs/scripts/reset.sh
+	@test/abs/scripts/restore-baseline.sh
+	@test/abs/scripts/wait-for-restored-config.sh
+	@docker compose -f test/abs/docker-compose.yml up -d --remove-orphans
+	@test/abs/scripts/wait-for-abs.sh
+	@test/abs/scripts/scan-libraries.sh
+
+# Run the metadata.json ABS E2E tests. Tests reset ABS before each case.
+abs-test-metadata:
+	@test/abs/scripts/seed-public-domain.sh
+	go test -tags=abs_e2e ./test/abs/e2e -run TestMetadataJSONMode -count=1 -v
+
+# Run all ABS E2E tests. Tests reset ABS before each case.
+abs-test-e2e:
+	@test/abs/scripts/seed-public-domain.sh
+	go test -tags=abs_e2e ./test/abs/e2e -count=1 -v
+
+# Capture configured ABS instances into the baseline config fixture
+abs-dev-capture-baseline:
+	@test/abs/scripts/capture-baseline.sh
+
+# Restore configured ABS instances from the baseline config fixture
+abs-dev-restore-baseline: abs-dev-reset
+
+# Start the local ABS test servers and wait until both respond
+abs-dev-wait: abs-dev-up
+	@test/abs/scripts/wait-for-abs.sh
 
 # Build using goreleaser for distribution
-build:
+build: web-build
 	goreleaser build --snapshot --clean
 
 # Clean all build artifacts including the embedded frontend dist
 clean:
 	rm -rf ./dist ./bin ./coverage.out ./coverage.html
-	rm -rf ./internal/guiapp/frontend/dist
+	rm -rf ./internal/server/static/assets
 
 # Check and install gotestsum if needed
 GOTESTSUM := $(shell command -v gotestsum 2> /dev/null)

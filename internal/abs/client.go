@@ -211,6 +211,28 @@ func (c *Client) ScanLibrary(libraryID string) error {
 	return nil
 }
 
+// ScanLibraryForce triggers a forced library scan.
+func (c *Client) ScanLibraryForce(libraryID string) error {
+	path := fmt.Sprintf("/api/libraries/%s/scan?force=1", libraryID)
+	resp, err := c.request("POST", path, nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
+// RemoveLibraryItemsWithIssues removes a library's items that ABS reports as having issues.
+func (c *Client) RemoveLibraryItemsWithIssues(libraryID string) error {
+	path := fmt.Sprintf("/api/libraries/%s/issues", libraryID)
+	resp, err := c.request("DELETE", path, nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
 // GetLibrary returns a single library by ID
 func (c *Client) GetLibrary(libraryID string) (*Library, error) {
 	path := fmt.Sprintf("/api/libraries/%s", libraryID)
