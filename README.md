@@ -22,6 +22,7 @@ Supports three modes: **Desktop GUI**, **Interactive TUI**, and **CLI automation
 - 🎨 **Three interfaces** to match your workflow
 - 🎵 **Hybrid metadata mode** - Merges JSON book info with audio track numbers
 - 🎯 **Field mapping** - Handle non-standard MP3 metadata structures
+- 📡 **Audiobookshelf integration** - Sync with ABS server, trigger library scans, real-time events
 
 ---
 
@@ -50,6 +51,7 @@ Pick the mode that fits your workflow:
 | Template Builder UI | ✓ | ✓ | Flags |
 | Conflict Highlighting | ✓ | ✓ | Logs |
 | SSH/Remote Compatible | - | ✓ | ✓ |
+| Audiobookshelf Integration | - | - | ✓ |
 
 ---
 

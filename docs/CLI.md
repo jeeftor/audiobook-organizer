@@ -747,6 +747,168 @@ audiobook-organizer rename --dir=/books --undo
 
 ---
 
+## Audiobookshelf (ABS) Integration
+
+The CLI includes commands for integrating with [Audiobookshelf](https://www.audiobookshelf.org/) (ABS), a self-hosted audiobook and podcast server.
+
+### Overview
+
+ABS integration provides:
+- **Metadata scanning** - Compare local files against ABS library metadata
+- **Library scanning** - Trigger ABS library scans after file operations
+- **Real-time events** - WebSocket connection for scan status monitoring
+- **Custom headers** - Support for Cloudflare Access and other proxy authentication
+
+### Commands
+
+#### `abs scan` - Scan with ABS Metadata
+
+Compare local files against ABS library to identify organization needs:
+
+```bash
+# SQLite + API mode (auto path discovery from ABS database)
+audiobook-organizer abs scan \
+  --abs-sqlite=/var/lib/audiobookshelf/config/abs.sqlite \
+  --abs-url=http://localhost:13378 \
+  --abs-token=eyJhbG... \
+  --dir=/mnt/audiobooks
+
+# API-only mode (manual path mapping)
+audiobook-organizer abs scan \
+  --abs-url=http://localhost:13378 \
+  --abs-token=eyJhbG... \
+  --abs-path-map="/audiobooks:/mnt/audiobooks" \
+  --dir=/mnt/audiobooks
+
+# Show all items (not just mismatches)
+audiobook-organizer abs scan --all
+
+# Verify local file existence
+audiobook-organizer abs scan --check-files
+```
+
+**Output:**
+- ✓ Files in correct location
+- 🚚 Files need to be moved
+- ✗ Files missing from disk
+
+#### `abs scan-trigger` - Trigger Library Scan
+
+Trigger ABS to rescan a library (useful after moving files):
+
+```bash
+# Trigger scan for default library
+audiobook-organizer abs scan-trigger \
+  --abs-url=http://localhost:13378 \
+  --abs-token=eyJhbG...
+
+# Trigger scan for specific library
+audiobook-organizer abs scan-trigger \
+  --abs-url=http://localhost:13378 \
+  --abs-token=eyJhbG... \
+  --abs-library=lib_abc123
+```
+
+#### `abs websocket-test` - Test WebSocket Connection
+
+Listen for real-time ABS scan events:
+
+```bash
+audiobook-organizer abs websocket-test \
+  --abs-url=http://localhost:13378 \
+  --abs-token=eyJhbG...
+```
+
+Output shows scan start/complete events with counts of added/updated/missing items.
+
+#### `abs test-paths` - Test Path Mapping
+
+Verify path discovery is working correctly:
+
+```bash
+audiobook-organizer abs test-paths \
+  --abs-sqlite=/var/lib/audiobookshelf/config/abs.sqlite \
+  --abs-url=http://localhost:13378 \
+  --abs-token=eyJhbG...
+```
+
+### Custom Headers (Cloudflare/Proxy)
+
+For ABS instances protected by Cloudflare Access or other proxies:
+
+#### File-based headers:
+```bash
+# Create headers file
+cat > ~/.abs_headers << 'EOF'
+CF-Access-Client-Id=xxxxxxxxxxxxxxxxxxxxxx
+CF-Access-Client-Secret=yyyyyyyyyyyyyyyyyy
+EOF
+
+# Use with any ABS command
+audiobook-organizer abs scan \
+  --abs-url=https://abs.example.com \
+  --abs-token=eyJhbG... \
+  --header-file=~/.abs_headers \
+  --dir=/mnt/audiobooks
+```
+
+#### Inline headers:
+```bash
+audiobook-organizer abs scan \
+  --abs-url=https://abs.example.com \
+  --abs-token=eyJhbG... \
+  --header "CF-Access-Client-Id=xxx" \
+  --header "CF-Access-Client-Secret=yyy" \
+  --dir=/mnt/audiobooks
+```
+
+#### Combined (file + inline override):
+```bash
+audiobook-organizer abs scan \
+  --header-file=~/.abs_headers \
+  --header "X-Extra-Header=special" \
+  --abs-url=https://abs.example.com \
+  --abs-token=eyJhbG...
+```
+
+### Common Flags
+
+| Flag | Description |
+|------|-------------|
+| `--abs-url` | ABS API base URL (e.g., http://localhost:13378) |
+| `--abs-token` | ABS API token (from Settings > Users > API Token) |
+| `--abs-library` | Library ID or name (default: auto-select) |
+| `--abs-sqlite` | Path to abs.sqlite for auto path discovery |
+| `--abs-path-map` | Manual path mapping `abs:local` format |
+| `--header-file` | File with custom headers (KEY=VALUE format) |
+| `--header` | Custom header inline (can be used multiple times) |
+| `--all` | Show all items, not just mismatches (scan command) |
+| `--check-files` | Verify local files exist (scan command) |
+
+### Getting ABS Token
+
+1. Open ABS web interface
+2. Go to Settings → Users
+3. Click your user
+4. Copy API Token
+
+### Docker ABS Setup
+
+If ABS runs in Docker, copy the SQLite file:
+
+```bash
+# Copy from container
+docker cp abs_container:/config/abs.sqlite /tmp/abs.sqlite
+
+# Use with scan
+audiobook-organizer abs scan \
+  --abs-sqlite=/tmp/abs.sqlite \
+  --abs-url=http://localhost:13378 \
+  --abs-token=eyJhbG...
+```
+
+---
+
 ## Troubleshooting
 
 ### No audiobooks found
@@ -825,6 +987,10 @@ fi
 - [CONFIGURATION.md](CONFIGURATION.md) - Configuration file format
 - [INSTALLATION.md](INSTALLATION.md) - Platform-specific installation
 - [Main README](../README.md) - Project overview
+
+**Audiobookshelf Integration:**
+- [Audiobookshelf Integration](#audiobookshelf-abs-integration) - This document
+- [Audiobookshelf Website](https://www.audiobookshelf.org/) - Official ABS documentation
 
 ---
 
