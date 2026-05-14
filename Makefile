@@ -146,7 +146,7 @@ abs-test-metadata:
 # Run implemented ABS matrix E2E tests. Tests reset ABS before each case.
 abs-test-matrix:
 	@test/abs/scripts/seed-public-domain.sh
-	go test -tags=abs_e2e ./test/abs/e2e -run 'Test(MetadataJSONMode|EmbeddedMetadataImport|FlatModeImport)' -count=1 -v
+	go test -tags=abs_e2e ./test/abs/e2e -run 'Test(MetadataJSONMode|EmbeddedAlreadyIndexed|EmbeddedMetadataImport|FlatModeImport)' -count=1 -v
 
 # Run all ABS E2E tests. Tests reset ABS before each case.
 abs-test-e2e:
