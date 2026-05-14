@@ -30,6 +30,15 @@ func TestMetadataJSONMode_AudiobooksLifecycle(t *testing.T) {
 	}
 }
 
+func TestMetadataJSONMode_BooksLifecycle(t *testing.T) {
+	for _, tc := range metadataJSONBookCases() {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			runMetadataJSONLifecycle(t, tc)
+		})
+	}
+}
+
 func metadataJSONAudiobookCases() []metadataJSONLifecycleCase {
 	return []metadataJSONLifecycleCase{
 		{
@@ -85,6 +94,74 @@ func metadataJSONAudiobookCases() []metadataJSONLifecycleCase {
 				"/audiobooks/Lewis Carroll",
 			},
 			expectedCount: 2,
+			expectMove:    false,
+		},
+	}
+}
+
+func metadataJSONBookCases() []metadataJSONLifecycleCase {
+	return []metadataJSONLifecycleCase{
+		{
+			name:     "metadata_enabled_books_moves_and_cleans_missing_abs_items",
+			instance: metadataEnabledInstance,
+			library:  booksLibrary,
+			inputParts: []string{
+				"test", "abs", "runtime", "metadata", "books",
+			},
+			oldFiles: [][]string{
+				{"test", "abs", "runtime", "metadata", "books", "imported", "ebook-001.epub"},
+				{"test", "abs", "runtime", "metadata", "books", "random", "shelley-book.epub"},
+				{"test", "abs", "runtime", "metadata", "books", "to-sort", "austen.epub"},
+			},
+			newFiles: [][]string{
+				{"test", "abs", "runtime", "metadata", "books", "Lewis Carroll", "Alice's Adventures in Wonderland", "ebook-001.epub"},
+				{"test", "abs", "runtime", "metadata", "books", "Mary Wollstonecraft Shelley", "Frankenstein; or, The Modern Prometheus", "shelley-book.epub"},
+				{"test", "abs", "runtime", "metadata", "books", "Jane Austen", "Pride and Prejudice", "austen.epub"},
+			},
+			logFile: []string{
+				"test", "abs", "runtime", "metadata", "books", ".abook-org.log",
+			},
+			oldAPIPaths: []string{
+				"/books/imported",
+				"/books/random",
+				"/books/to-sort",
+			},
+			newAPIPaths: []string{
+				"/books/Jane Austen/Pride and Prejudice",
+				"/books/Lewis Carroll/Alice's Adventures in Wonderland",
+				"/books/Mary Wollstonecraft Shelley/Frankenstein; or, The Modern Prometheus",
+			},
+			expectedCount: 3,
+			expectMove:    true,
+		},
+		{
+			name:     "plain_books_no_sidecars_stays_clean",
+			instance: plainInstance,
+			library:  booksLibrary,
+			inputParts: []string{
+				"test", "abs", "runtime", "plain", "books",
+			},
+			oldFiles: [][]string{
+				{"test", "abs", "runtime", "plain", "books", "imported", "ebook-001.epub"},
+				{"test", "abs", "runtime", "plain", "books", "random", "shelley-book.epub"},
+				{"test", "abs", "runtime", "plain", "books", "to-sort", "austen.epub"},
+			},
+			newFiles: [][]string{
+				{"test", "abs", "runtime", "plain", "books", "Lewis Carroll"},
+				{"test", "abs", "runtime", "plain", "books", "Mary Wollstonecraft Shelley"},
+				{"test", "abs", "runtime", "plain", "books", "Jane Austen"},
+			},
+			oldAPIPaths: []string{
+				"/books/imported",
+				"/books/random",
+				"/books/to-sort",
+			},
+			newAPIPaths: []string{
+				"/books/Jane Austen",
+				"/books/Lewis Carroll",
+				"/books/Mary Wollstonecraft Shelley",
+			},
+			expectedCount: 3,
 			expectMove:    false,
 		},
 	}
