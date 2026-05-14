@@ -61,7 +61,7 @@ jobs:
         go tool cover -func=coverage.out
 
   abs-e2e:
-    name: ABS metadata lifecycle
+    name: ABS implemented matrix
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -114,8 +114,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y jq
 
-    - name: Run ABS metadata lifecycle tests
-      run: make abs-test-metadata
+    - name: Run implemented ABS matrix tests
+      run: make abs-test-matrix
 
     - name: Stop ABS containers
       if: always()
