@@ -7,17 +7,176 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  debug:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v4
-      - uses: goreleaser/goreleaser-action@v4
+      - name: Debug conditions
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Base ref: ${{ github.event.base_ref }}"
+          echo "Ref: ${{ github.ref }}"
+          git fetch origin master
+          if git merge-base --is-ancestor HEAD origin/master; then
+            echo "Tag is on master branch: true"
+          else
+            echo "Tag is on master branch: false"
+          fi
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    needs: debug
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 'stable'
+      - name: Install Go dependencies
+        run: go mod tidy
+      - name: Set up Python
+        uses: actions/setup-python@v6
+      - name: Install pre-commit
+        run: pip install pre-commit
+      - name: Run pre-commit
+        run: pre-commit run --all-files
+
+  # Build on each platform
+  build:
+    needs: [pre-commit]
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+          - os: macos-14  # ARM64 runner
+            goos: darwin
+          - os: windows-latest
+            goos: windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Verify on master
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          git fetch origin master
+          if ! git merge-base --is-ancestor HEAD origin/master; then
+            echo "Tag is not on master branch"
+            exit 1
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 'stable'
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Build web frontend
+        working-directory: web
+        run: |
+          npm install
+          npm run build
+
+      - name: Build with goreleaser (single platform)
+        run: |
+          go run github.com/goreleaser/goreleaser/v2@latest build --single-target --snapshot --clean
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist-${{ matrix.goos }}
+          path: dist/
+          retention-days: 1
+
+  # Create release with all platform artifacts
+  release:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 'stable'
+
+      # Download all platform artifacts
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: dist-linux
+          path: dist/
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: dist-darwin
+          path: dist/
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: dist-windows
+          path: dist/
+
+      - name: List dist contents
+        run: ls -R dist/
+
+      # Generate a GitHub App token for both repositories
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: >-
+            audiobook-organizer,
+            homebrew-tap
+
+      # Configure Git for commit authoring
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Run GoReleaser to create archives and release (skip build since we have pre-built binaries)
+      - name: GoReleaser
+        uses: goreleaser/goreleaser-action@v7
+        timeout-minutes: 10
         with:
           distribution: goreleaser
           version: latest
-          args: release --clean
+          args: continue --merge
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+
+      # Backup artifacts in case release upload fails
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: audiobook-organizer-binaries-failed
+          path: dist/*
+          retention-days: 5
+
+      - name: Print Version Info
+        run: |
+          echo "GitHub Ref: ${{ github.ref }}"
+          echo "GitHub Ref Name: ${{ github.ref_name }}"
+          echo "Version to be released: ${GITHUB_REF#refs/tags/v}"

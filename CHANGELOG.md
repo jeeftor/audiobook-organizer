@@ -1,0 +1,48 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased] — v0.12.0
+
+### Added
+
+- **Local web UI foundation**: `audiobook-organizer web` starts a browser-based UI from the same binary as the CLI and TUI. `audiobook-organizer gui` remains as a compatibility alias.
+- **Embedded web assets**: Release builds now compile the Vue frontend into the Go binary so the app can serve its own UI.
+- **Web API surface**: Added initial local REST endpoints for health, initial configuration, option lists, organize preview, rename preview, Audiobookshelf libraries, ABS path mapping tests, ABS item loading, and ABS scan triggers.
+- **Audiobookshelf web workflow**: The new web foundation treats ABS as a first-class source alongside local metadata and embedded metadata.
+- **Preview-oriented app service layer**: Added an internal application service that converts web requests into organizer, renamer, and ABS operations without coupling the HTTP layer to Cobra command handling.
+- **REST execution coverage for ABS workflows**: Added Docker-backed REST tests for `metadata.json`, embedded metadata import, and flat import workflows against real Audiobookshelf containers.
+
+### Fixed
+
+- Frontend embed path is now stable for goreleaser by building into `internal/server/static`.
+- Release workflows build the web frontend before packaging the single binary.
+
+### Changed
+
+- Removed the deprecated GUI tree and release packaging. Releases now focus on one `audiobook-organizer` binary with CLI, TUI, ABS, and local web UI entrypoints.
+- Rewrote the root README for the single-binary web UI direction and current command surface.
+- Split the Audiobookshelf E2E matrix into parallel GitHub Actions jobs for faster feedback.
+
+---
+
+## [v0.11.0] — 2026-01-02
+
+### Added
+
+- New layout options (see `docs/LAYOUTS.md` for full list).
+- Environment variables now properly recognized for all flags — fixes [#17](https://github.com/jeeftor/audiobook-organizer/issues/17).
+
+### Fixed
+
+- `metadata.json` parsing edge cases.
+- Trailing underscore stripping in sanitized paths.
+
+---
+
+## [v0.10.0] and earlier
+
+See [GitHub Releases](https://github.com/jeeftor/audiobook-organizer/releases) for earlier release notes.

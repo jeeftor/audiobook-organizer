@@ -1,3 +1,49 @@
-
+# Build artifacts
+bin/
 dist/
+audiobook-organizer
+*.exe
+*.test
+*.out
+
+# Test data
+books/
+books-meta/
+gui-books/
+devbooks/
+output/
+web/node_modules/
+web/playwright-report/
+web/test-results/
+test_output/
+example/
+meta_init/
+
+# IDE
 .idea/
+.vscode/
+.DS_Store
+
+# Temporary files
+*.log
+*.tmp
+coverage.out
+test-picker
+test_output.txt
+
+# Local scratch/debug helpers
+debug*.go
+test_debug.go
+tui_test.go
+debug-*.sh
+docker-test.sh
+run_test.sh
+run_tests.sh
+run-tests-in-docker.sh
+Dockerfile.debug
+Dockerfile.simple
+
+# Development
+.claude/
+.codex/
+.windsurf/

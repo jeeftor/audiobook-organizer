@@ -1,0 +1,24 @@
+parser-opts:
+  case-insensitive-type: true
+  case-insensitive-scope: true
+  require-scope: false
+  max-header-length: 72
+  max-body-length: 100
+  merge-pattern: "^Merge .+$"
+  revert-pattern: "^Revert .+$"
+  allow-temp: true
+
+types:
+  - feat
+  - fix
+  - docs
+  - style
+  - refactor
+  - perf
+  - test
+  - build
+  - ci
+  - chore
+  - revert
+
+style: angular

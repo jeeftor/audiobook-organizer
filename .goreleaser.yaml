@@ -1,76 +1,133 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
-
-# The lines below are called `modelines`. See `:help modeline`
-# Feel free to remove those if you don't want/need to use them.
-# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
-# vim: set ts=2 sw=2 tw=0 fo=cnqoj
-
-version: 1
+---
+version: 2.2
+project_name: audiobook-organizer
 
 before:
   hooks:
-    # You may remove this if you don't use go modules.
     - go mod tidy
-    # you may remove this if you don't need go generate
-    - go generate ./...
 
 builds:
-  - env:
+  # CLI Binary (existing behavior)
+  - id: cli
+    main: ./main.go
+    binary: audiobook-organizer
+    env:
       - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    mod_timestamp: "{{ .CommitTimestamp }}"
     goos:
       - linux
-      - darwin
       - windows
+      - darwin
     goarch:
       - amd64
+      - "386"
       - arm64
+      - arm
+    goarm:
+      - 6
+      - 7
+    ignore:
+      - goos: windows
+        goarch: arm
+        goarm: 6
+      - goos: windows
+        goarch: arm
+        goarm: 7
+    ldflags:
+      - >
+        -s -w
+        -X github.com/jeeftor/audiobook-organizer/cmd.buildVersion={{.Version}}
+        -X github.com/jeeftor/audiobook-organizer/cmd.buildCommit={{.ShortCommit}}
+        -X github.com/jeeftor/audiobook-organizer/cmd.buildTime={{.Date}}
 
 archives:
-  - format: tar.gz
-    # this name template makes the OS and Arch compatible with the results of `uname`.
-    name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
-    # use zip for windows archives
+  # CLI Archives
+  - id: cli-archive
+    ids:
+      - cli
+    formats:
+      - tar.gz
+    name_template: '{{ .ProjectName }}_{{- title .Os }}_{{- if eq .Arch "amd64" }}x86_64{{- else if eq .Arch "386" }}i386{{- else if eq .Arch "arm" }}armv{{ .Arm }}{{- else }}{{ .Arch }}{{ end }}'
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
+    files:
+      - README.md
+      - LICENSE*
+      - CHANGELOG*
 
-# Add this new section for .deb package generation
+sboms:
+  - id: source-sbom
+    artifacts: source
+    documents:
+      - '{{ .ProjectName }}_{{ .Version }}_source.sbom.cyclonedx.json'
+    cmd: syft
+    args:
+      - .
+      - -o
+      - cyclonedx-json={{ .Document }}
+      - --source-name={{ .ProjectName }}
+      - --source-version={{ .Version }}
+    env:
+      - SYFT_FILE_METADATA_CATALOGER_ENABLED=true
+      - SYFT_GO_CATALOGER_ENABLED=true
+      - SYFT_PACKAGE_CATALOGER_ENABLED=true
+
 nfpms:
-  - vendor: jeffsui  # Replace with your name/organization
-    homepage: https://github.com/jeffsui/audiobook-organizer
-    maintainer: Jeff Stein <jeffstein@gmail.com>  # Replace with your details
-    description: CLI tool to organize audiobooks based on metadata.json files
-    license: MIT  # Adjust based on your license
+  - id: cli-packages
+    ids:
+      - cli
+    package_name: audiobook-organizer
+    vendor: jeeftor
+    homepage: https://github.com/jeeftor/audiobook-organizer
+    maintainer: Jeff Stein <jeffstein@gmail.com>
+    description: Audiobook Organizer Tool (CLI/TUI)
+    license: MIT
     formats:
       - deb
+      - rpm
+      - apk
     dependencies:
       - git
-    recommends:
-      - golang
-    suggests:
-      - docker
-    section: utils
-    priority: optional
     contents:
+      - src: ./LICENSE
+        dst: /usr/share/doc/audiobook-organizer/LICENSE
       - src: ./README.md
         dst: /usr/share/doc/audiobook-organizer/README.md
-      - src: ./LICENSE  # If you have a license file
-        dst: /usr/share/doc/audiobook-organizer/LICENSE
-    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    file_name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ if eq .Arch "arm" }}armv{{ .Arm }}{{ else }}{{ .Arch }}{{ end }}'
+
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: '{{ incpatch .Version }}-next'
 
 changelog:
   sort: asc
   filters:
     exclude:
-      - "^docs:"
-      - "^test:"
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
 
 release:
+  github:
+    owner: jeeftor
+    name: audiobook-organizer
   draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## Release Notes
+    For full details, see the [CHANGELOG.md](CHANGELOG.md).
+  footer: |
+    ## Thanks!
+    Thanks to all contributors who helped make this release possible.
+  name_template: v{{ .Version }}

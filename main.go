@@ -1,8 +1,9 @@
 package main
 
 import (
-	"audiobook-organizer/cmd"
 	"os"
+
+	"github.com/jeeftor/audiobook-organizer/cmd"
 )
 
 func main() {

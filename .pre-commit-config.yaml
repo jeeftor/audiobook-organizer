@@ -1,0 +1,47 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+repos:
+  # Enforce conventional commit message format
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.2.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+
+  # Standard file hygiene hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Go formatting and import management
+  - repo: local
+    hooks:
+      - id: goimports
+        name: goimports
+        entry: bash -c 'go install golang.org/x/tools/cmd/goimports@latest 2>/dev/null; $(go env GOPATH)/bin/goimports -w "$@"' --
+        language: system
+        types: [go]
+        pass_filenames: true
+
+      - id: gofumpt
+        name: gofumpt
+        entry: bash -c 'go install mvdan.cc/gofumpt@latest 2>/dev/null; $(go env GOPATH)/bin/gofumpt -w -l "$@"' --
+        language: system
+        types: [go]
+        pass_filenames: true
+
+      - id: golines
+        name: golines
+        entry: bash -c 'go install github.com/segmentio/golines@latest 2>/dev/null; $(go env GOPATH)/bin/golines -w "$@"' --
+        language: system
+        types: [go]
+        pass_filenames: true
