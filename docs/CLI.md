@@ -924,7 +924,7 @@ audiobook-organizer abs scan \
 **Solutions:**
 - Use `--skip-errors` with `--flat` to skip files with bad metadata and organize the rest
 - Use `--author-fields` to specify correct metadata fields
-- Check file tags with metadata viewer: `audiobook-organizer metadata --dir=/path`
+- Check file tags with metadata viewer: `audiobook-organizer metadata-tui --dir=/path`
 - Verify audio files aren't corrupted
 - See [METADATA.md](METADATA.md) for field mapping guide
 
@@ -949,7 +949,7 @@ audiobook-organizer abs scan \
 ### Dry run shows unexpected results
 
 **Solutions:**
-- Review field mapping: use `audiobook-organizer metadata --dir=/path`
+- Review field mapping: use `audiobook-organizer metadata-tui --dir=/path`
 - Adjust `--layout` option
 - Check `--author-fields`, `--title-field`, `--series-field` values
 - Use `--verbose` for detailed logging

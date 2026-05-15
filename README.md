@@ -10,8 +10,8 @@ Audiobook Organizer is a single-binary tool for cleaning up audiobook libraries.
 The project now ships one `audiobook-organizer` binary with:
 
 - a local browser UI: `audiobook-organizer web`
-- terminal workflows: `audiobook-organizer tui`, `rename-tui`, and `metadata`
-- scriptable CLI workflows: root organize command, `rename`, and `abs`
+- terminal workflows: `audiobook-organizer tui`, `rename-tui`, and `metadata-tui`
+- scriptable CLI workflows: root organize command, `rename`, `metadata`, and `abs`
 
 `audiobook-organizer gui` remains as a compatibility alias for `audiobook-organizer web`.
 
@@ -36,7 +36,8 @@ The project now ships one `audiobook-organizer` binary with:
 | Organization TUI | `audiobook-organizer tui` | Keyboard-first interactive organization | Stable |
 | Rename CLI | `audiobook-organizer rename --dir=/books` | Scriptable file renaming | Stable |
 | Rename TUI | `audiobook-organizer rename-tui --dir=/books` | Interactive rename previews | Stable |
-| Metadata TUI | `audiobook-organizer metadata --dir=/books` | Metadata inspection and template exploration | Stable |
+| Metadata CLI | `audiobook-organizer metadata --dir=/books` | Text-only metadata inspection | Stable |
+| Metadata TUI | `audiobook-organizer metadata-tui --dir=/books` | Metadata inspection and template exploration | Stable |
 | Audiobookshelf CLI | `audiobook-organizer abs ...` | ABS discovery, path mapping, metadata previews, and scan triggers | Active development |
 
 ## Quick Start
@@ -167,8 +168,11 @@ audiobook-organizer tui --dir=/path/to/books --out=/path/to/organized
 # Interactive rename workflow
 audiobook-organizer rename-tui --dir=/path/to/books
 
-# Metadata exploration workflow
+# Text-only metadata inspection
 audiobook-organizer metadata --dir=/path/to/books
+
+# Metadata exploration workflow
+audiobook-organizer metadata-tui --dir=/path/to/books
 ```
 
 See [docs/TUI.md](docs/TUI.md) and [docs/METADATA_COMMAND.md](docs/METADATA_COMMAND.md).

@@ -567,7 +567,7 @@ Internal layout patterns map to path construction:
 1. Use `--dry-run` to preview before executing
 2. Check metadata extraction with metadata viewer:
    ```bash
-   audiobook-organizer metadata --dir=/path
+   audiobook-organizer metadata-tui --dir=/path
    ```
 3. Verify author, series, title fields are populated
 4. Consider field mapping if using embedded metadata
