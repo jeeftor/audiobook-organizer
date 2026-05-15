@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed the deprecated GUI tree and release packaging. Releases now focus on one `audiobook-organizer` binary with CLI, TUI, ABS, and local web UI entrypoints.
 - Rewrote the root README for the single-binary web UI direction and current command surface.
 - Split the Audiobookshelf E2E matrix into parallel GitHub Actions jobs for faster feedback.
+- Added a first-class Audiobookshelf smoke/reset matrix row for the reset, baseline restore, startup, scan, metadata setting, and initial item count contract.
 - Clarified agent Gitflow rules for issue branches, worktree hook installation, PR merge strategy, branch verification, and closeout through merge back to `master`.
 
 ---

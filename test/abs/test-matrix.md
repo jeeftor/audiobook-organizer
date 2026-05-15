@@ -120,7 +120,7 @@ specifically about series layout. It gives stable, easy-to-assert paths:
 
 | ID | Mode | Instance | Library | Command shape | Expected result |
 | --- | --- | --- | --- | --- | --- |
-| H1 | Harness smoke | both | both | `make abs-dev-reset-scan` | Both servers reachable; plain has metadata setting `0`; metadata-enabled has metadata setting `1`; both have 2 audiobook items and 3 ebook items. |
+| H1 | Harness smoke | both | both | `go test -tags=abs_e2e ./test/abs/e2e -run TestABSHarnessSmokeResetContract -count=1 -v` | Implemented. Runs `make abs-dev-reset-scan`, verifies both servers are reachable through the ABS API, asserts plain has `storeMetadataWithItem=0`, asserts metadata-enabled has `storeMetadataWithItem=1`, and verifies both instances have exactly 2 audiobook items, 3 ebook items, and 0 missing items after the initial scan. |
 | M1A | `metadata.json` | metadata-enabled | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestMetadataJSONMode_AudiobooksLifecycle -count=1 -v` | Implemented as a table-driven lifecycle row. Moves audiobook directories using sidecar metadata; verifies old files are gone and new files exist; scans ABS; verifies old ABS rows are missing and new organized rows are active; calls the ABS library issues cleanup endpoint; rescans; verifies final ABS state has 2 active organized items and 0 missing items. |
 | M1B | `metadata.json` | metadata-enabled | Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestMetadataJSONMode_BooksLifecycle -count=1 -v` | Implemented as a table-driven lifecycle row. Moves ebook directories using sidecar metadata; verifies old files are gone and new files exist; scans ABS; verifies old ABS rows are missing and new organized rows are active; calls the ABS library issues cleanup endpoint; rescans; verifies final ABS state has 3 active organized items and 0 missing items. |
 | M1C | `metadata.json` negative control | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestMetadataJSONMode_AudiobooksLifecycle -count=1 -v` | Implemented as a table-driven lifecycle row. No `metadata.json` exists, so no files move. Old messy paths remain; ABS scan leaves 2 active original items and 0 missing items. |
@@ -178,6 +178,7 @@ cycle, so the fixed ABS ports do not conflict:
 
 | Row | `ABS_TEST_RUN` |
 | --- | --- |
+| `smoke-reset` | `TestABSHarnessSmokeResetContract` |
 | `metadata-json` | `TestMetadataJSONMode` |
 | `embedded-already-indexed` | `TestEmbeddedAlreadyIndexed` |
 | `embedded-import` | `TestEmbeddedMetadataImport` |
