@@ -1,6 +1,6 @@
 ---
 name: abo-pr-create
-description: Commit, push, and create Audiobook Organizer pull requests into master after verification and PR body preparation.
+description: Commit, push, and create Audiobook Organizer pull requests into protected master after verification and PR body preparation.
 metadata:
   short-description: Create ABO PRs
 ---
@@ -29,7 +29,8 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, `references/abo-assistan
 7. Commit with a concise message tied to the issue.
 8. Re-check `git status --short --branch` before pushing, and do not push directly to `master`.
 9. Push the branch and set upstream.
-10. Create a draft PR with `gh pr create --base master --head <branch> --draft --body-file <file>`.
-11. Verify the PR URL and draft state before reporting success.
+10. Create a PR with `gh pr create --base master --head <branch> --body-file <file>`.
+11. Verify the PR URL, target branch, and initial check/review state before reporting success.
+12. If the PR is intentionally ready for merge, do not leave it as a draft. Protected `master` requires passing checks and one approving review before merge.
 
 End with the PR URL, tests run, and any checks still pending.
