@@ -1,11 +1,13 @@
 # Audiobook Organizer
 
+Audiobook Organizer for Audiobookshelf organizes and renames audiobook libraries using metadata from `metadata.json`, EPUB, MP3, and M4B files.
+
 [![codecov](https://codecov.io/gh/jeeftor/audiobook-organizer/branch/master/graph/badge.svg)](https://codecov.io/gh/jeeftor/audiobook-organizer)
 [![Coverage Status](https://coveralls.io/repos/github/jeeftor/audiobook-organizer/badge.svg?branch=master)](https://coveralls.io/github/jeeftor/audiobook-organizer?branch=master)
 
 ![Audiobook Organizer logo](docs/logo.png)
 
-Audiobook Organizer is a single-binary tool for cleaning up audiobook libraries. It can preview and organize folders, rename files from metadata templates, inspect metadata, and connect to Audiobookshelf for library metadata and scan workflows.
+It is a single-binary audiobook library management tool for cleaning up folders, previewing file moves, renaming audiobook files from metadata templates, inspecting metadata, and connecting to Audiobookshelf for library metadata and scan workflows.
 
 The project now ships one `audiobook-organizer` binary with:
 
@@ -15,11 +17,19 @@ The project now ships one `audiobook-organizer` binary with:
 
 `audiobook-organizer gui` remains as a compatibility alias for `audiobook-organizer web`.
 
-## What It Does
+Common audiobook workflows:
+
+- [Organize audiobook libraries](docs/CLI.md) into layouts such as `Author/Series/Title`.
+- [Rename audiobook files](docs/RENAME_FEATURE.md) with metadata templates and dry-run previews.
+- [Use Audiobookshelf metadata and scan workflows](#audiobookshelf-workflows).
+- [Read metadata from metadata.json, EPUB, MP3, and M4B files](docs/METADATA.md).
+- [Install with Homebrew, Go, Docker, or release packages](docs/INSTALLATION.md).
+
+## Audiobook Organization And Rename Features
 
 - Organizes audiobooks into predictable directory layouts such as `Author/Series/Title`.
-- Reads metadata from `metadata.json`, EPUB, MP3, M4B, and Audiobookshelf.
-- Renames files with templates such as `{author} - {series} {series_number} - {title}`.
+- Reads audiobook metadata from `metadata.json`, EPUB, MP3, M4B, and Audiobookshelf.
+- Renames audiobook files with templates such as `{author} - {series} {series_number} - {title}`.
 - Supports dry-run previews before filesystem changes.
 - Logs organization and rename operations for undo.
 - Handles field mapping for non-standard metadata tags.
