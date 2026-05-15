@@ -63,7 +63,11 @@ type absLibraryState struct {
 	allPaths     []string
 }
 
-func newABSScenarioContext(t *testing.T, instance absInstance, library absLibrary) absScenarioContext {
+func newABSScenarioContext(
+	t *testing.T,
+	instance absInstance,
+	library absLibrary,
+) absScenarioContext {
 	t.Helper()
 	loadABSTestingEnv(t)
 
@@ -84,7 +88,8 @@ func newABSScenarioContext(t *testing.T, instance absInstance, library absLibrar
 
 	for _, candidate := range libraries {
 		for _, folder := range candidate.Folders {
-			if candidate.Name == library.name && (folder.Path == library.folderPath || folder.FullPath == library.folderPath) {
+			if candidate.Name == library.name &&
+				(folder.Path == library.folderPath || folder.FullPath == library.folderPath) {
 				return absScenarioContext{
 					client:    client,
 					libraryID: candidate.ID,
@@ -95,7 +100,12 @@ func newABSScenarioContext(t *testing.T, instance absInstance, library absLibrar
 		}
 	}
 
-	t.Fatalf("ABS library %q with folder %q not found on %s", library.name, library.folderPath, instance.name)
+	t.Fatalf(
+		"ABS library %q with folder %q not found on %s",
+		library.name,
+		library.folderPath,
+		instance.name,
+	)
 	return absScenarioContext{}
 }
 
@@ -106,7 +116,11 @@ func scanLibraryAndWait(t *testing.T, ctx absScenarioContext) {
 	}
 }
 
-func waitForABSState(t *testing.T, ctx absScenarioContext, want absStateExpectation) absLibraryState {
+func waitForABSState(
+	t *testing.T,
+	ctx absScenarioContext,
+	want absStateExpectation,
+) absLibraryState {
 	t.Helper()
 
 	deadline := time.Now().Add(2 * time.Minute)
@@ -157,7 +171,11 @@ func cleanMissingABSItems(t *testing.T, ctx absScenarioContext, oldPathFragments
 			continue
 		}
 		if item.IsMissing {
-			t.Fatalf("refusing to clean ABS issues because unexpected missing item exists: id=%s path=%s", item.ID, item.Path)
+			t.Fatalf(
+				"refusing to clean ABS issues because unexpected missing item exists: id=%s path=%s",
+				item.ID,
+				item.Path,
+			)
 		}
 	}
 	if err := ctx.client.RemoveLibraryItemsWithIssues(ctx.libraryID); err != nil {
@@ -207,7 +225,16 @@ func matchesABSState(state absLibraryState, want absStateExpectation) bool {
 func formatABSItems(items []abs.LibraryItem) string {
 	var rows []string
 	for _, item := range items {
-		rows = append(rows, fmt.Sprintf("id=%s missing=%t path=%s relPath=%s", item.ID, item.IsMissing, item.Path, item.RelPath))
+		rows = append(
+			rows,
+			fmt.Sprintf(
+				"id=%s missing=%t path=%s relPath=%s",
+				item.ID,
+				item.IsMissing,
+				item.Path,
+				item.RelPath,
+			),
+		)
 	}
 	return strings.Join(rows, "\n")
 }

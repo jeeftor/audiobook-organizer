@@ -507,7 +507,7 @@ Output:
 Use the metadata viewer to explore extracted fields:
 
 ```bash
-audiobook-organizer metadata --dir=/path/to/audiobooks
+audiobook-organizer metadata-tui --dir=/path/to/audiobooks
 ```
 
 **Shows:**
@@ -533,7 +533,7 @@ audiobook-organizer metadata --dir=/path/to/audiobooks
 **Solutions:**
 1. Verify files contain metadata:
    ```bash
-   audiobook-organizer metadata --dir=/path
+   audiobook-organizer metadata --dir=/path --json
    ```
 2. Check file formats are supported (EPUB, MP3, M4B, metadata.json)
 3. Try `--use-embedded-metadata` if no metadata.json files
@@ -546,7 +546,7 @@ audiobook-organizer metadata --dir=/path/to/audiobooks
 **Solutions:**
 1. Use metadata viewer to see available fields:
    ```bash
-   audiobook-organizer metadata --dir=/path
+   audiobook-organizer metadata-tui --dir=/path
    ```
 2. Configure field mapping:
    ```bash
@@ -569,7 +569,7 @@ audiobook-organizer metadata --dir=/path/to/audiobooks
 **Solutions:**
 1. Verify metadata consistency:
    ```bash
-   audiobook-organizer metadata --dir=/path
+   audiobook-organizer metadata-tui --dir=/path
    ```
 2. Use non-flat mode (default) for multi-file books
 3. Edit file tags to ensure consistent metadata
@@ -582,7 +582,7 @@ audiobook-organizer metadata --dir=/path/to/audiobooks
 **Solutions:**
 1. Check track field:
    ```bash
-   audiobook-organizer metadata --dir=/path
+   audiobook-organizer metadata-tui --dir=/path
    ```
 2. Configure track field:
    ```bash
@@ -622,7 +622,7 @@ audiobook-organizer --dir=/path --dry-run --verbose
 Before organizing, explore metadata:
 
 ```bash
-audiobook-organizer metadata --dir=/path
+audiobook-organizer metadata-tui --dir=/path
 ```
 
 ### 3. Test Field Mapping
@@ -681,6 +681,6 @@ title-field: "album"
 
 When reporting metadata issues, please include:
 - File format (MP3, M4B, EPUB, metadata.json)
-- Output of `audiobook-organizer metadata --dir=/path`
+- Output of `audiobook-organizer metadata --dir=/path --json`
 - Expected vs actual metadata
 - Sample file (if possible)

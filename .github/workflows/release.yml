@@ -4,7 +4,7 @@ on:
     tags:
       - 'v*'
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   debug:
@@ -105,6 +105,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     needs: [build]
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v6
         with:

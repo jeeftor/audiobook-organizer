@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO Bugfix"
+  short_description: "Reproduce and fix bugs"
+  default_prompt: "Use $abo-bugfix to reproduce and fix this Audiobook Organizer bug."

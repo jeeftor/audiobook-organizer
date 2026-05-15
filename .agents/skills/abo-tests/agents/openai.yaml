@@ -1,0 +1,4 @@
+interface:
+  display_name: "ABO Tests"
+  short_description: "Plan and run repo checks"
+  default_prompt: "Use $abo-tests to choose and run the right verification."

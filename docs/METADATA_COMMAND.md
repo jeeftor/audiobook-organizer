@@ -2,12 +2,14 @@
 
 ## Overview
 
-The `metadata` command provides an interactive TUI for exploring audiobook metadata. It helps you understand what metadata is available in your files before organizing or renaming them.
+The `metadata` command inspects audiobook metadata non-interactively and writes text-only output to the terminal. Add `--json` when scripts, tests, or CI need machine-readable output.
+
+Use `metadata-tui` when you want the interactive terminal workflow for exploring fields, mappings, and rename templates before organizing or renaming files.
 
 ## Usage
 
 ```bash
-# Basic usage
+# Text-only output
 audiobook-organizer metadata --dir=/path/to/audiobooks
 
 # Short form
@@ -19,13 +21,51 @@ audiobook-organizer metadata --dir=/path --use-embedded-metadata
 # Flat mode
 audiobook-organizer metadata --dir=/path --flat
 
-# Verbose output
-audiobook-organizer metadata --dir=/path -v
+# Machine-readable JSON output
+audiobook-organizer metadata --dir=/path --json
+
+# Interactive metadata exploration
+audiobook-organizer metadata-tui --dir=/path/to/audiobooks
 ```
 
-## Features
+## Text Output
 
-The metadata command provides an interactive interface with multiple screens:
+`metadata` recursively scans supported files and prints a text-only summary plus one block per file.
+
+Each file block includes:
+
+- path
+- source type
+- title
+- authors
+- series
+- track number
+- album
+- extraction error, when extraction fails for that file
+- additional metadata fields, when the metadata source exposes fields beyond the core display
+
+## JSON Output
+
+`metadata --json` recursively scans supported files and writes a JSON object with `files` and `summary` fields.
+
+Each file record includes:
+
+- `path`
+- `source_type`
+- `title`
+- `authors`
+- `series`
+- `track_number`
+- `track_title`
+- `album`
+- `raw_data`, when the source exposes additional metadata fields
+- `error`, when extraction fails for that file
+
+Per-file extraction errors are included in the JSON output. Command-level failures, such as a missing input directory, return a non-zero exit code.
+
+## Interactive Features
+
+The `metadata-tui` command provides an interactive interface with multiple screens:
 
 ### 1. Scan Screen
 - Automatically scans the directory for audiobook files
@@ -139,13 +179,13 @@ By default, the command prefers metadata.json if present, falling back to embedd
 
 ### Force Embedded Metadata
 ```bash
-audiobook-organizer metadata --dir=/path --use-embedded-metadata
+audiobook-organizer metadata-tui --dir=/path --use-embedded-metadata
 ```
 Ignores metadata.json files and always uses embedded tags from each file.
 
 ### Flat Mode
 ```bash
-audiobook-organizer metadata --dir=/path --flat
+audiobook-organizer metadata-tui --dir=/path --flat
 ```
 Implies `--use-embedded-metadata`. Useful for flat directory structures.
 
@@ -176,7 +216,7 @@ Implies `--use-embedded-metadata`. Useful for flat directory structures.
 Use the metadata command to see what fields are available in your files before deciding on an organization or rename strategy:
 
 ```bash
-audiobook-organizer metadata --dir=/path/to/books
+audiobook-organizer metadata-tui --dir=/path/to/books
 ```
 
 Press F2 to see actual metadata from your files.
@@ -185,7 +225,7 @@ Press F2 to see actual metadata from your files.
 Build and test rename templates interactively:
 
 ```bash
-audiobook-organizer metadata --dir=/path/to/books
+audiobook-organizer metadata-tui --dir=/path/to/books
 ```
 
 Type different templates and see live previews of how files would be renamed.
@@ -195,16 +235,16 @@ See the difference between metadata.json and embedded metadata:
 
 ```bash
 # View metadata.json data
-audiobook-organizer metadata --dir=/path/to/books
+audiobook-organizer metadata-tui --dir=/path/to/books
 
 # View embedded metadata
-audiobook-organizer metadata --dir=/path/to/books --use-embedded-metadata
+audiobook-organizer metadata-tui --dir=/path/to/books --use-embedded-metadata
 ```
 
 Press F2 to see which source is being used.
 
 ### 4. Interactive Rename Workflow
-The metadata command doubles as an interactive rename tool:
+The `metadata-tui` command doubles as an interactive rename tool:
 
 1. Scan files
 2. Build template with live preview
@@ -216,7 +256,7 @@ The metadata command doubles as an interactive rename tool:
 
 ### Example 1: Explore Metadata
 ```bash
-audiobook-organizer metadata --dir=./audiobooks
+audiobook-organizer metadata-tui --dir=./audiobooks
 ```
 
 1. Scans the directory
@@ -227,7 +267,7 @@ audiobook-organizer metadata --dir=./audiobooks
 
 ### Example 2: Test Different Templates
 ```bash
-audiobook-organizer metadata --dir=./audiobooks
+audiobook-organizer metadata-tui --dir=./audiobooks
 ```
 
 Try different templates:
@@ -239,7 +279,7 @@ See live preview for each template.
 
 ### Example 3: Rename with Preview
 ```bash
-audiobook-organizer metadata --dir=./audiobooks
+audiobook-organizer metadata-tui --dir=./audiobooks
 ```
 
 1. Build your template
@@ -249,12 +289,16 @@ audiobook-organizer metadata --dir=./audiobooks
 
 ## Comparison with Other Commands
 
-### `metadata` vs `rename`
-- **metadata**: Interactive TUI with live preview and metadata display
+### `metadata` vs `metadata-tui`
+- **metadata**: Text-only metadata inspection, with `--json` for machine-readable output
+- **metadata-tui**: Interactive TUI with live preview and metadata display
+
+### `metadata-tui` vs `rename`
+- **metadata-tui**: Interactive exploration and template preview
 - **rename**: Non-interactive CLI for batch operations
 
 ### `metadata` vs `gui`
-- **metadata**: Focused on metadata exploration and renaming
+- **metadata**: Focused on terminal metadata inspection
 - **gui**: Full organization workflow (scan → organize → move files)
 
 ## Tips

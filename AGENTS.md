@@ -1,6 +1,8 @@
 # AGENTS.md
 
-This file is the single source of truth for AI coding agents working in this repository. Claude Code should read this file through the `CLAUDE.md` compatibility pointer.
+This file is the single source of truth for AI coding agents working in this repository.
+
+For task-specific workflow details, use the repo-local skills in `.agents/skills/abo-*`.
 
 ## Project Summary
 
@@ -31,21 +33,52 @@ The project ships one `audiobook-organizer` binary with CLI, TUI, rename, Audiob
 - `internal/organizer/integration/`: integration tests
 - `test/abs/`: Audiobookshelf test harness and E2E tests
 
+The supported UI is the local browser UI through `audiobook-organizer web`, `audiobook-organizer gui`, `cmd/web.go`, `cmd/gui.go`, `internal/server/`, `internal/app/`, and `web/`.
+
+## Repo-Local Skills
+
+Use these skills for repeatable Audiobook Organizer workflows:
+
+- `$abo-workflow`: route broad maintainer requests to the right specialist skill.
+- `$abo-feature`: implement focused features across CLI, core, TUI, web, or ABS boundaries.
+- `$abo-bugfix`: reproduce, fix, and verify regressions with focused tests.
+- `$abo-issue-create`: create or reuse an issue and prepare the issue branch.
+- `$abo-issue-watcher`: inspect issue status, comments, linked PRs, and next steps.
+- `$abo-issue-verify`: verify acceptance criteria, tests, docs, changelog, and ABS matrix obligations.
+- `$abo-issue-closeout`: finish issue hygiene and close only when appropriate.
+- `$abo-tests`: select, write, and run repo-native Go, TUI, server/app, web, and docs checks.
+- `$abo-abs-tests`: handle Audiobookshelf harness, ABS E2E, and `test/abs/test-matrix.md` work.
+- `$abo-web-ui`: work only on the current local browser UI design in `web/`, `internal/server/`, `internal/app`, `cmd/web.go`, and `cmd/gui.go`.
+- `$abo-audit`: audit Go and current web UI dependencies without changing files.
+- `$abo-updater`: update Go and current web UI dependencies, then verify.
+- `$abo-docs`: maintain docs, AGENTS.md, changelog, and repo-local skill references.
+- `$abo-pr`: route PR drafting, creation, watching, and closeout.
+- `$abo-pr-writer`: draft or update PR descriptions.
+- `$abo-pr-create`: commit, push, and create a draft PR into `master`.
+- `$abo-pr-watcher`: watch PR CI, review comments, issue comments, and branch freshness.
+
+Shared skill references live in `references/abo-assistant/`. Keep AGENTS.md focused on durable repo rules; put detailed repeatable procedures in the relevant skill or shared reference.
+
 ## GitHub Workflow
 
 - Track non-trivial code and documentation changes with a GitHub issue before editing files.
 - If an issue already exists, use it. If not, create one with the goal, motivation, and acceptance criteria.
-- Create a dedicated branch from `master` for each issue. Use a descriptive branch name such as `feature/download-search-results` or `fix/series-metadata`.
+- Create a dedicated branch from `master` for each issue before editing files. Start from a fresh remote base with `git fetch origin master` and `git switch -c <branch> origin/master`.
+- Use descriptive branch prefixes by work type: `feature/<short-name>` for features, `fix/<short-name>` for bug fixes, `docs/<short-name>` for documentation-only changes, and `chore/<short-name>` for maintainer/tooling work.
+- Verify the active branch with `git status --short --branch` before editing, committing, or pushing. Do not commit or push from `master` except for explicitly approved tiny edits or explicit repository maintenance such as an approved history rewrite.
 - Keep the issue updated while working. Add comments for scope changes, important implementation decisions, blockers, test results, and follow-up work discovered during implementation.
 - Keep commits focused on the issue. Do not mix unrelated cleanup, refactors, or separate features into the same branch.
 - As part of each feature or fix, decide whether tests, docs, and `CHANGELOG.md` need updates. If they do, include them in the same branch. If they do not, note why in the PR.
 - For new or changed ABS-facing features, update `test/abs/test-matrix.md` before implementation is considered complete, then add or update the corresponding automated coverage in the ABS test matrix workflow.
 - Maintain the root `CHANGELOG.md`. User-visible features, fixes, behavior changes, Docker/runtime changes, and documentation changes should add a concise changelog entry under `Unreleased` before the PR is merged.
 - Before opening a PR, run the relevant repo-native checks. If a check cannot be run or has known unrelated failures, document that in the PR.
+- When pre-commit hooks are configured, prefer `prek run --all-files` over `pre-commit run --all-files`. If hooks are installed locally but no config exists on the branch, report that instead of treating hook execution as required.
+- When creating a separate Git worktree, install both pre-commit and commit-message hooks in that worktree when hook config exists, for example `prek install --hook-type pre-commit --hook-type commit-msg`.
 - Open a pull request into `master` when the branch is ready. The PR body must include the issue it resolves, a short summary, tests run, docs/changelog status, and any follow-up issues created.
-- Issues should close through the PR merge, not through direct commits to `master`.
-- After a PR is merged, delete the remote feature branch and remove the local branch or worktree.
-- Do not push directly to `master` for normal feature or fix work.
+- Prefer Squash and merge for PRs unless the maintainer asks for another merge strategy.
+- A feature, fix, docs, or chore issue is not complete at local commit or draft PR time. Close the cycle by getting the PR ready, passing required checks, merging back into `master`, and letting the linked issue close through the PR merge.
+- After the PR is merged, delete the remote feature branch and remove the local branch or worktree.
+- Do not push directly to `master` for normal feature, fix, docs, or chore work.
 - If work is paused or deferred, leave the issue open and comment with the current state and next step.
 
 Tiny explicitly requested edits may proceed without creating an issue, but do not mix unrelated work.
@@ -163,6 +196,7 @@ make coverage
 make lint
 make fmt
 make fmt-check
+prek run --all-files
 ```
 
 Useful direct commands:
@@ -225,10 +259,11 @@ Be careful when editing:
 
 ## Recommended Workflow
 
-1. Read the command layer and the relevant package before editing.
-2. Find existing tests for the same behavior.
-3. Make the smallest coherent change.
-4. Run formatting if needed.
-5. Run the most relevant tests or lint target.
-6. Update docs and `CHANGELOG.md` when the change is user-visible.
-7. Summarize behavior changes and any verification gaps clearly.
+1. Read the relevant `abo-*` skill and shared reference for the task.
+2. Read the command layer and relevant package before editing.
+3. Find existing tests for the same behavior.
+4. Make the smallest coherent change.
+5. Run formatting if needed.
+6. Run the most relevant tests or lint target.
+7. Update docs and `CHANGELOG.md` when the change is user-visible.
+8. Summarize behavior changes and any verification gaps clearly.
