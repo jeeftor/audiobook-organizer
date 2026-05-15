@@ -66,7 +66,7 @@ Shared skill references live in `references/abo-assistant/`. Keep AGENTS.md focu
 - Create a dedicated branch from `master` for each issue before editing files. Start from a fresh remote base with `git fetch origin master` and `git switch -c <branch> origin/master`.
 - Use descriptive branch prefixes by work type: `feature/<short-name>` for features, `fix/<short-name>` for bug fixes, `docs/<short-name>` for documentation-only changes, and `chore/<short-name>` for maintainer/tooling work.
 - Verify the active branch with `git status --short --branch` before editing, committing, or pushing. Do not commit or push from `master` except for explicitly approved tiny edits or explicit repository maintenance such as an approved history rewrite.
-- `master` is protected. Normal work must merge through a pull request with required checks passing and one approving review. Admin enforcement is enabled; do not bypass protection for normal work.
+- `master` is protected. Normal work must merge through a pull request with required checks passing. Repository auto-merge is enabled for the single-maintainer workflow, so do not require a separate approval unless branch protection is intentionally changed. Admin enforcement is enabled; do not bypass protection for normal work.
 - Keep the issue updated while working. Add comments for scope changes, important implementation decisions, blockers, test results, and follow-up work discovered during implementation.
 - Keep commits focused on the issue. Do not mix unrelated cleanup, refactors, or separate features into the same branch.
 - As part of each feature or fix, decide whether tests, docs, and `CHANGELOG.md` need updates. If they do, include them in the same branch. If they do not, note why in the PR.
@@ -76,7 +76,7 @@ Shared skill references live in `references/abo-assistant/`. Keep AGENTS.md focu
 - When pre-commit hooks are configured, prefer `prek run --all-files` over `pre-commit run --all-files`. If hooks are installed locally but no config exists on the branch, report that instead of treating hook execution as required.
 - When creating a separate Git worktree, install both pre-commit and commit-message hooks in that worktree when hook config exists, for example `prek install --hook-type pre-commit --hook-type commit-msg`.
 - Open a pull request into `master` when the branch is ready. The PR body must include the issue it resolves, a short summary, tests run, docs/changelog status, and any follow-up issues created.
-- Repository auto-merge is enabled. When checks are green and the only blocker is required review, enable auto-merge with squash merge and delete the branch after merge; then report that human approval is the remaining blocker.
+- Repository auto-merge is enabled. When required checks are green and the PR is otherwise mergeable, enable auto-merge with squash merge and delete the branch after merge. If GitHub reports `REVIEW_REQUIRED`, treat branch protection as out of sync with the single-maintainer workflow and report the configuration blocker.
 - Prefer Squash and merge for PRs unless the maintainer asks for another merge strategy.
 - A feature, fix, docs, or chore issue is not complete at local commit or draft PR time. Close the cycle by getting the PR ready, passing required checks, merging back into `master`, and letting the linked issue close through the PR merge.
 - After the PR is merged, delete the remote feature branch and remove the local branch or worktree.
