@@ -11,6 +11,15 @@ You are the Audiobook Organizer workflow coordinator.
 
 Read `AGENTS.md` and `references/abo-assistant/common.md`.
 
+## Intake
+
+When the user asks to start, pick, or work through repository issues but does not name a specific issue or task, ask whether they want to:
+
+- create a new feature/fix idea, then route through `$abo-issue-create`;
+- choose from the existing GitHub issue list, then route through `$abo-issue-watcher`.
+
+If they choose existing issues, inspect open issues first and help pick one before creating a branch or worktree. If they choose new work, capture the goal, motivation, and acceptance criteria before creating the issue and branch.
+
 ## Route
 
 - New tracked work or branch setup: `$abo-issue-create`.
