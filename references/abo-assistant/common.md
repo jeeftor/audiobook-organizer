@@ -7,13 +7,17 @@ Use this shared reference for Audiobook Organizer repo-local skills.
 - Read `AGENTS.md` first.
 - Default branch is `master`.
 - Non-trivial code or documentation work needs a GitHub issue before edits.
-- Work on a dedicated branch from `master`; do not push directly to `master`.
+- Work on a dedicated branch from `origin/master` before editing; do not push directly to `master`.
+- Use branch prefixes by work type: `feature/<short-name>`, `fix/<short-name>`, `docs/<short-name>`, or `chore/<short-name>`.
+- Verify `git status --short --branch` before editing, committing, or pushing.
+- If a separate Git worktree is created and hook config exists, run `prek install --hook-type pre-commit --hook-type commit-msg` inside that worktree.
 - Preserve unrelated dirty worktree changes.
 - Keep edits focused on the issue.
 - Keep the issue updated with decisions, blockers, test results, and follow-up work.
 - User-visible features, fixes, behavior changes, Docker/runtime changes, and documentation changes need a `CHANGELOG.md` entry under `Unreleased`.
 - ABS-facing behavior changes must update `test/abs/test-matrix.md` unless explicitly not applicable.
-- PRs target `master`; issues normally close through PR merge.
+- PRs target `master`; prefer Squash and merge; issues normally close through PR merge.
+- Do not treat a local commit or draft PR as done. Finish the cycle by getting the PR ready, passing required checks, merging back into `master`, confirming the linked issue closed, and cleaning up the branch or worktree.
 
 ## Architecture Map
 
@@ -56,5 +60,6 @@ Use this shared reference for Audiobook Organizer repo-local skills.
 - `git fetch origin master`
 - `git switch -c <branch> origin/master`
 - `git status --short --branch`
+- `prek install --hook-type pre-commit --hook-type commit-msg`
 
 Prefer `rg` for content search and `fd` or `find` for file discovery.

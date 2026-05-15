@@ -5,6 +5,7 @@ Use this shared reference for PR writing, creation, watching, and closeout.
 ## PR Preconditions
 
 - Branch is not `master`, `main`, `develop`, or `dev`.
+- Branch uses the appropriate work-type prefix: `feature/`, `fix/`, `docs/`, or `chore/`.
 - Branch is tied to a GitHub issue.
 - Unrelated dirty worktree changes are not included.
 - Relevant tests, lint, and builds have been run or explicitly documented as blocked.
@@ -32,10 +33,12 @@ Prefer concise reviewer-oriented text. Do not hide unrun tests.
 - `gh pr create --base master --head <branch> --draft --title "<title>" --body-file <file>`
 
 Prefer `--body-file` over `--fill` so issue links, test notes, and changelog status are preserved.
+Prefer Squash and merge when the PR is ready unless the maintainer asks for another merge strategy.
 
 ## Closeout Rules
 
-- Issues normally close through PR merge.
+- Issues normally close through PR merge back into `master`.
+- A branch is not done when implementation is committed, pushed, or opened as a draft PR. Closeout means the PR is ready, required checks and review are satisfied, the PR is merged, the linked issue closes, and stale branches or worktrees are cleaned up.
 - Use closing keywords in the PR body when the PR fully resolves the issue.
 - Directly close an issue only when the user explicitly asks, the issue is obsolete/duplicate, or the work intentionally completed outside PR merge.
 - Before closeout, verify acceptance criteria against code, tests, docs, changelog, and PR state.

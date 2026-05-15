@@ -15,10 +15,11 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, and `references/abo-assi
 
 1. Identify the behavior under test and affected package boundary.
 2. Find nearby tests before adding new ones.
-3. For bug fixes, create or identify a failing check first when practical.
-4. Prefer focused package tests, then widen to repo-native checks.
-5. Run `prek run --all-files` when pre-commit hooks are configured.
-6. Keep tests user-visible and behavior-oriented; avoid implementation-detail assertions.
-7. Report exact commands, status, and blockers.
+3. Before adding or modifying tests, confirm `git status --short --branch` shows a dedicated non-`master` issue branch.
+4. For bug fixes, create or identify a failing check first when practical.
+5. Prefer focused package tests, then widen to repo-native checks.
+6. Run `prek run --all-files` when pre-commit hooks are configured.
+7. Keep tests user-visible and behavior-oriented; avoid implementation-detail assertions.
+8. Report exact commands, status, and blockers.
 
 Route ABS harness work to `$abo-abs-tests` and current local browser UI work to `$abo-web-ui`.

@@ -14,7 +14,7 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, `references/abo-assistan
 ## Workflow
 
 1. Confirm the update scope: security fix, specific dependency, Go dependencies, web dependencies, or all dependencies.
-2. Inspect current branch and worktree status. Use an issue branch for non-trivial updates.
+2. Confirm `git status --short --branch` shows a dedicated non-`master` issue branch before non-trivial dependency updates.
 3. Prefer targeted updates for vulnerabilities or requested packages.
 4. For Go updates, run the chosen `go get` command, then `go mod tidy`.
 5. For web updates, update only `web/` dependencies.

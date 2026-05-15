@@ -15,6 +15,7 @@ Use repo-native checks first. Start narrow, then widen before PR closeout when p
 - Direct package tests: `go test ./internal/organizer/...`
 - Focused test: `go test -run TestName ./path/to/package`
 - Pre-commit hooks, when configured: `prek run --all-files`
+- New worktree hook setup, when configured: `prek install --hook-type pre-commit --hook-type commit-msg`
 
 Prefer `prek` over `pre-commit`. If no `.pre-commit-config.yaml` or `.pre-commit-config.yml` exists on the branch, report that pre-commit hooks are not configured rather than forcing the command.
 

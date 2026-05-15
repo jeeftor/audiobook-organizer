@@ -20,6 +20,7 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, and `references/abo-assi
 5. Check whether `CHANGELOG.md` is required and present.
 6. Check whether `test/abs/test-matrix.md` is required and present for ABS-facing changes.
 7. Run or confirm the narrowest relevant verification commands, widening when practical.
-8. Report a checklist of pass/fail/blocked items and the exact remaining work.
+8. Verify whether the work is only locally complete or fully closed out through a PR merge back into `master`.
+9. Report a checklist of pass/fail/blocked items and the exact remaining work.
 
 Do not mark the issue done just because tests pass. Tie completion back to acceptance criteria and repo workflow obligations.
