@@ -14,7 +14,7 @@ LDFLAGS := -ldflags "-s -w $(VERSION_FLAGS)"
 # Test packages
 UNIT_TEST_PKGS = ./...
 INTEGRATION_TEST_PKGS = $(shell go list ./... | grep -v '/integration$$')
-ABS_TEST_RUN ?= Test(MetadataJSONMode|EmbeddedAlreadyIndexed|EmbeddedMetadataImport|FlatModeImport|RESTHarness_(MetadataJSONMode|EmbeddedMetadataImport|FlatModeImport)Lifecycle)
+ABS_TEST_RUN ?= Test(ABSHarnessSmokeResetContract|MetadataJSONMode|EmbeddedAlreadyIndexed|EmbeddedMetadataImport|FlatModeImport|RESTHarness_(MetadataJSONMode|EmbeddedMetadataImport|FlatModeImport)Lifecycle)
 ABS_REST_TEST_RUN ?= TestRESTHarness_(MetadataJSONMode|EmbeddedMetadataImport|FlatModeImport)Lifecycle
 
 .PHONY: all build clean dev dev-linux-amd64 web-install web-build web-dev gui-rest-test gui-test gui-test-headed gui-test-ui abs-dev-seed abs-dev-init abs-dev-configure abs-dev-up abs-dev-down abs-dev-reset abs-dev-reset-all abs-dev-scan abs-dev-reset-scan abs-ci-smoke abs-test-metadata abs-test-rest abs-test-matrix abs-test-e2e abs-dev-capture-baseline abs-dev-restore-baseline abs-dev-wait release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help scp-dev

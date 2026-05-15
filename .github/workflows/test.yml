@@ -68,6 +68,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - name: smoke-reset
+            run_regex: TestABSHarnessSmokeResetContract
           - name: metadata-json
             run_regex: TestMetadataJSONMode
           - name: embedded-already-indexed
