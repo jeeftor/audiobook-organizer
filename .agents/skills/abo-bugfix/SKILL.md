@@ -14,11 +14,12 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, and `references/abo-assi
 ## Workflow
 
 1. Confirm or create the tracking issue with `$abo-issue-create` logic.
-2. Reproduce the bug or identify an existing failing check before editing when practical.
-3. Locate the smallest responsible package boundary.
-4. Fix the root cause without unrelated cleanup.
-5. Add or update regression coverage.
-6. Update docs, `CHANGELOG.md`, or `test/abs/test-matrix.md` when the fix changes user-visible or ABS-facing behavior.
-7. Run the focused failing check, then the relevant repo-native checks.
+2. Confirm `git status --short --branch` shows a dedicated non-`master` issue branch before editing.
+3. Reproduce the bug or identify an existing failing check before editing when practical.
+4. Locate the smallest responsible package boundary.
+5. Fix the root cause without unrelated cleanup.
+6. Add or update regression coverage.
+7. Update docs, `CHANGELOG.md`, or `test/abs/test-matrix.md` when the fix changes user-visible or ABS-facing behavior.
+8. Run the focused failing check, then the relevant repo-native checks.
 
 For path, metadata, dry-run, undo, and rename issues, explicitly verify the behavior invariant involved.

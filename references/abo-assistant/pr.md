@@ -5,6 +5,7 @@ Use this shared reference for PR writing, creation, watching, and closeout.
 ## PR Preconditions
 
 - Branch is not `master`, `main`, `develop`, or `dev`.
+- Branch uses the appropriate work-type prefix: `feature/`, `fix/`, `docs/`, or `chore/`.
 - Branch is tied to a GitHub issue.
 - Unrelated dirty worktree changes are not included.
 - Relevant tests, lint, and builds have been run or explicitly documented as blocked.
@@ -32,6 +33,7 @@ Prefer concise reviewer-oriented text. Do not hide unrun tests.
 - `gh pr create --base master --head <branch> --draft --title "<title>" --body-file <file>`
 
 Prefer `--body-file` over `--fill` so issue links, test notes, and changelog status are preserved.
+Prefer Squash and merge when the PR is ready unless the maintainer asks for another merge strategy.
 
 ## Closeout Rules
 
