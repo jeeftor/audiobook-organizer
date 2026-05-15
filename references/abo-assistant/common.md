@@ -10,6 +10,7 @@ Use this shared reference for Audiobook Organizer repo-local skills.
 - Work on a dedicated branch from `origin/master` before editing; do not push directly to `master`.
 - Use branch prefixes by work type: `feature/<short-name>`, `fix/<short-name>`, `docs/<short-name>`, or `chore/<short-name>`.
 - Verify `git status --short --branch` before editing, committing, or pushing.
+- `master` is protected with required checks. Repository auto-merge is enabled for the single-maintainer workflow, so a separate approving review is not required unless branch protection is intentionally changed. Admin enforcement is enabled; do not bypass protection for normal work.
 - If a separate Git worktree is created and hook config exists, run `prek install --hook-type pre-commit --hook-type commit-msg` inside that worktree.
 - Preserve unrelated dirty worktree changes.
 - Keep edits focused on the issue.
@@ -17,7 +18,8 @@ Use this shared reference for Audiobook Organizer repo-local skills.
 - User-visible features, fixes, behavior changes, Docker/runtime changes, and documentation changes need a `CHANGELOG.md` entry under `Unreleased`.
 - ABS-facing behavior changes must update `test/abs/test-matrix.md` unless explicitly not applicable.
 - PRs target `master`; prefer Squash and merge; issues normally close through PR merge.
-- Do not treat a local commit or draft PR as done. Finish the cycle by getting the PR ready, passing required checks, merging back into `master`, confirming the linked issue closed, and cleaning up the branch or worktree.
+- Repository auto-merge and delete-branch-on-merge are enabled. When required checks are green and the PR is otherwise mergeable, enable auto-merge. If GitHub reports `REVIEW_REQUIRED`, report the branch protection mismatch instead of trying to self-approve.
+- Do not treat a local commit or draft PR as done. Finish the cycle by getting the PR ready, passing required checks, enabling or completing merge back into `master`, confirming the linked issue closed, and cleaning up the branch or worktree.
 
 ## Architecture Map
 
