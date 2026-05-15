@@ -194,9 +194,20 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() error {
-	color.Cyan("🎧 Audiobook Organizer")
-	color.Cyan("=====================")
+	if shouldPrintStartupBanner(os.Args[1:]) {
+		color.Cyan("🎧 Audiobook Organizer")
+		color.Cyan("=====================")
+	}
 	return rootCmd.Execute()
+}
+
+func shouldPrintStartupBanner(args []string) bool {
+	for _, arg := range args {
+		if arg == "metadata" {
+			return false
+		}
+	}
+	return true
 }
 
 // getEnvValue checks all possible environment variable names for a config key

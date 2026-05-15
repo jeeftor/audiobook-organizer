@@ -394,7 +394,7 @@ The **Metadata Viewer** lets you explore metadata for audiobook files interactiv
 
 ```bash
 # Interactive metadata exploration
-audiobook-organizer metadata --dir=/path/to/audiobooks
+audiobook-organizer metadata-tui --dir=/path/to/audiobooks
 ```
 
 ### Features

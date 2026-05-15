@@ -10,6 +10,8 @@ Audiobook Organizer ships as one binary named `audiobook-organizer`. The same bi
 | `audiobook-organizer gui` | Local Web UI alias | Compatibility alias for `web` |
 | `audiobook-organizer tui` | Interactive Terminal | Keyboard-driven terminal workflow |
 | `audiobook-organizer rename-tui` | Rename TUI | Interactive rename workflow |
+| `audiobook-organizer metadata` | Metadata CLI | Text-only metadata inspection |
+| `audiobook-organizer metadata-tui` | Metadata TUI | Interactive metadata exploration |
 | `audiobook-organizer abs` | Audiobookshelf CLI | ABS libraries, mappings, item loading, and scan triggers |
 | `audiobook-organizer --dir=/path` | CLI | Scriptable organization |
 
