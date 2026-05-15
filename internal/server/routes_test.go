@@ -122,6 +122,48 @@ func TestStaticRoutesServeIndexAndSPAFallback(t *testing.T) {
 	}
 }
 
+func TestStaticAssetPathRejectsTraversal(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{name: "root", path: "/", want: "index.html"},
+		{name: "asset", path: "/assets/index.js", want: "assets/index.js"},
+		{
+			name: "spa route",
+			path: "/library/not-a-real-static-file",
+			want: "library/not-a-real-static-file",
+		},
+		{name: "parent traversal", path: "/../secret", want: "index.html"},
+		{name: "nested parent traversal", path: "/assets/../../secret", want: "index.html"},
+		{name: "current directory segment", path: "/assets/./index.js", want: "index.html"},
+		{name: "windows separator", path: `/assets\..\secret`, want: "index.html"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := staticAssetPath(tt.path)
+			if got != tt.want {
+				t.Fatalf("staticAssetPath(%q) = %q, want %q", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStaticRoutesFallBackForTraversalRequests(t *testing.T) {
+	srv := newTestServer(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/%2e%2e/secret", nil)
+	rec := httptest.NewRecorder()
+	srv.handleStatic(rec, req)
+
+	assertStatus(t, rec, http.StatusOK)
+	if !strings.Contains(rec.Body.String(), `<div id="app"></div>`) {
+		t.Fatalf("expected embedded app shell, got body:\n%s", rec.Body.String())
+	}
+}
+
 func TestPostEndpointsRejectWrongMethodAndInvalidJSON(t *testing.T) {
 	handler := newTestHandler(t)
 
@@ -312,6 +354,12 @@ func TestABSEndpointsReturnValidationErrorsBeforeDockerIsNeeded(t *testing.T) {
 func newTestHandler(t *testing.T) http.Handler {
 	t.Helper()
 
+	return newTestServer(t).routes()
+}
+
+func newTestServer(t *testing.T) *Server {
+	t.Helper()
+
 	cfg := app.DefaultWebConfig("127.0.0.1", 0, false, "/input", "/output")
 	cfg.ABS = app.ABSConfigDTO{
 		URL:       "http://abs.local",
@@ -326,7 +374,7 @@ func newTestHandler(t *testing.T) http.Handler {
 	if err != nil {
 		t.Fatalf("new server: %v", err)
 	}
-	return srv.routes()
+	return srv
 }
 
 func performRequest(

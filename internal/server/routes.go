@@ -220,10 +220,7 @@ func (s *Server) handleABSScanTrigger(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/")
-	if path == "" {
-		path = "index.html"
-	}
+	path := staticAssetPath(r.URL.Path)
 	if _, err := fs.Stat(s.static, path); err != nil {
 		path = "index.html"
 	}
@@ -264,6 +261,14 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store, max-age=0")
 	http.ServeContent(w, r, path, stat.ModTime(), bytes.NewReader(data))
+}
+
+func staticAssetPath(requestPath string) string {
+	path := strings.TrimPrefix(requestPath, "/")
+	if path == "" || path == "." || !fs.ValidPath(path) || strings.Contains(path, `\`) {
+		return "index.html"
+	}
+	return path
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {

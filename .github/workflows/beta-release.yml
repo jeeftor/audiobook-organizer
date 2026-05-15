@@ -4,7 +4,7 @@ on:
     branches:
       - 'develop'
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   # Build on each platform
@@ -58,6 +58,8 @@ jobs:
   pre-release:
     runs-on: ubuntu-latest
     needs: [build]
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v6
         with:
