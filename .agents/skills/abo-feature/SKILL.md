@@ -21,5 +21,6 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, and `references/abo-assi
 6. Add or update tests that prove the new behavior.
 7. Update docs, `CHANGELOG.md`, and `test/abs/test-matrix.md` when applicable.
 8. Run focused verification, then wider checks when practical.
+9. Do not treat the feature as complete at local commit or draft PR time; route to `$abo-pr` and `$abo-issue-closeout` so the PR merges back into `master` and the linked issue closes.
 
 Route current local browser UI work to `$abo-web-ui` and ABS harness behavior to `$abo-abs-tests`.

@@ -17,6 +17,7 @@ Use this shared reference for Audiobook Organizer repo-local skills.
 - User-visible features, fixes, behavior changes, Docker/runtime changes, and documentation changes need a `CHANGELOG.md` entry under `Unreleased`.
 - ABS-facing behavior changes must update `test/abs/test-matrix.md` unless explicitly not applicable.
 - PRs target `master`; prefer Squash and merge; issues normally close through PR merge.
+- Do not treat a local commit or draft PR as done. Finish the cycle by getting the PR ready, passing required checks, merging back into `master`, confirming the linked issue closed, and cleaning up the branch or worktree.
 
 ## Architecture Map
 

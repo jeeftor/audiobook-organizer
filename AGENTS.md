@@ -76,8 +76,8 @@ Shared skill references live in `references/abo-assistant/`. Keep AGENTS.md focu
 - When creating a separate Git worktree, install both pre-commit and commit-message hooks in that worktree when hook config exists, for example `prek install --hook-type pre-commit --hook-type commit-msg`.
 - Open a pull request into `master` when the branch is ready. The PR body must include the issue it resolves, a short summary, tests run, docs/changelog status, and any follow-up issues created.
 - Prefer Squash and merge for PRs unless the maintainer asks for another merge strategy.
-- Issues should close through the PR merge, not through direct commits to `master`.
-- After a PR is merged, delete the remote feature branch and remove the local branch or worktree.
+- A feature, fix, docs, or chore issue is not complete at local commit or draft PR time. Close the cycle by getting the PR ready, passing required checks, merging back into `master`, and letting the linked issue close through the PR merge.
+- After the PR is merged, delete the remote feature branch and remove the local branch or worktree.
 - Do not push directly to `master` for normal feature, fix, docs, or chore work.
 - If work is paused or deferred, leave the issue open and comment with the current state and next step.
 

@@ -37,7 +37,8 @@ Prefer Squash and merge when the PR is ready unless the maintainer asks for anot
 
 ## Closeout Rules
 
-- Issues normally close through PR merge.
+- Issues normally close through PR merge back into `master`.
+- A branch is not done when implementation is committed, pushed, or opened as a draft PR. Closeout means the PR is ready, required checks and review are satisfied, the PR is merged, the linked issue closes, and stale branches or worktrees are cleaned up.
 - Use closing keywords in the PR body when the PR fully resolves the issue.
 - Directly close an issue only when the user explicitly asks, the issue is obsolete/duplicate, or the work intentionally completed outside PR merge.
 - Before closeout, verify acceptance criteria against code, tests, docs, changelog, and PR state.
