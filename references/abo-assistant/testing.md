@@ -30,8 +30,19 @@ The current web UI is the local browser UI:
 - Build embedded assets: `make web-build`.
 - Run frontend dev server: `make web-dev`.
 - Full distribution build: `make build`.
+- Browser E2E: `cd web && npm run test:e2e`.
 
 If `web/` is absent on an older checkout, stop and report that the checkout does not contain the current new web UI design.
+
+### Browser Binary Setup
+
+Before reporting a browser E2E failure as an application failure, confirm the browser binary that the check needs:
+
+- Playwright-managed browsers live under `~/Library/Caches/ms-playwright`.
+- The repo web E2E suite expects Playwright's managed Chromium and Chrome Headless Shell revisions. If `npm run test:e2e` fails with a missing executable under `~/Library/Caches/ms-playwright`, run `npx playwright install chromium` from `web/`, then rerun the check.
+- A separate Chrome Headless Shell may exist under `~/.cache/puppeteer/chrome-headless-shell/`. Use it for temporary rendered smoke checks when Playwright-managed browsers are missing, and record the exact executable path, but still install the Playwright-managed payload for the repo E2E suite.
+- If Chrome Headless Shell launch fails with macOS sandbox or `MachPortRendezvousServer` permission errors, rerun the same browser check with command escalation. Do not reduce verification to `make web-build` only when rendered UI behavior is under test.
+- When reporting results, include whether the check used Playwright-managed Chromium or the cached Chrome Headless Shell fallback.
 
 ## ABS Checks
 
