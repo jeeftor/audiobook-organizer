@@ -19,6 +19,7 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, and `references/abo-assi
 4. Preserve the reset contract: stop containers, rebuild runtime fixtures, restore committed baseline config, start containers, and scan.
 5. Never restore SQLite state while ABS containers are running.
 6. Prefer focused `go test -tags=abs_e2e ./test/abs/e2e -run TestName -count=1 -v`, then `make abs-test-matrix` when practical.
-7. If Docker, downloads, or certificates block validation, report the exact command and blocker.
+7. Do not treat mocked ABS responses as acceptance evidence for ABS-facing behavior; real E2E must verify containers, fixtures, and ABS API or database state unless the maintainer explicitly accepts a documented blocker.
+8. If Docker, downloads, or certificates block validation, report the exact command and blocker.
 
 ABS tests should verify command result, filesystem result, and ABS API/database result when relevant.

@@ -9,6 +9,7 @@ Use this shared reference for PR writing, creation, watching, and closeout.
 - Branch is tied to a GitHub issue.
 - Unrelated dirty worktree changes are not included.
 - Relevant tests, lint, and builds have been run or explicitly documented as blocked.
+- User-facing workflow changes have real E2E acceptance evidence; mocked UI/API tests are supplemental only unless the maintainer explicitly accepted the documented gap.
 - Pre-commit hooks have been run with `prek run --all-files` when hook config exists, or their absence is documented.
 - User-visible changes have a `CHANGELOG.md` entry under `Unreleased`.
 - ABS-facing changes update `test/abs/test-matrix.md` when relevant.
@@ -21,6 +22,7 @@ Include:
 - `Resolves #<issue>`
 - Summary.
 - Tests run, with exact commands.
+- Real E2E evidence for user-facing workflow changes, or the maintainer-accepted reason it is blocked.
 - Docs/changelog status.
 - Follow-up issues or known gaps, if any.
 
@@ -45,6 +47,7 @@ Prefer enabling auto-merge once checks are green. If GitHub reports `REVIEW_REQU
 - Use closing keywords in the PR body when the PR fully resolves the issue.
 - Directly close an issue only when the user explicitly asks, the issue is obsolete/duplicate, or the work intentionally completed outside PR merge.
 - Before closeout, verify acceptance criteria against code, tests, docs, changelog, and PR state.
+- Do not close a user-facing workflow issue based only on mocked/stubbed tests. Confirm real E2E evidence or documented maintainer acceptance of the gap.
 
 ## Watcher Duties
 
