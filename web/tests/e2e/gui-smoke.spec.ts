@@ -194,7 +194,7 @@ test('keeps organize run locked when preview fails', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
 })
 
-test('wires rename preview and keeps rename execution deferred', async ({ page }) => {
+test('contracts rename preview UI state with mocked backend responses', async ({ page }) => {
   let previewBody: Record<string, any> | undefined
   let renameRunRequested = false
 

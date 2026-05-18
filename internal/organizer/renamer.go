@@ -192,11 +192,7 @@ func (r *Renamer) Execute() error {
 	// 2. Filter out no-ops
 	toRename := filterRenameableCandidates(candidates)
 
-	// 3. Detect conflicts
-	conflicts := detectConflicts(toRename)
-	r.summary.ConflictsFound = len(conflicts)
-
-	// 4. Execute renames
+	// 3. Execute renames
 	for _, candidate := range toRename {
 		// Skip if prompt is enabled and user declines
 		if r.config.PromptEnabled {
@@ -213,7 +209,7 @@ func (r *Renamer) Execute() error {
 		r.summary.FilesRenamed++
 	}
 
-	// 5. Save log
+	// 4. Save log
 	if !r.config.DryRun && len(r.logEntries) > 0 {
 		if err := r.SaveLog(); err != nil {
 			return err
@@ -297,8 +293,46 @@ func (r *Renamer) ScanFiles() ([]RenameCandidate, error) {
 
 		return nil
 	})
+	if err != nil {
+		return candidates, err
+	}
 
-	return candidates, err
+	r.finalizePreviewSummary(candidates)
+	return candidates, nil
+}
+
+func (r *Renamer) finalizePreviewSummary(candidates []RenameCandidate) {
+	summary := RenameSummary{
+		FilesScanned: len(candidates),
+	}
+	resolver := NewConflictResolver()
+
+	for i := range candidates {
+		if candidates[i].Error != "" {
+			summary.FilesSkipped++
+			summary.Errors = append(summary.Errors, candidates[i].Error)
+			continue
+		}
+		if candidates[i].IsNoOp {
+			summary.FilesSkipped++
+			continue
+		}
+
+		filename := filepath.Base(candidates[i].ProposedPath)
+		resolvedName, isConflict := resolver.CheckConflict(filename)
+		if !isConflict {
+			continue
+		}
+
+		candidates[i].IsConflict = true
+		candidates[i].ProposedPath = filepath.Join(
+			filepath.Dir(candidates[i].ProposedPath),
+			resolvedName,
+		)
+		summary.ConflictsFound++
+	}
+
+	r.summary = summary
 }
 
 // GenerateNewPath generates the new path for a file based on metadata
