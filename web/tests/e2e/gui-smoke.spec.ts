@@ -194,6 +194,99 @@ test('keeps organize run locked when preview fails', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
 })
 
+test('wires rename preview and keeps rename execution deferred', async ({ page }) => {
+  let previewBody: Record<string, any> | undefined
+  let renameRunRequested = false
+
+  await page.route('**/api/rename/preview', async (route) => {
+    previewBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        candidates: [
+          {
+            CurrentPath: '/library/source/book/audio.mp3',
+            ProposedPath: '/library/source/book/Rename Author - Rename Book.mp3',
+            Metadata: { title: 'Rename Book', authors: ['Rename Author'] },
+            IsNoOp: false,
+            IsConflict: false,
+            Error: '',
+          },
+          {
+            CurrentPath: '/library/source/book/duplicate.mp3',
+            ProposedPath: '/library/source/book/Rename Author - Rename Book (1).mp3',
+            Metadata: { title: 'Rename Book', authors: ['Rename Author'] },
+            IsNoOp: false,
+            IsConflict: true,
+            Error: '',
+          },
+        ],
+        summary: {
+          FilesScanned: 3,
+          FilesRenamed: 0,
+          FilesSkipped: 1,
+          ConflictsFound: 1,
+          Errors: ['missing metadata in skipped.mp3'],
+        },
+      }),
+    })
+  })
+  await page.route('**/api/rename/run', async (route) => {
+    renameRunRequested = true
+    await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'not found' }) })
+  })
+
+  await loadApp(page)
+  await page.getByRole('button', { name: /Rename/ }).click()
+  await page.getByRole('textbox', { name: 'Source folder' }).fill('/library/source')
+  await page.getByRole('textbox', { name: 'Rename template' }).fill('{author} - {title}')
+  await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
+
+  await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Create Rename Preview' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Rename preview ready' })).toBeVisible()
+  await expect(page.getByText('/library/source/book/Rename Author - Rename Book.mp3')).toBeVisible()
+  await expect(page.locator('.move-list em').filter({ hasText: /^Conflict$/ })).toBeVisible()
+  await expect(page.getByText('missing metadata in skipped.mp3')).toBeVisible()
+  expect(previewBody?.config).toEqual(
+    expect.objectContaining({
+      base_dir: '/library/source',
+      template: '{author} - {title}',
+      dry_run: true,
+      recursive: true,
+      preserve_path: true,
+      use_embedded_metadata: false,
+    }),
+  )
+
+  await page.getByRole('button', { name: 'Review Candidates & Continue' }).click()
+  await expect(page.getByRole('heading', { name: 'Rename Execution Deferred' })).toBeVisible()
+  await expect(page.getByText(/Rename execution is deferred/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Rename Execution Deferred' })).toBeDisabled()
+  expect(renameRunRequested).toBe(false)
+})
+
+test('keeps rename run unavailable when preview fails', async ({ page }) => {
+  await page.route('**/api/rename/preview', async (route) => {
+    await route.fulfill({
+      status: 400,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'rename preview exploded' }),
+    })
+  })
+
+  await loadApp(page)
+  await page.getByRole('button', { name: /Rename/ }).click()
+  await page.getByRole('textbox', { name: 'Source folder' }).fill('/library/source')
+  await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
+  await page.getByRole('button', { name: 'Create Rename Preview' }).click()
+
+  await expect(page.locator('.inline-alert').filter({ hasText: 'rename preview exploded' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
+})
+
 test('separates workflow modes and gates run behind preview review', async ({ page }) => {
   await loadApp(page)
 
@@ -204,11 +297,9 @@ test('separates workflow modes and gates run behind preview review', async ({ pa
 
   await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
   await expect(page.getByRole('heading', { name: 'Review a dry-run preview' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Dry-run preview first' })).toBeVisible()
-
-  await page.getByRole('button', { name: /Mark Preview Reviewed/ }).click()
-  await expect(page.getByRole('heading', { name: 'Execute the reviewed plan' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Run Rename' })).toBeEnabled()
+  await expect(page.getByRole('heading', { name: 'Create a rename preview' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Create Rename Preview' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
 })
 
 async function loadApp(page: Page, options: { allowFailedResourceMessages?: boolean } = {}): Promise<void> {

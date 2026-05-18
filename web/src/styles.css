@@ -487,7 +487,8 @@ select:focus {
 }
 
 .move-list span,
-.move-list strong {
+.move-list strong,
+.move-list em {
   overflow-wrap: anywhere;
 }
 
@@ -498,6 +499,13 @@ select:focus {
 .move-list strong {
   color: var(--text);
   font-weight: 700;
+}
+
+.move-list em {
+  color: var(--warning);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 760;
 }
 
 .run-layout {
