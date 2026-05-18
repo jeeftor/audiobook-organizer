@@ -29,26 +29,35 @@ test('protects authenticated API endpoints with the session token', async ({ req
   )
 })
 
-test('renders the dashboard and connects to the local server', async ({ page }) => {
+test('renders staged workflows and connects to the local server', async ({ page }) => {
   await loadApp(page)
 
-  await expect(page).toHaveTitle('Audiobook Organizer')
+  await expect(page).toHaveTitle('Audiobook Organizer for Audiobookshelf')
   await expect(page.getByRole('heading', { name: 'Audiobook Organizer' })).toBeVisible()
   await expect(page.getByText('localhost connected')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Source & Output' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Audiobookshelf Connection' })).toBeVisible()
-  await expect(page.getByRole('cell', { name: 'Project Hail Mary' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Organize/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Rename/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Audiobookshelf/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Configure and scan setup' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Run/ })).toBeDisabled()
 })
 
-test('updates visible state from table and scan interactions', async ({ page }) => {
+test('separates workflow modes and gates run behind preview review', async ({ page }) => {
   await loadApp(page)
 
-  await page.getByRole('cell', { name: 'Dune' }).click()
-  await expect(page.getByRole('heading', { name: 'Selected: Dune' })).toBeVisible()
+  await page.getByRole('button', { name: /Rename/ }).click()
+  await expect(page.getByRole('heading', { name: 'Configure and scan setup' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Rename Template' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Organization Rules' })).toHaveCount(0)
 
-  await page.getByRole('button', { name: 'Scan Library' }).click()
-  await expect(page.getByText('Scan requested')).toBeVisible()
-  await expect(page.getByText('/Volumes/Media/Audiobooks/Unsorted')).toBeVisible()
+  await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
+  await expect(page.getByRole('heading', { name: 'Review a dry-run preview' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Dry-run preview first' })).toBeVisible()
+
+  await page.getByRole('button', { name: /Mark Preview Reviewed/ }).click()
+  await expect(page.getByRole('heading', { name: 'Execute the reviewed plan' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Run Rename' })).toBeEnabled()
+  await expect(page.getByText('Preview reviewed')).toBeVisible()
 })
 
 async function loadApp(page: Page): Promise<void> {
