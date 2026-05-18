@@ -104,7 +104,7 @@ test('does not treat redacted ABS credentials as usable browser state', async ({
   await expect(page.getByText(/Saved ABS credentials are redacted/)).toBeVisible()
 })
 
-test('wires organize preview and run to backend endpoints', async ({ page }) => {
+test('contracts organize preview and run UI state with mocked backend responses', async ({ page }) => {
   let previewBody: Record<string, any> | undefined
   let runBody: Record<string, any> | undefined
 

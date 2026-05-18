@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Beta release tags now derive from the latest stable SemVer tag instead of stacking beta suffixes from prior prereleases.
 - Frontend embed path is now stable for goreleaser by building into `internal/server/static`.
 - Release workflows build the web frontend before packaging the single binary.
+- Organize summaries now report directories missing metadata even when verbose console logging is disabled, so web previews show real warning counts.
 
 ### Changed
 
