@@ -2,6 +2,89 @@ export type HealthResponse = {
   status: string
 }
 
+export type Option = {
+  value: string
+  label: string
+  description?: string
+}
+
+export type FieldMapping = {
+  title_field?: string
+  series_field?: string
+  author_fields?: string[]
+  track_field?: string
+  disc_field?: string
+}
+
+export type OrganizerConfig = {
+  base_dir: string
+  output_dir: string
+  replace_space: string
+  dry_run: boolean
+  remove_empty: boolean
+  use_embedded_metadata: boolean
+  flat: boolean
+  skip_errors: boolean
+  layout: string
+  author_format: string
+  field_mapping: FieldMapping
+  allowed_source_paths?: string[]
+}
+
+export type RenameConfig = {
+  base_dir: string
+  template: string
+  dry_run: boolean
+  author_format: string
+  recursive: boolean
+  field_mapping: FieldMapping
+  replace_space: string
+  strict_mode: boolean
+  preserve_path: boolean
+  use_embedded_metadata: boolean
+}
+
+export type PathMapping = {
+  abs_prefix: string
+  local_prefix: string
+}
+
+export type HeaderConfig = {
+  name: string
+  value?: string
+}
+
+export type ABSConfig = {
+  url: string
+  token?: string
+  library_id: string
+  sqlite_path?: string
+  path_mappings?: PathMapping[]
+  all_libraries: boolean
+  header_file?: string
+  headers?: HeaderConfig[]
+}
+
+export type WebConfig = {
+  host: string
+  port: number
+  open: boolean
+  initial: {
+    input_dir: string
+    output_dir: string
+  }
+  organizer: OrganizerConfig
+  rename: RenameConfig
+  abs: ABSConfig
+}
+
+export type OptionsResponse = {
+  layouts: Option[]
+  scan_modes: Option[]
+  author_formats: Option[]
+  field_mappings: Record<string, FieldMapping>
+}
+
 const token = new URLSearchParams(window.location.search).get('token') ?? ''
 
 export async function apiGet<T>(path: string): Promise<T> {

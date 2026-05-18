@@ -91,6 +91,10 @@ button:disabled {
 }
 
 .server-status {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--muted);
   font-size: 13px;
   font-weight: 650;

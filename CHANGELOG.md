@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refined the `abo-workflow` skill to prompt between creating new tracked work and selecting from existing GitHub issues.
 - Documented browser binary setup for local web UI E2E checks, including Playwright-managed Chromium and cached Chrome Headless Shell fallback behavior.
 - Restructured the local web UI into explicit organize, rename, and Audiobookshelf workflow stages so configure, dry-run preview, run, and review states are separated.
+- Improved local web UI startup handling so config/options loading and fallback states are visible and Audiobookshelf metadata mode stays scoped to the ABS workflow.
 
 ---
 
