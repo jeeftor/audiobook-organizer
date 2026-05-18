@@ -2,6 +2,25 @@
 
 Use repo-native checks first. Start narrow, then widen before PR closeout when practical.
 
+## Real E2E Acceptance Rule
+
+For user-facing workflow changes, acceptance-level validation must include a real
+end-to-end path before the issue is considered complete. A real E2E check drives
+the actual entrypoint under test and verifies real downstream effects:
+
+- Browser/web workflow: browser -> local web server -> real API handler -> real
+  app/core behavior -> real filesystem fixture or external service result.
+- CLI/TUI workflow: command or TUI path -> real organizer/renamer behavior ->
+  real filesystem fixture result.
+- ABS workflow: command or REST path -> real ABS container/API/database behavior
+  -> real filesystem and ABS state result.
+
+Mocked browser routes, stubbed API responses, fake ABS clients, and synthetic
+UI-only state tests are useful supplemental UI-contract checks, but they do not
+replace real E2E acceptance evidence for a full feature or fix issue. If a real
+E2E check is blocked, leave the issue open or document the blocker and get
+explicit maintainer acceptance before treating the gap as acceptable.
+
 ## Core Checks
 
 - Format Go code: `make fmt`
@@ -34,6 +53,13 @@ The current web UI is the local browser UI:
 
 If `web/` is absent on an older checkout, stop and report that the checkout does not contain the current new web UI design.
 
+For web workflow issues, prefer fixture-backed Playwright tests that use the real
+server endpoints for the behavior under test. Do not mock or intercept the
+primary endpoint being accepted, such as `/api/organize/preview`,
+`/api/organize/run`, `/api/rename/preview`, or ABS operation endpoints. Mocked
+routes may still be used for negative UI states, bootstrap failures, or contract
+tests, but label/report them as supplemental rather than full E2E proof.
+
 ### Browser Binary Setup
 
 Before reporting a browser E2E failure as an application failure, confirm the browser binary that the check needs:
@@ -56,6 +82,10 @@ ABS-facing changes include Audiobookshelf discovery, path mapping, metadata mode
 - Focused ABS test: `go test -tags=abs_e2e ./test/abs/e2e -run TestName -count=1 -v`
 
 ABS tests require Docker and can download public-domain fixtures. If Docker, network, or corporate proxy/certificates block the run, report the exact blocker and command attempted.
+
+ABS acceptance checks should use real containers, committed/runtime fixtures, and
+real ABS API or database state. Mocked ABS responses can supplement UI or error
+handling tests, but they are not sufficient to close ABS-facing behavior issues.
 
 ## Test Selection
 
