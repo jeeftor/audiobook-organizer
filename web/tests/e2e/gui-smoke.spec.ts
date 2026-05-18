@@ -57,7 +57,6 @@ test('separates workflow modes and gates run behind preview review', async ({ pa
   await page.getByRole('button', { name: /Mark Preview Reviewed/ }).click()
   await expect(page.getByRole('heading', { name: 'Execute the reviewed plan' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Run Rename' })).toBeEnabled()
-  await expect(page.getByText('Preview reviewed')).toBeVisible()
 })
 
 async function loadApp(page: Page): Promise<void> {

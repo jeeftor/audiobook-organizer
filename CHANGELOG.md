@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Clarified agent Gitflow rules for issue branches, worktree hook installation, PR merge strategy, branch verification, and closeout through merge back to `master`.
 - Documented protected `master` workflow rules for required checks, auto-merge, and branch cleanup.
 - Refined the `abo-workflow` skill to prompt between creating new tracked work and selecting from existing GitHub issues.
+- Documented browser binary setup for local web UI E2E checks, including Playwright-managed Chromium and cached Chrome Headless Shell fallback behavior.
 - Restructured the local web UI into explicit organize, rename, and Audiobookshelf workflow stages so configure, dry-run preview, run, and review states are separated.
 
 ---
