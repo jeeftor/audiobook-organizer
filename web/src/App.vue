@@ -58,8 +58,13 @@
             <label v-if="activeWorkflow !== 'rename'">Output folder</label>
             <input v-if="activeWorkflow !== 'rename'" v-model="outputFolder" />
             <label>{{ currentWorkflow.modeLabel }}</label>
-            <select v-model="scanMode">
-              <option v-for="mode in scanModes" :key="mode.value" :value="mode.value">{{ mode.label }}</option>
+            <select
+              v-model="scanMode"
+              aria-label="Metadata source"
+              :disabled="optionsLoading && workflowScanModes.length === 0"
+            >
+              <option v-if="optionsLoading && workflowScanModes.length === 0" value="" disabled>Loading options</option>
+              <option v-for="mode in workflowScanModes" :key="mode.value" :value="mode.value">{{ mode.label }}</option>
             </select>
             <p class="hint">{{ currentWorkflow.configureHint }}</p>
           </div>
@@ -75,8 +80,9 @@
           <div v-else class="panel-section">
             <h3>Organization Rules</h3>
             <label>Layout</label>
-            <select v-model="layout">
-              <option v-for="option in layouts" :key="option.value" :value="option.value">{{ option.label }}</option>
+            <select v-model="layout" aria-label="Layout" :disabled="optionsLoading && layoutOptions.length === 0">
+              <option v-if="optionsLoading && layoutOptions.length === 0" value="" disabled>Loading options</option>
+              <option v-for="option in layoutOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
             <label class="check-row"><input v-model="useEmbeddedMetadata" type="checkbox" /> Use embedded metadata</label>
             <label class="check-row"><input v-model="removeEmpty" type="checkbox" /> Remove empty source folders after run</label>
@@ -91,7 +97,7 @@
             <label>Path Mapping</label>
             <div class="deferred-state">
               <Server :size="18" />
-              <span>Connection tests and library loading are tracked in the follow-up control wiring issue.</span>
+              <span>{{ absSetupState }}</span>
             </div>
           </div>
         </section>
@@ -162,43 +168,18 @@ import {
   Play,
   Server,
 } from 'lucide-vue-next'
-import { apiGet, type HealthResponse } from './api'
+import {
+  apiGet,
+  type HealthResponse,
+  type Option,
+  type OptionsResponse,
+  type WebConfig,
+} from './api'
 
 type WorkflowId = 'organize' | 'rename' | 'abs'
 type StageId = 'configure' | 'preview' | 'run' | 'review'
-
-type Option = {
-  value: string
-  label: string
-}
-
-type InitialConfigResponse = {
-  initial?: {
-    input_dir?: string
-    output_dir?: string
-  }
-  organizer?: {
-    base_dir?: string
-    output_dir?: string
-    layout?: string
-    use_embedded_metadata?: boolean
-    remove_empty?: boolean
-  }
-  rename?: {
-    template?: string
-    recursive?: boolean
-    preserve_path?: boolean
-  }
-  abs?: {
-    url?: string
-    library_id?: string
-  }
-}
-
-type OptionsResponse = {
-  layouts?: Option[]
-  scan_modes?: Option[]
-}
+type LoadState = 'loading' | 'ready' | 'fallback'
+type CredentialState = 'empty' | 'redacted'
 
 type ActivityEvent = {
   time: string
@@ -284,6 +265,8 @@ const defaultScanModes: Option[] = [
 ]
 
 const health = ref('offline')
+const configState = ref<LoadState>('loading')
+const optionsState = ref<LoadState>('loading')
 const activeWorkflow = ref<WorkflowId>('organize')
 const activeStage = ref<StageId>('configure')
 const previewReady = ref(false)
@@ -298,20 +281,50 @@ const renameRecursive = ref(true)
 const preservePath = ref(true)
 const absUrl = ref('')
 const absLibrary = ref('main')
-const layouts = ref<Option[]>(defaultLayouts)
-const scanModes = ref<Option[]>(defaultScanModes)
+const absCredentialState = ref<CredentialState>('empty')
+const layouts = ref<Option[]>([])
+const scanModes = ref<Option[]>([])
 const events = ref<ActivityEvent[]>([
-  { time: 'Pending', level: 'info', event: 'Configure workflow', detail: 'Choose a workflow to begin.' },
+  { time: 'Pending', level: 'info', event: 'Startup checks', detail: 'Loading server health, config, and options.' },
 ])
 
 const currentWorkflow = computed(() => workflows.find((workflow) => workflow.id === activeWorkflow.value) ?? workflows[0])
 const currentStage = computed(() => stageText[activeStage.value])
-const serverLabel = computed(() => (health.value === 'ok' ? 'localhost connected' : 'localhost pending'))
+const optionsLoading = computed(() => optionsState.value === 'loading')
+const layoutOptions = computed(() => {
+  if (layouts.value.length > 0) {
+    return layouts.value
+  }
+  return optionsState.value === 'fallback' ? defaultLayouts : []
+})
+const scanModeOptions = computed(() => {
+  if (scanModes.value.length > 0) {
+    return scanModes.value
+  }
+  return optionsState.value === 'fallback' ? defaultScanModes : []
+})
+const workflowScanModes = computed(() => {
+  return scanModeOptions.value.filter((mode) => activeWorkflow.value === 'abs' || mode.value !== 'abs')
+})
+const serverLabel = computed(() =>
+  [
+    health.value === 'ok' ? 'localhost connected' : 'localhost pending',
+    stateLabel('config', configState.value),
+    stateLabel('options', optionsState.value),
+  ].join(' · '),
+)
+const absSetupState = computed(() => {
+  if (absCredentialState.value === 'redacted') {
+    return 'Saved ABS credentials are redacted and will need a fresh token when connection controls are wired.'
+  }
+  return 'Connection tests and library loading are tracked in the follow-up control wiring issue.'
+})
 
 function selectWorkflow(workflow: WorkflowId) {
   activeWorkflow.value = workflow
   activeStage.value = 'configure'
   previewReady.value = false
+  ensureScanModeFitsWorkflow()
   events.value = [
     {
       time: now(),
@@ -335,6 +348,27 @@ function markPreviewReady() {
   ]
 }
 
+function stateLabel(name: string, state: LoadState) {
+  if (state === 'ready') {
+    return `${name} ready`
+  }
+  if (state === 'fallback') {
+    return `${name} fallback`
+  }
+  return `${name} loading`
+}
+
+function addEvent(event: ActivityEvent) {
+  events.value = [event, ...events.value]
+}
+
+function ensureScanModeFitsWorkflow() {
+  if (workflowScanModes.value.some((mode) => mode.value === scanMode.value)) {
+    return
+  }
+  scanMode.value = workflowScanModes.value[0]?.value || 'json'
+}
+
 function now() {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
@@ -348,7 +382,7 @@ onMounted(async () => {
   }
 
   try {
-    const config = await apiGet<InitialConfigResponse>('/api/config/initial')
+    const config = await apiGet<WebConfig>('/api/config/initial')
     sourceFolder.value = config.initial?.input_dir || config.organizer?.base_dir || ''
     outputFolder.value = config.initial?.output_dir || config.organizer?.output_dir || ''
     layout.value = config.organizer?.layout || layout.value
@@ -359,16 +393,25 @@ onMounted(async () => {
     preservePath.value = config.rename?.preserve_path ?? true
     absUrl.value = config.abs?.url ?? ''
     absLibrary.value = config.abs?.library_id || absLibrary.value
+    absCredentialState.value = config.abs?.token === 'redacted' ? 'redacted' : 'empty'
+    configState.value = 'ready'
+    addEvent({ time: now(), level: 'ok', event: 'Config loaded', detail: 'Startup config is ready.' })
   } catch {
-    events.value = [{ time: now(), level: 'warn', event: 'Config unavailable', detail: 'Using local defaults.' }, ...events.value]
+    configState.value = 'fallback'
+    addEvent({ time: now(), level: 'warn', event: 'Config unavailable', detail: 'Using local defaults.' })
   }
 
   try {
     const options = await apiGet<OptionsResponse>('/api/config/options')
-    layouts.value = options.layouts?.length ? options.layouts : defaultLayouts
-    scanModes.value = options.scan_modes?.length ? options.scan_modes : defaultScanModes
+    layouts.value = Array.isArray(options.layouts) ? options.layouts : []
+    scanModes.value = Array.isArray(options.scan_modes) ? options.scan_modes : []
+    optionsState.value = 'ready'
+    ensureScanModeFitsWorkflow()
+    addEvent({ time: now(), level: 'ok', event: 'Options loaded', detail: 'Layout and scan mode options are ready.' })
   } catch {
-    events.value = [{ time: now(), level: 'warn', event: 'Options unavailable', detail: 'Using built-in option labels.' }, ...events.value]
+    optionsState.value = 'fallback'
+    ensureScanModeFitsWorkflow()
+    addEvent({ time: now(), level: 'warn', event: 'Options unavailable', detail: 'Using built-in option labels.' })
   }
 })
 </script>
