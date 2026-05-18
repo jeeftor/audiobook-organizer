@@ -378,6 +378,81 @@ select:focus {
   line-height: 1.4;
 }
 
+.deferred-state.ready {
+  border-color: rgba(40, 201, 123, 0.46);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.split-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.library-list,
+.mapping-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.library-option {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #14181e;
+  color: var(--text);
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+  text-align: left;
+}
+
+.library-option:hover {
+  border-color: var(--accent);
+}
+
+.library-option strong {
+  font-size: 13px;
+}
+
+.library-option span {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.mapping-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px;
+  gap: 8px;
+  align-items: center;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-quiet);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+}
+
+.icon-button:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .preview-layout {
   display: grid;
   grid-template-columns: minmax(320px, 1.1fr) minmax(260px, 0.9fr);
@@ -616,6 +691,15 @@ select:focus {
   .configure-grid,
   .preview-layout {
     grid-template-columns: 1fr;
+  }
+
+  .split-row,
+  .mapping-row {
+    grid-template-columns: 1fr;
+  }
+
+  .icon-button {
+    width: 100%;
   }
 }
 

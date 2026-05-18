@@ -101,7 +101,100 @@ test('does not treat redacted ABS credentials as usable browser state', async ({
   await loadApp(page)
   await page.getByRole('button', { name: /Audiobookshelf/ }).click()
 
-  await expect(page.getByText(/Saved ABS credentials are redacted/)).toBeVisible()
+  await expect(page.locator('.deferred-state').filter({ hasText: /Saved ABS credentials are redacted/ })).toBeVisible()
+})
+
+test('contracts ABS setup controls with mocked backend responses', async ({ page }) => {
+  let librariesBody: Record<string, any> | undefined
+  let pathBody: Record<string, any> | undefined
+
+  await page.route('**/api/abs/libraries', async (route) => {
+    librariesBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        libraries: [
+          {
+            id: 'lib-audio',
+            name: 'Audiobooks',
+            mediaType: 'book',
+            folders: [{ id: 'folder-audio', path: '/audiobooks', fullPath: '/audiobooks' }],
+          },
+        ],
+      }),
+    })
+  })
+  await page.route('**/api/abs/test-paths', async (route) => {
+    pathBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        mappings: [{ abs_prefix: '/audiobooks', local_prefix: '/host/audiobooks' }],
+      }),
+    })
+  })
+
+  await loadApp(page)
+  await page.getByRole('button', { name: /Audiobookshelf/ }).click()
+  await page.getByRole('textbox', { name: 'Source folder' }).fill('/host/audiobooks')
+  await page.getByLabel('ABS server URL').fill('http://localhost:13378')
+  await page.getByLabel('ABS API token').fill('test-token')
+  await page.getByLabel('ABS library ID').fill('pending-library')
+  await page.getByLabel('Local path prefix').fill('/host/audiobooks')
+  await page.getByRole('button', { name: 'Load Libraries' }).click()
+
+  await expect(page.getByRole('button', { name: /Audiobooks lib-audio/ })).toBeVisible()
+  await page.getByRole('button', { name: /Audiobooks lib-audio/ }).click()
+  await expect(page.getByLabel('ABS library ID')).toHaveValue('lib-audio')
+  expect(librariesBody).toEqual(
+    expect.objectContaining({
+      url: 'http://localhost:13378',
+      token: 'test-token',
+      library_id: 'pending-library',
+    }),
+  )
+
+  await page.getByRole('button', { name: 'Validate Paths' }).click()
+
+  await expect(page.getByText('ABS libraries loaded and path mappings validated.')).toBeVisible()
+  await expect(page.getByText('/host/audiobooks')).toBeVisible()
+  expect(pathBody).toEqual(
+    expect.objectContaining({
+      input_dir: '/host/audiobooks',
+      config: expect.objectContaining({
+        library_id: 'lib-audio',
+        path_mappings: [{ abs_prefix: '/audiobooks', local_prefix: '/host/audiobooks' }],
+      }),
+    }),
+  )
+
+  await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
+  await expect(page.getByRole('heading', { name: 'ABS Setup Summary' })).toBeVisible()
+  await expect(page.getByText('Ready for ABS operations')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
+})
+
+test('keeps ABS later stages locked when setup requests fail', async ({ page }) => {
+  await page.route('**/api/abs/libraries', async (route) => {
+    await route.fulfill({
+      status: 400,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'abs token is required' }),
+    })
+  })
+
+  await loadApp(page)
+  await page.getByRole('button', { name: /Audiobookshelf/ }).click()
+  await page.getByLabel('ABS server URL').fill('http://localhost:13378')
+  await page.getByRole('button', { name: 'Load Libraries' }).click()
+
+  await expect(page.locator('.inline-alert').filter({ hasText: 'abs token is required' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
+  await expect(page.locator('.inline-alert').filter({ hasText: 'ABS setup must load libraries' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
 })
 
 test('contracts organize preview and run UI state with mocked backend responses', async ({ page }) => {

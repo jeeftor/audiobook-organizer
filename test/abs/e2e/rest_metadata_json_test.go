@@ -73,6 +73,62 @@ func TestRESTHarness_MetadataJSONModeLifecycle(t *testing.T) {
 	}
 }
 
+func TestRESTHarness_ABSSetupEndpoints(t *testing.T) {
+	harness := newRESTHarness(t)
+	defer harness.server.Close()
+
+	var ctx restScenarioContext
+	step(t, "01 reset and identify ABS audiobook library", func(t *testing.T) {
+		resetAndInitialScan(t)
+		ctx = newRESTScenarioContext(t, harness, plainInstance, audiobooksLibrary)
+	})
+
+	step(t, "02 list libraries through REST setup endpoint", func(t *testing.T) {
+		var response restABSLibrariesResponse
+		harness.postJSON(t, "/api/abs/libraries", ctx.config, &response)
+		for _, library := range response.Libraries {
+			if library.ID == ctx.libraryID && library.Name == audiobooksLibrary.name {
+				return
+			}
+		}
+		t.Fatalf(
+			"library %s not returned by REST ABS setup endpoint: %+v",
+			ctx.libraryID,
+			response.Libraries,
+		)
+	})
+
+	step(t, "03 validate manual path mapping through REST setup endpoint", func(t *testing.T) {
+		var response struct {
+			Mappings []struct {
+				ABSPrefix   string `json:"abs_prefix"`
+				LocalPrefix string `json:"local_prefix"`
+			} `json:"mappings"`
+		}
+		harness.postJSON(t, "/api/abs/test-paths", map[string]any{
+			"input_dir": localLibraryPath(plainInstance, audiobooksLibrary),
+			"config":    ctx.config,
+		}, &response)
+		if len(response.Mappings) != 1 {
+			t.Fatalf("expected one resolved mapping, got %+v", response.Mappings)
+		}
+		if response.Mappings[0].ABSPrefix != audiobooksLibrary.folderPath {
+			t.Fatalf(
+				"abs prefix = %q, want %q",
+				response.Mappings[0].ABSPrefix,
+				audiobooksLibrary.folderPath,
+			)
+		}
+		if response.Mappings[0].LocalPrefix != localLibraryPath(plainInstance, audiobooksLibrary) {
+			t.Fatalf(
+				"local prefix = %q, want %q",
+				response.Mappings[0].LocalPrefix,
+				localLibraryPath(plainInstance, audiobooksLibrary),
+			)
+		}
+	})
+}
+
 func runRESTMetadataJSONLifecycle(t *testing.T, tc metadataJSONLifecycleCase) {
 	harness := newRESTHarness(t)
 	defer harness.server.Close()

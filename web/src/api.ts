@@ -111,6 +111,28 @@ export type ABSConfig = {
   headers?: HeaderConfig[]
 }
 
+export type ABSLibraryFolder = {
+  id: string
+  path: string
+  fullPath: string
+  libraryId?: string
+}
+
+export type ABSLibrary = {
+  id: string
+  name: string
+  mediaType: string
+  folders?: ABSLibraryFolder[]
+}
+
+export type ABSLibrariesResponse = {
+  libraries: ABSLibrary[]
+}
+
+export type ABSPathMappingResponse = {
+  mappings: PathMapping[]
+}
+
 export type WebConfig = {
   host: string
   port: number
