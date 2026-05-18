@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Removed the deprecated GUI tree and release packaging. Releases now focus on one `audiobook-organizer` binary with CLI, TUI, ABS, and local web UI entrypoints.
-- Improved README, repository metadata, and web page metadata so search results describe the project as an audiobook organizer and renamer for Audiobookshelf with `metadata.json`, EPUB, MP3, and M4B support.
+- Improved the README overview, repository metadata, and web page metadata so search results describe the project as an audiobook organizer and renamer for Audiobookshelf with `metadata.json`, EPUB, MP3, and M4B support.
 - Rewrote the root README for the single-binary web UI direction and current command surface.
 - Split the Audiobookshelf E2E matrix into parallel GitHub Actions jobs for faster feedback.
 - Added a first-class Audiobookshelf smoke/reset matrix row for the reset, baseline restore, startup, scan, metadata setting, and initial item count contract.
