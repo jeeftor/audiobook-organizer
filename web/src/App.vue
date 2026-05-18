@@ -91,13 +91,80 @@
           <div v-if="activeWorkflow === 'abs'" class="panel-section">
             <h3>Audiobookshelf</h3>
             <label>Server URL</label>
-            <input v-model="absUrl" placeholder="http://localhost:13378" />
+            <input v-model="absUrl" aria-label="ABS server URL" placeholder="http://localhost:13378" />
+            <label>API Token</label>
+            <input v-model="absToken" aria-label="ABS API token" autocomplete="off" type="password" />
+            <p v-if="absCredentialState === 'redacted' && !absToken" class="hint">
+              Saved ABS credentials are redacted. Enter a fresh token before sending requests.
+            </p>
             <label>Library ID</label>
-            <input v-model="absLibrary" />
+            <input v-model="absLibrary" aria-label="ABS library ID" />
+            <div class="action-row">
+              <button class="secondary-action" :disabled="absLibrariesStatus === 'loading'" @click="loadABSLibraries">
+                <Server :size="18" /> {{ absLibrariesActionLabel }}
+              </button>
+            </div>
+            <p v-if="absLibrariesError" class="inline-alert">{{ absLibrariesError }}</p>
+            <div v-if="absLibraries.length > 0" class="library-list">
+              <button
+                v-for="library in absLibraries"
+                :key="library.id"
+                class="library-option"
+                type="button"
+                @click="selectABSLibrary(library.id)"
+              >
+                <strong>{{ library.name || library.id }}</strong>
+                <span>{{ library.id }} · {{ library.mediaType || 'library' }}</span>
+              </button>
+            </div>
+            <label>Custom Header</label>
+            <div class="split-row">
+              <input v-model="absHeaderName" aria-label="ABS header name" placeholder="Header name" />
+              <input
+                v-model="absHeaderValue"
+                aria-label="ABS header value"
+                autocomplete="off"
+                placeholder="Header value"
+                type="password"
+              />
+            </div>
+            <label>SQLite Database Path</label>
+            <input v-model="absSQLitePath" aria-label="ABS SQLite database path" />
+            <p class="hint">Leave SQLite empty to validate manual path mappings.</p>
             <label>Path Mapping</label>
-            <div class="deferred-state">
+            <div class="mapping-list">
+              <div v-for="(mapping, index) in absPathMappings" :key="index" class="mapping-row">
+                <input v-model="mapping.abs_prefix" aria-label="ABS path prefix" placeholder="/audiobooks" />
+                <input v-model="mapping.local_prefix" aria-label="Local path prefix" placeholder="/host/audiobooks" />
+                <button
+                  class="icon-button"
+                  type="button"
+                  :disabled="absPathMappings.length === 1"
+                  aria-label="Remove path mapping"
+                  @click="removeABSPathMapping(index)"
+                >
+                  <Trash2 :size="16" />
+                </button>
+              </div>
+            </div>
+            <div class="action-row">
+              <button class="secondary-action" type="button" @click="addABSPathMapping">
+                <Plus :size="18" /> Add Mapping
+              </button>
+              <button class="primary-action" :disabled="absPathStatus === 'loading'" type="button" @click="testABSPathMappings">
+                <Server :size="18" /> {{ absPathActionLabel }}
+              </button>
+            </div>
+            <p v-if="absPathError" class="inline-alert">{{ absPathError }}</p>
+            <div class="deferred-state" :class="{ ready: absSetupReady }">
               <Server :size="18" />
               <span>{{ absSetupState }}</span>
+            </div>
+            <div v-if="absResolvedMappings.length > 0" class="move-list">
+              <div v-for="mapping in absResolvedMappings" :key="mapping.abs_prefix + mapping.local_prefix">
+                <span>{{ mapping.abs_prefix }}</span>
+                <strong>{{ mapping.local_prefix }}</strong>
+              </div>
             </div>
           </div>
         </section>
@@ -133,9 +200,12 @@
               </button>
               <p v-if="renamePreviewError" class="inline-alert">{{ renamePreviewError }}</p>
             </template>
-            <button v-else class="primary-action" @click="markPreviewReady">
-              <Play :size="18" /> Mark Preview Reviewed
-            </button>
+            <template v-else>
+              <button class="primary-action" disabled>
+                <Play :size="18" /> ABS Operations Deferred
+              </button>
+              <p v-if="!absSetupReady" class="inline-alert">ABS setup must load libraries and validate paths first.</p>
+            </template>
           </div>
           <div v-if="activeWorkflow === 'organize'" class="preview-checklist">
             <h3>Preview Summary</h3>
@@ -188,12 +258,12 @@
             </template>
           </div>
           <div v-else class="preview-checklist">
-            <h3>Review Gate</h3>
-            <ul>
-              <li>Filesystem-changing actions stay locked until a dry-run preview has been reviewed.</li>
-              <li>Warnings and proposed paths belong in this stage, not on the first screen.</li>
-              <li>Backend preview wiring remains scoped to #64.</li>
-            </ul>
+            <h3>ABS Setup Summary</h3>
+            <div class="result-grid compact">
+              <span>Libraries</span><strong>{{ absLibraries.length }}</strong>
+              <span>Mappings</span><strong>{{ absResolvedMappings.length }}</strong>
+              <span>Status</span><strong>{{ absSetupReady ? 'Ready for ABS operations' : 'Setup incomplete' }}</strong>
+            </div>
           </div>
         </section>
 
@@ -264,11 +334,17 @@ import {
   FilePenLine,
   FolderInput,
   Play,
+  Plus,
   Server,
+  Trash2,
 } from 'lucide-vue-next'
 import {
   apiGet,
   apiPost,
+  type ABSConfig,
+  type ABSLibrariesResponse,
+  type ABSLibrary,
+  type ABSPathMappingResponse,
   type FieldMapping,
   type HealthResponse,
   type Option,
@@ -286,6 +362,10 @@ type StageId = 'configure' | 'preview' | 'run' | 'review'
 type LoadState = 'loading' | 'ready' | 'fallback'
 type CredentialState = 'empty' | 'redacted'
 type RequestState = 'idle' | 'loading' | 'success' | 'error'
+type EditablePathMapping = {
+  abs_prefix: string
+  local_prefix: string
+}
 
 type ActivityEvent = {
   time: string
@@ -392,21 +472,32 @@ const renameTemplate = ref('{author} - {series} {series_number} - {title}')
 const renameRecursive = ref(true)
 const preservePath = ref(true)
 const absUrl = ref('')
+const absToken = ref('')
 const absLibrary = ref('main')
 const absCredentialState = ref<CredentialState>('empty')
+const absHeaderName = ref('')
+const absHeaderValue = ref('')
+const absSQLitePath = ref('')
+const absPathMappings = ref<EditablePathMapping[]>([{ abs_prefix: '/audiobooks', local_prefix: '' }])
 const organizerDefaults = ref<OrganizerConfig | null>(null)
 const renameDefaults = ref<RenameConfig | null>(null)
 const layouts = ref<Option[]>([])
 const scanModes = ref<Option[]>([])
+const absLibraries = ref<ABSLibrary[]>([])
+const absResolvedMappings = ref<EditablePathMapping[]>([])
 const organizePreview = ref<OrganizePreviewResponse | null>(null)
 const organizeRun = ref<OrganizeRunResponse | null>(null)
 const renamePreview = ref<RenamePreviewResponse | null>(null)
 const organizePreviewStatus = ref<RequestState>('idle')
 const organizeRunStatus = ref<RequestState>('idle')
 const renamePreviewStatus = ref<RequestState>('idle')
+const absLibrariesStatus = ref<RequestState>('idle')
+const absPathStatus = ref<RequestState>('idle')
 const organizePreviewError = ref('')
 const organizeRunError = ref('')
 const renamePreviewError = ref('')
+const absLibrariesError = ref('')
+const absPathError = ref('')
 const events = ref<ActivityEvent[]>([
   { time: 'Pending', level: 'info', event: 'Startup checks', detail: 'Loading server health, config, and options.' },
 ])
@@ -437,11 +528,15 @@ const serverLabel = computed(() =>
   ].join(' · '),
 )
 const absSetupState = computed(() => {
-  if (absCredentialState.value === 'redacted') {
-    return 'Saved ABS credentials are redacted and will need a fresh token when connection controls are wired.'
+  if (absSetupReady.value) {
+    return 'ABS libraries loaded and path mappings validated.'
   }
-  return 'Connection tests and library loading are tracked in the follow-up control wiring issue.'
+  if (absCredentialState.value === 'redacted' && !absToken.value) {
+    return 'Saved ABS credentials are redacted. Enter a fresh token before sending requests.'
+  }
+  return 'Load libraries and validate path mappings to complete ABS setup.'
 })
+const absSetupReady = computed(() => absLibrariesStatus.value === 'success' && absPathStatus.value === 'success')
 const previewHeading = computed(() => {
   if (activeWorkflow.value === 'rename') {
     if (renamePreviewStatus.value === 'success') {
@@ -466,12 +561,18 @@ const organizePreviewActionLabel = computed(() =>
 const renamePreviewActionLabel = computed(() =>
   renamePreviewStatus.value === 'loading' ? 'Creating Preview' : 'Create Rename Preview',
 )
+const absLibrariesActionLabel = computed(() =>
+  absLibrariesStatus.value === 'loading' ? 'Loading Libraries' : 'Load Libraries',
+)
+const absPathActionLabel = computed(() =>
+  absPathStatus.value === 'loading' ? 'Validating Paths' : 'Validate Paths',
+)
 const isRunActionDisabled = computed(() => {
   if (activeWorkflow.value === 'rename') {
     return true
   }
   if (activeWorkflow.value === 'abs') {
-    return !previewReady.value
+    return true
   }
   return !previewReady.value || organizeRunStatus.value === 'loading'
 })
@@ -502,6 +603,9 @@ function isStageLocked(stage: StageId) {
   }
   if (activeWorkflow.value === 'organize') {
     return !previewReady.value || organizeRunStatus.value === 'loading'
+  }
+  if (activeWorkflow.value === 'abs') {
+    return true
   }
   return !previewReady.value
 }
@@ -617,6 +721,71 @@ function reviewRenamePreview() {
   })
 }
 
+async function loadABSLibraries() {
+  absLibrariesStatus.value = 'loading'
+  absLibrariesError.value = ''
+  absLibraries.value = []
+  previewReady.value = false
+
+  try {
+    const response = await apiPost<ABSLibrariesResponse>('/api/abs/libraries', buildABSConfig())
+    absLibraries.value = Array.isArray(response.libraries) ? response.libraries : []
+    absLibrariesStatus.value = 'success'
+    addEvent({
+      time: now(),
+      level: 'ok',
+      event: 'ABS libraries loaded',
+      detail: `${absLibraries.value.length} library/libraries returned.`,
+    })
+  } catch (error) {
+    absLibrariesStatus.value = 'error'
+    absLibrariesError.value = error instanceof Error ? error.message : 'ABS library request failed.'
+    addEvent({ time: now(), level: 'warn', event: 'ABS libraries failed', detail: absLibrariesError.value })
+  }
+}
+
+async function testABSPathMappings() {
+  absPathStatus.value = 'loading'
+  absPathError.value = ''
+  absResolvedMappings.value = []
+  previewReady.value = false
+
+  try {
+    const response = await apiPost<ABSPathMappingResponse>('/api/abs/test-paths', {
+      input_dir: sourceFolder.value.trim(),
+      config: buildABSConfig(),
+    })
+    absResolvedMappings.value = response.mappings ?? []
+    absPathStatus.value = 'success'
+    addEvent({
+      time: now(),
+      level: 'ok',
+      event: 'ABS paths validated',
+      detail: `${absResolvedMappings.value.length} path mapping(s) resolved.`,
+    })
+  } catch (error) {
+    absPathStatus.value = 'error'
+    absPathError.value = error instanceof Error ? error.message : 'ABS path validation failed.'
+    addEvent({ time: now(), level: 'warn', event: 'ABS path validation failed', detail: absPathError.value })
+  }
+}
+
+function selectABSLibrary(libraryID: string) {
+  absLibrary.value = libraryID
+}
+
+function addABSPathMapping() {
+  absPathMappings.value = [...absPathMappings.value, { abs_prefix: '', local_prefix: '' }]
+}
+
+function removeABSPathMapping(index: number) {
+  if (absPathMappings.value.length === 1) {
+    return
+  }
+  absPathMappings.value = absPathMappings.value.filter((_, mappingIndex) => mappingIndex !== index)
+  resetABSPathResults()
+}
+
 async function runOrganize() {
   if (organizePreviewStatus.value !== 'success' || !previewReady.value || organizeRunStatus.value === 'loading') {
     return
@@ -683,6 +852,27 @@ function buildRenameConfig(): RenameConfig {
   }
 }
 
+function buildABSConfig(): ABSConfig {
+  const headers =
+    absHeaderName.value.trim() && absHeaderValue.value
+      ? [{ name: absHeaderName.value.trim(), value: absHeaderValue.value }]
+      : undefined
+  return {
+    url: absUrl.value.trim(),
+    token: absToken.value,
+    library_id: absLibrary.value.trim() || 'main',
+    sqlite_path: absSQLitePath.value.trim() || undefined,
+    path_mappings: absPathMappings.value
+      .map((mapping) => ({
+        abs_prefix: mapping.abs_prefix.trim(),
+        local_prefix: mapping.local_prefix.trim(),
+      }))
+      .filter((mapping) => mapping.abs_prefix || mapping.local_prefix),
+    all_libraries: false,
+    headers,
+  }
+}
+
 function shouldUseEmbeddedMetadata() {
   return useEmbeddedMetadata.value || scanMode.value === 'embedded-directory' || scanMode.value === 'embedded-file'
 }
@@ -707,6 +897,19 @@ function resetRenameResults() {
   renamePreview.value = null
   renamePreviewStatus.value = 'idle'
   renamePreviewError.value = ''
+}
+
+function resetABSConnectionResults() {
+  absLibraries.value = []
+  absLibrariesStatus.value = 'idle'
+  absLibrariesError.value = ''
+  resetABSPathResults()
+}
+
+function resetABSPathResults() {
+  absResolvedMappings.value = []
+  absPathStatus.value = 'idle'
+  absPathError.value = ''
 }
 
 function normalizeOrganizeResponse<T extends OrganizePreviewResponse | OrganizeRunResponse>(response: T): T {
@@ -769,6 +972,14 @@ onMounted(async () => {
     absUrl.value = config.abs?.url ?? ''
     absLibrary.value = config.abs?.library_id || absLibrary.value
     absCredentialState.value = config.abs?.token === 'redacted' ? 'redacted' : 'empty'
+    absSQLitePath.value = config.abs?.sqlite_path ?? ''
+    absPathMappings.value =
+      config.abs?.path_mappings && config.abs.path_mappings.length > 0
+        ? config.abs.path_mappings.map((mapping) => ({
+            abs_prefix: mapping.abs_prefix,
+            local_prefix: mapping.local_prefix,
+          }))
+        : absPathMappings.value
     configState.value = 'ready'
     addEvent({ time: now(), level: 'ok', event: 'Config loaded', detail: 'Startup config is ready.' })
   } catch {
@@ -805,4 +1016,20 @@ watch([sourceFolder, scanMode, useEmbeddedMetadata, renameTemplate, renameRecurs
   previewReady.value = false
   resetRenameResults()
 })
+
+watch([absUrl, absToken, absHeaderName, absHeaderValue], () => {
+  if (activeWorkflow.value !== 'abs') {
+    return
+  }
+  previewReady.value = false
+  resetABSConnectionResults()
+})
+
+watch([sourceFolder, absSQLitePath, absPathMappings], () => {
+  if (activeWorkflow.value !== 'abs') {
+    return
+  }
+  previewReady.value = false
+  resetABSPathResults()
+}, { deep: true })
 </script>
