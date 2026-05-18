@@ -54,9 +54,9 @@
           <div class="panel-section">
             <h3>{{ currentWorkflow.configureTitle }}</h3>
             <label>Source folder</label>
-            <input v-model="sourceFolder" />
+            <input v-model="sourceFolder" aria-label="Source folder" />
             <label v-if="activeWorkflow !== 'rename'">Output folder</label>
-            <input v-if="activeWorkflow !== 'rename'" v-model="outputFolder" />
+            <input v-if="activeWorkflow !== 'rename'" v-model="outputFolder" aria-label="Output folder" />
             <label>{{ currentWorkflow.modeLabel }}</label>
             <select
               v-model="scanMode"
@@ -105,11 +105,51 @@
         <section v-else-if="activeStage === 'preview'" class="preview-layout">
           <div class="preview-empty">
             <Eye :size="30" />
-            <h3>Dry-run preview first</h3>
+            <h3>{{ organizePreviewHeading }}</h3>
             <p>{{ currentWorkflow.previewCopy }}</p>
-            <button class="primary-action" @click="markPreviewReady"><Play :size="18" /> Mark Preview Reviewed</button>
+            <template v-if="activeWorkflow === 'organize'">
+              <button
+                class="primary-action"
+                :disabled="organizePreviewStatus === 'loading'"
+                @click="createOrganizePreview"
+              >
+                <Play :size="18" /> {{ organizePreviewActionLabel }}
+              </button>
+              <button
+                v-if="organizePreviewStatus === 'success'"
+                class="secondary-action"
+                @click="reviewOrganizePreview"
+              >
+                Review Preview & Continue
+              </button>
+              <p v-if="organizePreviewError" class="inline-alert">{{ organizePreviewError }}</p>
+            </template>
+            <button v-else class="primary-action" @click="markPreviewReady">
+              <Play :size="18" /> Mark Preview Reviewed
+            </button>
           </div>
-          <div class="preview-checklist">
+          <div v-if="activeWorkflow === 'organize'" class="preview-checklist">
+            <h3>Preview Summary</h3>
+            <p v-if="!organizePreview">No organize preview has run.</p>
+            <template v-else>
+              <div class="result-grid compact">
+                <span>Metadata found</span><strong>{{ organizePreview.summary.MetadataFound.length }}</strong>
+                <span>Planned moves</span><strong>{{ organizePreview.summary.Moves.length }}</strong>
+                <span>Warnings</span><strong>{{ organizePreview.summary.MetadataMissing.length }}</strong>
+                <span>Log path</span><strong>{{ organizePreview.log_path || 'Not created during dry-run' }}</strong>
+              </div>
+              <ul v-if="organizePreview.summary.MetadataMissing.length > 0" class="warning-list">
+                <li v-for="missing in organizePreview.summary.MetadataMissing.slice(0, 4)" :key="missing">{{ missing }}</li>
+              </ul>
+              <div v-if="organizePreview.summary.Moves.length > 0" class="move-list">
+                <div v-for="move in organizePreview.summary.Moves.slice(0, 4)" :key="move.from + move.to">
+                  <span>{{ move.from }}</span>
+                  <strong>{{ move.to }}</strong>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div v-else class="preview-checklist">
             <h3>Review Gate</h3>
             <ul>
               <li>Filesystem-changing actions stay locked until a dry-run preview has been reviewed.</li>
@@ -127,9 +167,25 @@
               <p>{{ currentWorkflow.runCopy }}</p>
             </div>
           </div>
-          <button class="danger-action" :disabled="!previewReady">
+          <p v-if="activeWorkflow === 'organize' && organizeRunError" class="inline-alert">{{ organizeRunError }}</p>
+          <button
+            class="danger-action"
+            :disabled="isRunActionDisabled"
+            @click="activeWorkflow === 'organize' ? runOrganize() : undefined"
+          >
             <Play :size="18" /> {{ currentWorkflow.runAction }}
           </button>
+        </section>
+
+        <section v-else-if="activeWorkflow === 'organize' && organizeRun" class="review-layout">
+          <h3>Organize Run Complete</h3>
+          <p>The reviewed organize plan finished with backend results.</p>
+          <div class="result-grid">
+            <span>Job status</span><strong>Complete</strong>
+            <span>Files organized</span><strong>{{ organizeRun.summary.Moves.length }}</strong>
+            <span>Undo log</span><strong>{{ organizeRun.log_path || 'Not reported' }}</strong>
+            <span>Warnings</span><strong>{{ organizeRun.summary.MetadataMissing.length }}</strong>
+          </div>
         </section>
 
         <section v-else class="review-layout">
@@ -158,7 +214,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import {
   AlertTriangle,
   AudioLines,
@@ -170,8 +226,13 @@ import {
 } from 'lucide-vue-next'
 import {
   apiGet,
+  apiPost,
+  type FieldMapping,
   type HealthResponse,
   type Option,
+  type OrganizerConfig,
+  type OrganizePreviewResponse,
+  type OrganizeRunResponse,
   type OptionsResponse,
   type WebConfig,
 } from './api'
@@ -180,6 +241,7 @@ type WorkflowId = 'organize' | 'rename' | 'abs'
 type StageId = 'configure' | 'preview' | 'run' | 'review'
 type LoadState = 'loading' | 'ready' | 'fallback'
 type CredentialState = 'empty' | 'redacted'
+type RequestState = 'idle' | 'loading' | 'success' | 'error'
 
 type ActivityEvent = {
   time: string
@@ -263,6 +325,12 @@ const defaultScanModes: Option[] = [
   { value: 'embedded-file', label: 'Embedded metadata by file' },
   { value: 'abs', label: 'Audiobookshelf metadata' },
 ]
+const defaultFieldMapping: FieldMapping = {
+  title_field: 'title',
+  series_field: 'series',
+  author_fields: ['authors'],
+  track_field: 'track',
+}
 
 const health = ref('offline')
 const configState = ref<LoadState>('loading')
@@ -282,8 +350,15 @@ const preservePath = ref(true)
 const absUrl = ref('')
 const absLibrary = ref('main')
 const absCredentialState = ref<CredentialState>('empty')
+const organizerDefaults = ref<OrganizerConfig | null>(null)
 const layouts = ref<Option[]>([])
 const scanModes = ref<Option[]>([])
+const organizePreview = ref<OrganizePreviewResponse | null>(null)
+const organizeRun = ref<OrganizeRunResponse | null>(null)
+const organizePreviewStatus = ref<RequestState>('idle')
+const organizeRunStatus = ref<RequestState>('idle')
+const organizePreviewError = ref('')
+const organizeRunError = ref('')
 const events = ref<ActivityEvent[]>([
   { time: 'Pending', level: 'info', event: 'Startup checks', detail: 'Loading server health, config, and options.' },
 ])
@@ -319,11 +394,35 @@ const absSetupState = computed(() => {
   }
   return 'Connection tests and library loading are tracked in the follow-up control wiring issue.'
 })
+const organizePreviewHeading = computed(() => {
+  if (activeWorkflow.value !== 'organize') {
+    return 'Dry-run preview first'
+  }
+  if (organizePreviewStatus.value === 'success') {
+    return 'Organize preview ready'
+  }
+  if (organizePreviewStatus.value === 'error') {
+    return 'Preview needs attention'
+  }
+  return 'Create an organize preview'
+})
+const organizePreviewActionLabel = computed(() =>
+  organizePreviewStatus.value === 'loading' ? 'Creating Preview' : 'Create Dry-run Preview',
+)
+const isRunActionDisabled = computed(() => {
+  if (activeWorkflow.value !== 'organize') {
+    return !previewReady.value
+  }
+  return !previewReady.value || organizeRunStatus.value === 'loading'
+})
 
 function selectWorkflow(workflow: WorkflowId) {
   activeWorkflow.value = workflow
   activeStage.value = 'configure'
   previewReady.value = false
+  if (workflow === 'organize') {
+    resetOrganizeResults()
+  }
   ensureScanModeFitsWorkflow()
   events.value = [
     {
@@ -336,7 +435,7 @@ function selectWorkflow(workflow: WorkflowId) {
 }
 
 function isStageLocked(stage: StageId) {
-  return stage === 'run' && !previewReady.value
+  return stage === 'run' && isRunActionDisabled.value
 }
 
 function markPreviewReady() {
@@ -362,6 +461,129 @@ function addEvent(event: ActivityEvent) {
   events.value = [event, ...events.value]
 }
 
+async function createOrganizePreview() {
+  organizePreviewStatus.value = 'loading'
+  organizePreviewError.value = ''
+  organizeRun.value = null
+  organizeRunError.value = ''
+  previewReady.value = false
+
+  try {
+    if (!sourceFolder.value.trim() || !outputFolder.value.trim()) {
+      throw new Error('Source and output folders are required for organize preview.')
+    }
+    const response = normalizeOrganizeResponse(
+      await apiPost<OrganizePreviewResponse>('/api/organize/preview', {
+        config: buildOrganizerConfig(true),
+      }),
+    )
+    organizePreview.value = response
+    organizePreviewStatus.value = 'success'
+    addEvent({
+      time: now(),
+      level: 'ok',
+      event: 'Organize preview ready',
+      detail: `${response.summary.Moves.length} planned move(s), ${response.summary.MetadataMissing.length} warning(s).`,
+    })
+  } catch (error) {
+    organizePreview.value = null
+    organizePreviewStatus.value = 'error'
+    organizePreviewError.value = error instanceof Error ? error.message : 'Preview failed.'
+    addEvent({ time: now(), level: 'warn', event: 'Organize preview failed', detail: organizePreviewError.value })
+  }
+}
+
+function reviewOrganizePreview() {
+  if (organizePreviewStatus.value !== 'success') {
+    return
+  }
+  previewReady.value = true
+  activeStage.value = 'run'
+  addEvent({ time: now(), level: 'ok', event: 'Preview reviewed', detail: 'Organize run stage unlocked.' })
+}
+
+async function runOrganize() {
+  if (organizePreviewStatus.value !== 'success' || !previewReady.value || organizeRunStatus.value === 'loading') {
+    return
+  }
+  if (!window.confirm('Run Organize will change files using the reviewed preview. Continue?')) {
+    return
+  }
+
+  organizeRunStatus.value = 'loading'
+  organizeRunError.value = ''
+  try {
+    const response = normalizeOrganizeResponse(
+      await apiPost<OrganizeRunResponse>('/api/organize/run', {
+        config: buildOrganizerConfig(false),
+      }),
+    )
+    organizeRun.value = response
+    organizeRunStatus.value = 'success'
+    activeStage.value = 'review'
+    addEvent({
+      time: now(),
+      level: 'ok',
+      event: 'Organize run complete',
+      detail: `${response.summary.Moves.length} file operation(s).`,
+    })
+  } catch (error) {
+    organizeRunStatus.value = 'error'
+    organizeRunError.value = error instanceof Error ? error.message : 'Organize run failed.'
+    addEvent({ time: now(), level: 'warn', event: 'Organize run failed', detail: organizeRunError.value })
+  }
+}
+
+function buildOrganizerConfig(dryRun: boolean): OrganizerConfig {
+  const defaults = organizerDefaults.value
+  return {
+    base_dir: sourceFolder.value.trim(),
+    output_dir: outputFolder.value.trim(),
+    replace_space: defaults?.replace_space ?? '',
+    dry_run: dryRun,
+    remove_empty: removeEmpty.value,
+    use_embedded_metadata: shouldUseEmbeddedMetadata(),
+    flat: shouldUseFlatMode(),
+    skip_errors: defaults?.skip_errors ?? false,
+    layout: layout.value,
+    author_format: defaults?.author_format || 'first-last',
+    field_mapping: defaults?.field_mapping ?? defaultFieldMapping,
+    allowed_source_paths: defaults?.allowed_source_paths,
+  }
+}
+
+function shouldUseEmbeddedMetadata() {
+  return useEmbeddedMetadata.value || scanMode.value === 'embedded-directory' || scanMode.value === 'embedded-file'
+}
+
+function shouldUseFlatMode() {
+  if (scanMode.value === 'embedded-file') {
+    return true
+  }
+  return organizerDefaults.value?.flat ?? false
+}
+
+function resetOrganizeResults() {
+  organizePreview.value = null
+  organizeRun.value = null
+  organizePreviewStatus.value = 'idle'
+  organizeRunStatus.value = 'idle'
+  organizePreviewError.value = ''
+  organizeRunError.value = ''
+}
+
+function normalizeOrganizeResponse<T extends OrganizePreviewResponse | OrganizeRunResponse>(response: T): T {
+  return {
+    ...response,
+    summary: {
+      MetadataFound: response.summary.MetadataFound ?? [],
+      MetadataMissing: response.summary.MetadataMissing ?? [],
+      Moves: response.summary.Moves ?? [],
+      EmptyDirsRemoved: response.summary.EmptyDirsRemoved ?? [],
+    },
+  }
+}
+
 function ensureScanModeFitsWorkflow() {
   if (workflowScanModes.value.some((mode) => mode.value === scanMode.value)) {
     return
@@ -383,6 +605,7 @@ onMounted(async () => {
 
   try {
     const config = await apiGet<WebConfig>('/api/config/initial')
+    organizerDefaults.value = config.organizer
     sourceFolder.value = config.initial?.input_dir || config.organizer?.base_dir || ''
     outputFolder.value = config.initial?.output_dir || config.organizer?.output_dir || ''
     layout.value = config.organizer?.layout || layout.value
@@ -413,5 +636,13 @@ onMounted(async () => {
     ensureScanModeFitsWorkflow()
     addEvent({ time: now(), level: 'warn', event: 'Options unavailable', detail: 'Using built-in option labels.' })
   }
+})
+
+watch([sourceFolder, outputFolder, scanMode, layout, useEmbeddedMetadata, removeEmpty], () => {
+  if (activeWorkflow.value !== 'organize') {
+    return
+  }
+  previewReady.value = false
+  resetOrganizeResults()
 })
 </script>

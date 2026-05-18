@@ -406,11 +406,10 @@ select:focus {
 }
 
 .primary-action,
+.secondary-action,
 .danger-action {
   min-height: 40px;
-  border: 0;
   border-radius: 6px;
-  color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -420,12 +419,85 @@ select:focus {
   font-weight: 760;
 }
 
+.primary-action,
+.danger-action {
+  border: 0;
+  color: #fff;
+}
+
 .primary-action {
   background: var(--accent);
 }
 
 .primary-action:hover {
   background: var(--accent-dark);
+}
+
+.secondary-action {
+  border: 1px solid var(--line-strong);
+  background: var(--surface-quiet);
+  color: var(--text);
+}
+
+.secondary-action:hover {
+  border-color: var(--accent);
+}
+
+.inline-alert {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid rgba(249, 112, 112, 0.42);
+  border-radius: 7px;
+  background: var(--danger-soft);
+  color: #ffdada;
+  font-size: 12px;
+}
+
+.result-grid.compact {
+  grid-template-columns: 120px minmax(0, 1fr);
+  margin-top: 0;
+}
+
+.result-grid strong {
+  overflow-wrap: anywhere;
+}
+
+.warning-list {
+  margin: 14px 0 0;
+  padding-left: 18px;
+  color: var(--warning);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.move-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.move-list div {
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #14181e;
+  font-size: 12px;
+}
+
+.move-list span,
+.move-list strong {
+  overflow-wrap: anywhere;
+}
+
+.move-list span {
+  color: var(--muted);
+}
+
+.move-list strong {
+  color: var(--text);
+  font-weight: 700;
 }
 
 .run-layout {
