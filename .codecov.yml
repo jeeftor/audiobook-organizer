@@ -6,3 +6,6 @@ coverage:
     patch:
       default:
         target: 10%
+ignore:
+  - "internal/server/static/**/*"
+  - "web/**/*"
