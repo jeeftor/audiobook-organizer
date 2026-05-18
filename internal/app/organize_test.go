@@ -31,6 +31,21 @@ func TestPreviewOrganizeForcesDryRunAndOmitsLogPath(t *testing.T) {
 	assertFileNotExists(t, filepath.Join(outputDir, "App Author", "App Test Book", "audio.mp3"))
 }
 
+func TestPreviewOrganizeReportsMetadataMissingWithoutVerbose(t *testing.T) {
+	service := NewService(DefaultWebConfig("127.0.0.1", 0, false, "", ""))
+	inputDir, outputDir, missingDir := createOrganizeFixtureWithMissingMetadata(t)
+
+	resp, err := service.PreviewOrganize(context.Background(), OrganizeRequest{
+		Config: organizeTestConfig(inputDir, outputDir, false),
+	})
+	if err != nil {
+		t.Fatalf("PreviewOrganize() error = %v", err)
+	}
+
+	assertStringSliceContains(t, resp.Summary.MetadataMissing, mustResolvePath(t, inputDir))
+	assertStringSliceContains(t, resp.Summary.MetadataMissing, mustResolvePath(t, missingDir))
+}
+
 func TestRunOrganizeForcesRunAndReturnsLogPath(t *testing.T) {
 	service := NewService(DefaultWebConfig("127.0.0.1", 0, false, "", ""))
 	inputDir, outputDir := createOrganizeFixture(t)
@@ -97,6 +112,19 @@ func createOrganizeFixture(t *testing.T) (string, string) {
 	return inputDir, outputDir
 }
 
+func createOrganizeFixtureWithMissingMetadata(t *testing.T) (string, string, string) {
+	t.Helper()
+
+	inputDir, outputDir := createOrganizeFixture(t)
+	missingDir := filepath.Join(inputDir, "missing_metadata")
+	if err := os.MkdirAll(missingDir, 0o755); err != nil {
+		t.Fatalf("create missing metadata dir: %v", err)
+	}
+	writeFile(t, filepath.Join(missingDir, "orphan.mp3"), "fake audio")
+
+	return inputDir, outputDir, missingDir
+}
+
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
@@ -118,4 +146,23 @@ func assertFileNotExists(t *testing.T, path string) {
 	} else if !os.IsNotExist(err) {
 		t.Fatalf("stat %s: %v", path, err)
 	}
+}
+
+func assertStringSliceContains(t *testing.T, values []string, want string) {
+	t.Helper()
+	for _, value := range values {
+		if value == want {
+			return
+		}
+	}
+	t.Fatalf("expected %q in %v", want, values)
+}
+
+func mustResolvePath(t *testing.T, path string) string {
+	t.Helper()
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		t.Fatalf("resolve %s: %v", path, err)
+	}
+	return resolved
 }

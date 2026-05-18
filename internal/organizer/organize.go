@@ -104,8 +104,8 @@ func (o *Organizer) shouldSkipOutputDirectory(path string) bool {
 
 // handleMissingMetadata logs directories that don't contain any usable metadata.
 func (o *Organizer) handleMissingMetadata(path string) {
+	o.summary.MetadataMissing = append(o.summary.MetadataMissing, path)
 	if o.config.Verbose {
-		o.summary.MetadataMissing = append(o.summary.MetadataMissing, path)
 		PrintYellow("⚠️  No metadata found in %s", path)
 	}
 }
