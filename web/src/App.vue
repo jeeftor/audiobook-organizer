@@ -72,7 +72,7 @@
           <div v-if="activeWorkflow === 'rename'" class="panel-section">
             <h3>Rename Template</h3>
             <label>Template</label>
-            <input v-model="renameTemplate" />
+            <input v-model="renameTemplate" aria-label="Rename template" />
             <label class="check-row"><input v-model="renameRecursive" type="checkbox" /> Include subfolders</label>
             <label class="check-row"><input v-model="preservePath" type="checkbox" /> Preserve relative folders</label>
           </div>
@@ -105,7 +105,7 @@
         <section v-else-if="activeStage === 'preview'" class="preview-layout">
           <div class="preview-empty">
             <Eye :size="30" />
-            <h3>{{ organizePreviewHeading }}</h3>
+            <h3>{{ previewHeading }}</h3>
             <p>{{ currentWorkflow.previewCopy }}</p>
             <template v-if="activeWorkflow === 'organize'">
               <button
@@ -123,6 +123,15 @@
                 Review Preview & Continue
               </button>
               <p v-if="organizePreviewError" class="inline-alert">{{ organizePreviewError }}</p>
+            </template>
+            <template v-else-if="activeWorkflow === 'rename'">
+              <button class="primary-action" :disabled="renamePreviewStatus === 'loading'" @click="createRenamePreview">
+                <Play :size="18" /> {{ renamePreviewActionLabel }}
+              </button>
+              <button v-if="renamePreviewStatus === 'success'" class="secondary-action" @click="reviewRenamePreview">
+                Review Candidates & Continue
+              </button>
+              <p v-if="renamePreviewError" class="inline-alert">{{ renamePreviewError }}</p>
             </template>
             <button v-else class="primary-action" @click="markPreviewReady">
               <Play :size="18" /> Mark Preview Reviewed
@@ -149,6 +158,35 @@
               </div>
             </template>
           </div>
+          <div v-else-if="activeWorkflow === 'rename'" class="preview-checklist">
+            <h3>Rename Preview Summary</h3>
+            <p v-if="!renamePreview">No rename preview has run.</p>
+            <template v-else>
+              <div class="result-grid compact">
+                <span>Files scanned</span><strong>{{ renamePreview.summary.FilesScanned }}</strong>
+                <span>Candidates</span><strong>{{ renamePreview.candidates.length }}</strong>
+                <span>Conflicts</span><strong>{{ renamePreview.summary.ConflictsFound }}</strong>
+                <span>Skipped</span><strong>{{ renamePreview.summary.FilesSkipped }}</strong>
+                <span>Errors</span><strong>{{ renamePreview.summary.Errors.length }}</strong>
+              </div>
+              <ul v-if="renamePreview.summary.Errors.length > 0" class="warning-list">
+                <li v-for="error in renamePreview.summary.Errors.slice(0, 4)" :key="error">{{ error }}</li>
+              </ul>
+              <div v-if="renamePreview.candidates.length > 0" class="move-list">
+                <div
+                  v-for="candidate in renamePreview.candidates.slice(0, 5)"
+                  :key="candidate.CurrentPath + candidate.ProposedPath"
+                  :class="{ warning: candidate.IsConflict || candidate.IsNoOp || !!candidate.Error }"
+                >
+                  <span>{{ candidate.CurrentPath }}</span>
+                  <strong>{{ candidate.ProposedPath }}</strong>
+                  <em v-if="candidate.IsConflict">Conflict</em>
+                  <em v-else-if="candidate.IsNoOp">Skipped: unchanged</em>
+                  <em v-else-if="candidate.Error">{{ candidate.Error }}</em>
+                </div>
+              </div>
+            </template>
+          </div>
           <div v-else class="preview-checklist">
             <h3>Review Gate</h3>
             <ul>
@@ -168,6 +206,10 @@
             </div>
           </div>
           <p v-if="activeWorkflow === 'organize' && organizeRunError" class="inline-alert">{{ organizeRunError }}</p>
+          <p v-if="activeWorkflow === 'rename'" class="inline-alert">
+            Rename execution is deferred until a backend run endpoint is implemented. This workflow can only preview
+            candidates right now.
+          </p>
           <button
             class="danger-action"
             :disabled="isRunActionDisabled"
@@ -234,6 +276,8 @@ import {
   type OrganizePreviewResponse,
   type OrganizeRunResponse,
   type OptionsResponse,
+  type RenameConfig,
+  type RenamePreviewResponse,
   type WebConfig,
 } from './api'
 
@@ -259,7 +303,7 @@ const workflows = [
     configureTitle: 'Local Library Setup',
     configureHint: 'Choose the source, output, and metadata mode before creating a dry-run preview.',
     modeLabel: 'Metadata source',
-    previewCopy: 'The next implementation pass will connect this stage to the organize preview endpoint.',
+    previewCopy: 'Create a backend dry-run preview before the organize run stage can unlock.',
     runTitle: 'Run Organize',
     runCopy: 'This action changes files and stays locked until the preview stage has been reviewed.',
     runAction: 'Run Organize',
@@ -272,10 +316,10 @@ const workflows = [
     configureTitle: 'Rename Setup',
     configureHint: 'Set the folder and filename template before creating rename candidates.',
     modeLabel: 'Metadata source',
-    previewCopy: 'Rename candidates and conflicts belong here before any file operation is available.',
-    runTitle: 'Run Rename',
-    runCopy: 'Rename execution must stay behind candidate review and conflict checks.',
-    runAction: 'Run Rename',
+    previewCopy: 'Create real rename candidates from the backend before considering any filesystem action.',
+    runTitle: 'Rename Execution Deferred',
+    runCopy: 'The web UI does not expose a rename execution endpoint yet. Candidate review stays available here.',
+    runAction: 'Rename Execution Deferred',
   },
   {
     id: 'abs' as const,
@@ -351,14 +395,18 @@ const absUrl = ref('')
 const absLibrary = ref('main')
 const absCredentialState = ref<CredentialState>('empty')
 const organizerDefaults = ref<OrganizerConfig | null>(null)
+const renameDefaults = ref<RenameConfig | null>(null)
 const layouts = ref<Option[]>([])
 const scanModes = ref<Option[]>([])
 const organizePreview = ref<OrganizePreviewResponse | null>(null)
 const organizeRun = ref<OrganizeRunResponse | null>(null)
+const renamePreview = ref<RenamePreviewResponse | null>(null)
 const organizePreviewStatus = ref<RequestState>('idle')
 const organizeRunStatus = ref<RequestState>('idle')
+const renamePreviewStatus = ref<RequestState>('idle')
 const organizePreviewError = ref('')
 const organizeRunError = ref('')
+const renamePreviewError = ref('')
 const events = ref<ActivityEvent[]>([
   { time: 'Pending', level: 'info', event: 'Startup checks', detail: 'Loading server health, config, and options.' },
 ])
@@ -394,23 +442,35 @@ const absSetupState = computed(() => {
   }
   return 'Connection tests and library loading are tracked in the follow-up control wiring issue.'
 })
-const organizePreviewHeading = computed(() => {
-  if (activeWorkflow.value !== 'organize') {
-    return 'Dry-run preview first'
+const previewHeading = computed(() => {
+  if (activeWorkflow.value === 'rename') {
+    if (renamePreviewStatus.value === 'success') {
+      return 'Rename preview ready'
+    }
+    if (renamePreviewStatus.value === 'error') {
+      return 'Rename preview needs attention'
+    }
+    return 'Create a rename preview'
   }
-  if (organizePreviewStatus.value === 'success') {
+  if (activeWorkflow.value === 'organize' && organizePreviewStatus.value === 'success') {
     return 'Organize preview ready'
   }
-  if (organizePreviewStatus.value === 'error') {
+  if (activeWorkflow.value === 'organize' && organizePreviewStatus.value === 'error') {
     return 'Preview needs attention'
   }
-  return 'Create an organize preview'
+  return activeWorkflow.value === 'organize' ? 'Create an organize preview' : 'Dry-run preview first'
 })
 const organizePreviewActionLabel = computed(() =>
   organizePreviewStatus.value === 'loading' ? 'Creating Preview' : 'Create Dry-run Preview',
 )
+const renamePreviewActionLabel = computed(() =>
+  renamePreviewStatus.value === 'loading' ? 'Creating Preview' : 'Create Rename Preview',
+)
 const isRunActionDisabled = computed(() => {
-  if (activeWorkflow.value !== 'organize') {
+  if (activeWorkflow.value === 'rename') {
+    return true
+  }
+  if (activeWorkflow.value === 'abs') {
     return !previewReady.value
   }
   return !previewReady.value || organizeRunStatus.value === 'loading'
@@ -422,6 +482,8 @@ function selectWorkflow(workflow: WorkflowId) {
   previewReady.value = false
   if (workflow === 'organize') {
     resetOrganizeResults()
+  } else if (workflow === 'rename') {
+    resetRenameResults()
   }
   ensureScanModeFitsWorkflow()
   events.value = [
@@ -435,7 +497,13 @@ function selectWorkflow(workflow: WorkflowId) {
 }
 
 function isStageLocked(stage: StageId) {
-  return stage === 'run' && isRunActionDisabled.value
+  if (stage !== 'run') {
+    return false
+  }
+  if (activeWorkflow.value === 'organize') {
+    return !previewReady.value || organizeRunStatus.value === 'loading'
+  }
+  return !previewReady.value
 }
 
 function markPreviewReady() {
@@ -502,6 +570,53 @@ function reviewOrganizePreview() {
   addEvent({ time: now(), level: 'ok', event: 'Preview reviewed', detail: 'Organize run stage unlocked.' })
 }
 
+async function createRenamePreview() {
+  renamePreviewStatus.value = 'loading'
+  renamePreviewError.value = ''
+  previewReady.value = false
+
+  try {
+    if (!sourceFolder.value.trim()) {
+      throw new Error('Source folder is required for rename preview.')
+    }
+    if (!renameTemplate.value.trim()) {
+      throw new Error('Rename template is required for preview.')
+    }
+    const response = normalizeRenameResponse(
+      await apiPost<RenamePreviewResponse>('/api/rename/preview', {
+        config: buildRenameConfig(),
+      }),
+    )
+    renamePreview.value = response
+    renamePreviewStatus.value = 'success'
+    addEvent({
+      time: now(),
+      level: 'ok',
+      event: 'Rename preview ready',
+      detail: `${response.candidates.length} candidate(s), ${response.summary.ConflictsFound} conflict(s).`,
+    })
+  } catch (error) {
+    renamePreview.value = null
+    renamePreviewStatus.value = 'error'
+    renamePreviewError.value = error instanceof Error ? error.message : 'Rename preview failed.'
+    addEvent({ time: now(), level: 'warn', event: 'Rename preview failed', detail: renamePreviewError.value })
+  }
+}
+
+function reviewRenamePreview() {
+  if (renamePreviewStatus.value !== 'success') {
+    return
+  }
+  previewReady.value = true
+  activeStage.value = 'run'
+  addEvent({
+    time: now(),
+    level: 'ok',
+    event: 'Rename candidates reviewed',
+    detail: 'Rename execution remains deferred until the backend supports it.',
+  })
+}
+
 async function runOrganize() {
   if (organizePreviewStatus.value !== 'success' || !previewReady.value || organizeRunStatus.value === 'loading') {
     return
@@ -552,6 +667,22 @@ function buildOrganizerConfig(dryRun: boolean): OrganizerConfig {
   }
 }
 
+function buildRenameConfig(): RenameConfig {
+  const defaults = renameDefaults.value
+  return {
+    base_dir: sourceFolder.value.trim(),
+    template: renameTemplate.value.trim(),
+    dry_run: true,
+    author_format: defaults?.author_format || 'first-last',
+    recursive: renameRecursive.value,
+    field_mapping: defaults?.field_mapping ?? defaultFieldMapping,
+    replace_space: defaults?.replace_space ?? '',
+    strict_mode: defaults?.strict_mode ?? false,
+    preserve_path: preservePath.value,
+    use_embedded_metadata: shouldUseEmbeddedMetadata(),
+  }
+}
+
 function shouldUseEmbeddedMetadata() {
   return useEmbeddedMetadata.value || scanMode.value === 'embedded-directory' || scanMode.value === 'embedded-file'
 }
@@ -572,6 +703,12 @@ function resetOrganizeResults() {
   organizeRunError.value = ''
 }
 
+function resetRenameResults() {
+  renamePreview.value = null
+  renamePreviewStatus.value = 'idle'
+  renamePreviewError.value = ''
+}
+
 function normalizeOrganizeResponse<T extends OrganizePreviewResponse | OrganizeRunResponse>(response: T): T {
   return {
     ...response,
@@ -580,6 +717,20 @@ function normalizeOrganizeResponse<T extends OrganizePreviewResponse | OrganizeR
       MetadataMissing: response.summary.MetadataMissing ?? [],
       Moves: response.summary.Moves ?? [],
       EmptyDirsRemoved: response.summary.EmptyDirsRemoved ?? [],
+    },
+  }
+}
+
+function normalizeRenameResponse(response: RenamePreviewResponse): RenamePreviewResponse {
+  return {
+    ...response,
+    candidates: response.candidates ?? [],
+    summary: {
+      FilesScanned: response.summary.FilesScanned ?? 0,
+      FilesRenamed: response.summary.FilesRenamed ?? 0,
+      FilesSkipped: response.summary.FilesSkipped ?? 0,
+      ConflictsFound: response.summary.ConflictsFound ?? 0,
+      Errors: response.summary.Errors ?? [],
     },
   }
 }
@@ -606,6 +757,7 @@ onMounted(async () => {
   try {
     const config = await apiGet<WebConfig>('/api/config/initial')
     organizerDefaults.value = config.organizer
+    renameDefaults.value = config.rename
     sourceFolder.value = config.initial?.input_dir || config.organizer?.base_dir || ''
     outputFolder.value = config.initial?.output_dir || config.organizer?.output_dir || ''
     layout.value = config.organizer?.layout || layout.value
@@ -644,5 +796,13 @@ watch([sourceFolder, outputFolder, scanMode, layout, useEmbeddedMetadata, remove
   }
   previewReady.value = false
   resetOrganizeResults()
+})
+
+watch([sourceFolder, scanMode, useEmbeddedMetadata, renameTemplate, renameRecursive, preservePath], () => {
+  if (activeWorkflow.value !== 'rename') {
+    return
+  }
+  previewReady.value = false
+  resetRenameResults()
 })
 </script>

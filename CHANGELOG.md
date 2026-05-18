@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Restructured the local web UI into explicit organize, rename, and Audiobookshelf workflow stages so configure, dry-run preview, run, and review states are separated.
 - Improved local web UI startup handling so config/options loading and fallback states are visible and Audiobookshelf metadata mode stays scoped to the ABS workflow.
 - Wired the local web UI organize workflow to real preview and run endpoints with review gating and backend result summaries.
+- Wired the local web UI rename workflow to real preview candidates while keeping rename execution explicitly deferred.
 
 ---
 

@@ -66,6 +66,30 @@ export type RenameConfig = {
   use_embedded_metadata: boolean
 }
 
+export type RenameMetadata = Record<string, unknown>
+
+export type RenameCandidate = {
+  CurrentPath: string
+  ProposedPath: string
+  Metadata: RenameMetadata
+  IsNoOp: boolean
+  IsConflict: boolean
+  Error: string
+}
+
+export type RenameSummary = {
+  FilesScanned: number
+  FilesRenamed: number
+  FilesSkipped: number
+  ConflictsFound: number
+  Errors: string[]
+}
+
+export type RenamePreviewResponse = {
+  candidates: RenameCandidate[]
+  summary: RenameSummary
+}
+
 export type PathMapping = {
   abs_prefix: string
   local_prefix: string
