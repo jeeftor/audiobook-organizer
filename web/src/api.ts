@@ -31,6 +31,28 @@ export type OrganizerConfig = {
   allowed_source_paths?: string[]
 }
 
+export type MoveSummary = {
+  from: string
+  to: string
+}
+
+export type OrganizerSummary = {
+  MetadataFound: string[]
+  MetadataMissing: string[]
+  Moves: MoveSummary[]
+  EmptyDirsRemoved: string[]
+}
+
+export type OrganizePreviewResponse = {
+  summary: OrganizerSummary
+  log_path?: string
+}
+
+export type OrganizeRunResponse = {
+  summary: OrganizerSummary
+  log_path?: string
+}
+
 export type RenameConfig = {
   base_dir: string
   template: string

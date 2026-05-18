@@ -246,6 +246,11 @@ func TestOrganizeRunEndpointMovesFiles(t *testing.T) {
 	assertStatus(t, rec, http.StatusOK)
 	assertJSONArrayLength(t, rec, "summary.MetadataFound", 1)
 	assertJSONArrayLength(t, rec, "summary.Moves", 1)
+	resolvedOutputDir, err := filepath.EvalSymlinks(outputDir)
+	if err != nil {
+		t.Fatalf("resolve output dir: %v", err)
+	}
+	assertJSONField(t, rec, "log_path", filepath.Join(resolvedOutputDir, ".abook-org.log"))
 	assertFileExists(
 		t,
 		filepath.Join(outputDir, "REST Author", "REST Test Book", "audio.mp3"),

@@ -104,6 +104,96 @@ test('does not treat redacted ABS credentials as usable browser state', async ({
   await expect(page.getByText(/Saved ABS credentials are redacted/)).toBeVisible()
 })
 
+test('wires organize preview and run to backend endpoints', async ({ page }) => {
+  let previewBody: Record<string, any> | undefined
+  let runBody: Record<string, any> | undefined
+
+  await page.route('**/api/organize/preview', async (route) => {
+    previewBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        summary: {
+          MetadataFound: ['/library/source/book/metadata.json'],
+          MetadataMissing: ['/library/source/missing'],
+          Moves: [{ from: '/library/source/book/audio.mp3', to: '/library/output/Author/Book/audio.mp3' }],
+          EmptyDirsRemoved: [],
+        },
+      }),
+    })
+  })
+  await page.route('**/api/organize/run', async (route) => {
+    runBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        summary: {
+          MetadataFound: ['/library/source/book/metadata.json'],
+          MetadataMissing: [],
+          Moves: [{ from: '/library/source/book/audio.mp3', to: '/library/output/Author/Book/audio.mp3' }],
+          EmptyDirsRemoved: [],
+        },
+        log_path: '/library/output/.abook-org.log',
+      }),
+    })
+  })
+
+  await loadApp(page)
+  await page.getByRole('textbox', { name: 'Source folder' }).fill('/library/source')
+  await page.getByRole('textbox', { name: 'Output folder' }).fill('/library/output')
+  await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
+
+  await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
+  await expect(page.getByText('/library/source/missing')).toBeVisible()
+  await expect(page.getByText('/library/output/Author/Book/audio.mp3')).toBeVisible()
+  expect(previewBody?.config).toEqual(
+    expect.objectContaining({
+      base_dir: '/library/source',
+      output_dir: '/library/output',
+      dry_run: true,
+      layout: 'author-series-title',
+    }),
+  )
+
+  await page.getByRole('button', { name: 'Review Preview & Continue' }).click()
+  await expect(page.getByRole('heading', { name: 'Execute the reviewed plan' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Run Organize' })).toBeEnabled()
+
+  page.once('dialog', async (dialog) => {
+    expect(dialog.message()).toContain('Run Organize will change files')
+    await dialog.accept()
+  })
+  await page.getByRole('button', { name: 'Run Organize' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
+  await expect(page.getByText('/library/output/.abook-org.log')).toBeVisible()
+  expect(runBody?.config).toEqual(expect.objectContaining({ dry_run: false }))
+})
+
+test('keeps organize run locked when preview fails', async ({ page }) => {
+  await page.route('**/api/organize/preview', async (route) => {
+    await route.fulfill({
+      status: 400,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'preview exploded' }),
+    })
+  })
+
+  await loadApp(page)
+  await page.getByRole('textbox', { name: 'Source folder' }).fill('/library/source')
+  await page.getByRole('textbox', { name: 'Output folder' }).fill('/library/output')
+  await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
+  await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
+
+  await expect(page.locator('.inline-alert').filter({ hasText: 'preview exploded' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
+})
+
 test('separates workflow modes and gates run behind preview review', async ({ page }) => {
   await loadApp(page)
 
