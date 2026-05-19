@@ -90,6 +90,8 @@ jobs:
             run_regex: TestRESTHarness_ABSSetupEndpoints
           - name: rest-abs-operations
             run_regex: TestRESTHarness_ABSOperationEndpoints
+          - name: abs-metadata-mode
+            run_regex: TestABSMetadataMode
     env:
       ABS_IMAGE: ghcr.io/advplyr/audiobookshelf:latest
       ABS_FIXTURE_CACHE_DIR: test/abs/.cache/staging-data

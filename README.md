@@ -55,7 +55,7 @@ Common audiobook workflows:
 | Rename TUI | `audiobook-organizer rename-tui --dir=/books` | Interactive rename previews | Stable |
 | Metadata CLI | `audiobook-organizer metadata --dir=/books` | Text-only metadata inspection | Stable |
 | Metadata TUI | `audiobook-organizer metadata-tui --dir=/books` | Metadata inspection and template exploration | Stable |
-| Audiobookshelf CLI | `audiobook-organizer abs ...` | ABS discovery, path mapping, metadata previews, and scan triggers | Active development |
+| Audiobookshelf CLI | `audiobook-organizer abs ...` | ABS discovery, path mapping, metadata previews, ABS metadata organization, and scan triggers | Active development |
 
 ## Quick Start
 
@@ -215,6 +215,15 @@ audiobook-organizer abs scan \
   --dir=/mnt/media/audiobooks \
   --check-files
 
+# Organize already-indexed items using ABS metadata as the source of truth
+audiobook-organizer abs organize \
+  --abs-url=http://localhost:13378 \
+  --abs-token="$ABS_TOKEN" \
+  --abs-library=Audiobooks \
+  --abs-path-map="/audiobooks:/mnt/media/audiobooks" \
+  --dir=/mnt/media/audiobooks \
+  --layout=author-title
+
 # Test SQLite-backed path mapping discovery
 audiobook-organizer abs test-paths \
   --abs-sqlite=/path/to/absdatabase.sqlite \
@@ -232,7 +241,7 @@ audiobook-organizer abs websocket-test \
   --abs-token="$ABS_TOKEN"
 ```
 
-ABS metadata-driven organization is still being built out and validated through `test/abs/test-matrix.md`. For already indexed ABS libraries, prefer previewing path mappings and metadata first, then trigger an ABS scan after any filesystem move so ABS can reconcile missing and moved items.
+`abs organize` uses Audiobookshelf API metadata for already-indexed files and then sends the mapped local paths through the same organizer core used by the normal CLI. Preview with `abs scan` first when setting up path mappings. After non-dry-run moves, trigger an ABS scan so Audiobookshelf can reconcile old missing paths and newly organized paths.
 
 ## Metadata Sources
 

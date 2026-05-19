@@ -163,6 +163,35 @@ func TestMetadataProvider_GetMetadata(t *testing.T) {
 	}
 }
 
+func TestMetadataProvider_UsesLibraryItemAuthorNamesFallback(t *testing.T) {
+	provider := NewMetadataProvider(
+		"http://example.invalid",
+		"test-token",
+		"lib_main",
+		[]PathMapping{{ABSPrefix: "/books", LocalPrefix: "/mnt/books"}},
+	)
+
+	meta := provider.convertToOrganizerMetadata(&LibraryItem{
+		ID:                   "li_001",
+		LibraryID:            "lib_main",
+		Path:                 "/books/messy/pride",
+		AuthorNamesFirstLast: "Jane Austen",
+		Media: Media{
+			Metadata: Metadata{Title: "Pride and Prejudice"},
+		},
+	})
+
+	if len(meta.Authors) != 1 || meta.Authors[0] != "Jane Austen" {
+		t.Fatalf("Expected author fallback from library item, got %v", meta.Authors)
+	}
+	if meta.RawData["authors"] != "Jane Austen" {
+		t.Fatalf(
+			"Expected authors raw field to support field mapping, got %v",
+			meta.RawData["authors"],
+		)
+	}
+}
+
 func TestMetadataProvider_PathMappings(t *testing.T) {
 	server := mockProviderServer()
 	defer server.Close()

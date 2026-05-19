@@ -755,6 +755,7 @@ The CLI includes commands for integrating with [Audiobookshelf](https://www.audi
 
 ABS integration provides:
 - **Metadata scanning** - Compare local files against ABS library metadata
+- **ABS metadata organization** - Reorganize already-indexed ABS items using ABS as the metadata source
 - **Library scanning** - Trigger ABS library scans after file operations
 - **Real-time events** - WebSocket connection for scan status monitoring
 - **Custom headers** - Support for Cloudflare Access and other proxy authentication
@@ -791,6 +792,40 @@ audiobook-organizer abs scan --check-files
 - ✓ Files in correct location
 - 🚚 Files need to be moved
 - ✗ Files missing from disk
+
+#### `abs organize` - Organize With ABS Metadata
+
+Organize items that Audiobookshelf already indexed. ABS supplies the metadata and
+path mapping, then Audiobook Organizer reuses the normal organizer move, dry-run,
+undo, layout, logging, and prompt behavior.
+
+```bash
+# Preview moves without changing files
+audiobook-organizer abs organize \
+  --abs-url=http://localhost:13378 \
+  --abs-token=eyJhbG... \
+  --abs-library=Audiobooks \
+  --abs-path-map="/audiobooks:/mnt/audiobooks" \
+  --dir=/mnt/audiobooks \
+  --layout=author-title \
+  --dry-run
+
+# Move files in place using ABS metadata
+audiobook-organizer abs organize \
+  --abs-url=http://localhost:13378 \
+  --abs-token=eyJhbG... \
+  --abs-library=Audiobooks \
+  --abs-path-map="/audiobooks:/mnt/audiobooks" \
+  --dir=/mnt/audiobooks \
+  --layout=author-title
+
+# Undo the previous ABS metadata organization run
+audiobook-organizer abs organize --dir=/mnt/audiobooks --undo
+```
+
+After non-dry-run moves, run `abs scan-trigger` for the touched ABS library so
+Audiobookshelf can mark old paths missing, discover the organized paths, and then
+clean up missing rows through your normal ABS workflow.
 
 #### `abs scan-trigger` - Trigger Library Scan
 
@@ -884,6 +919,7 @@ audiobook-organizer abs scan \
 | `--header` | Custom header inline (can be used multiple times) |
 | `--all` | Show all items, not just mismatches (scan command) |
 | `--check-files` | Verify local files exist (scan command) |
+| `--abs-all-libraries` | Scan or organize all libraries with explicit path mappings |
 
 ### Getting ABS Token
 
