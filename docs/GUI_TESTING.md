@@ -15,6 +15,9 @@ The GUI is the local Vue web UI served by `audiobook-organizer web`. GUI tests s
 # Install frontend dependencies
 make web-install
 
+# Install Playwright-managed Chromium for browser tests
+cd web && npm run install:browsers
+
 # Run Go REST endpoint tests without Docker or a browser
 make gui-rest-test
 
@@ -32,10 +35,24 @@ Direct npm equivalents:
 
 ```bash
 cd web
+npm install
+npm run install:browsers
 npm run test:e2e
 npm run test:e2e:headed
 npm run test:e2e:ui
 ```
+
+## Browser Setup
+
+The Playwright suite is configured to run both desktop and mobile projects with Playwright-managed Chromium. Install that browser payload from `web/`:
+
+```bash
+npm run install:browsers
+```
+
+On macOS, Playwright stores the managed browser revisions under `~/Library/Caches/ms-playwright`; on Linux CI runners, it uses the matching Playwright cache directory for that operating system. The suite should launch from that managed cache after `npm install` and `npm run install:browsers`.
+
+If Playwright reports a missing executable such as `chromium_headless_shell-<rev>`, rerun `npm run install:browsers` from `web/`, then rerun `npm run test:e2e`. A separate Chrome Headless Shell under `~/.cache/puppeteer/chrome-headless-shell/` is useful for ad hoc manual rendering checks only; it is not the supported browser source for `npm run test:e2e`.
 
 ## Current Coverage
 
