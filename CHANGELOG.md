@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **REST execution coverage for ABS workflows**: Added Docker-backed REST tests for `metadata.json`, embedded metadata import, and flat import workflows against real Audiobookshelf containers.
 - **Flat mode ABS coverage**: Added Docker-backed flat mechanics and flat ebook import matrix coverage for Audiobookshelf workflows.
 - **Embedded EPUB ABS coverage**: Added Docker-backed already-indexed EPUB current-behavior coverage for embedded metadata workflows.
+- **ABS browser UI coverage**: Added Docker-backed Playwright coverage for the web Audiobookshelf setup and operation controls against real ABS instances.
 - **ABS metadata organization**: Added `audiobook-organizer abs organize` so already-indexed Audiobookshelf items can be reorganized with ABS API metadata while reusing the normal organizer move, dry-run, undo, layout, logging, and scan follow-up flow.
 - **Text-only metadata inspection**: `audiobook-organizer metadata` now prints non-interactive metadata scan results, `metadata --json` writes machine-readable output, and `metadata-tui` keeps the old interactive metadata exploration workflow explicit.
 
