@@ -1107,9 +1107,21 @@ function extractLocalDirectoryPath(file: File): string {
 }
 
 function parentPath(path: string): string {
-  const trimmed = path.replace(/[\\/]+$/, '')
+  const trimmed = trimTrailingPathSeparators(path)
   const index = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'))
   return index > 0 ? trimmed.slice(0, index) : trimmed
+}
+
+function trimTrailingPathSeparators(path: string): string {
+  let end = path.length
+  while (end > 0 && isPathSeparator(path[end - 1])) {
+    end -= 1
+  }
+  return path.slice(0, end)
+}
+
+function isPathSeparator(character: string): boolean {
+  return character === '/' || character === '\\'
 }
 
 function setPathValue(field: PathFieldId, value: string) {
