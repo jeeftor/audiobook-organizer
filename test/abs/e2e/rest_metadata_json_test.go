@@ -46,6 +46,17 @@ type restABSLibraryStateResponse struct {
 	Items []restABSLibraryItem `json:"items"`
 }
 
+type restABSItemsResponse struct {
+	Items []restABSMetadataItem `json:"items"`
+}
+
+type restABSMetadataItem struct {
+	Title      string   `json:"title"`
+	Authors    []string `json:"authors"`
+	SourceType string   `json:"source_type"`
+	SourcePath string   `json:"source_path"`
+}
+
 type restABSLibraryItem struct {
 	ID        string `json:"id"`
 	Path      string `json:"path"`
@@ -126,6 +137,84 @@ func TestRESTHarness_ABSSetupEndpoints(t *testing.T) {
 				localLibraryPath(plainInstance, audiobooksLibrary),
 			)
 		}
+	})
+}
+
+func TestRESTHarness_ABSOperationEndpoints(t *testing.T) {
+	harness := newRESTHarness(t)
+	defer harness.server.Close()
+
+	var ctx restScenarioContext
+	step(t, "01 reset and identify ABS audiobook library", func(t *testing.T) {
+		resetAndInitialScan(t)
+		ctx = newRESTScenarioContext(t, harness, plainInstance, audiobooksLibrary)
+	})
+
+	step(t, "02 load ABS metadata items through REST operation endpoint", func(t *testing.T) {
+		var response restABSItemsResponse
+		harness.postJSON(t, "/api/abs/items", map[string]any{
+			"config": ctx.config,
+		}, &response)
+		if len(response.Items) != 2 {
+			t.Fatalf("expected 2 ABS metadata items, got %+v", response.Items)
+		}
+		localPrefix := localLibraryPath(plainInstance, audiobooksLibrary)
+		for _, item := range response.Items {
+			if item.SourceType != "abs" {
+				t.Fatalf("source type = %q, want abs for %+v", item.SourceType, item)
+			}
+			if !strings.HasPrefix(item.SourcePath, localPrefix) {
+				t.Fatalf("source path = %q, want prefix %q", item.SourcePath, localPrefix)
+			}
+		}
+	})
+
+	step(t, "03 load clean ABS library state through REST operation endpoint", func(t *testing.T) {
+		waitForRESTABSState(t, ctx, absStateExpectation{
+			expectedCount:  2,
+			missingCount:   0,
+			activeContains: []string{"/audiobooks/loose", "/audiobooks/unsorted-audio"},
+		})
+	})
+
+	step(t, "04 trigger ABS scan through REST operation endpoint", func(t *testing.T) {
+		triggerRESTABSScan(t, ctx)
+		waitForRESTABSState(t, ctx, absStateExpectation{
+			expectedCount:  2,
+			missingCount:   0,
+			activeContains: []string{"/audiobooks/loose", "/audiobooks/unsorted-audio"},
+		})
+	})
+
+	step(
+		t,
+		"05 remove one mounted folder and scan until ABS reports it missing",
+		func(t *testing.T) {
+			source := filepath.Join(localLibraryPath(plainInstance, audiobooksLibrary), "loose")
+			target := filepath.Join(t.TempDir(), "loose")
+			if err := os.Rename(source, target); err != nil {
+				t.Fatalf("move ABS fixture folder out of library: %v", err)
+			}
+			triggerRESTABSScan(t, ctx)
+			waitForRESTABSState(t, ctx, absStateExpectation{
+				expectedCount:   2,
+				missingCount:    1,
+				activeContains:  []string{"/audiobooks/unsorted-audio"},
+				missingContains: []string{"/audiobooks/loose"},
+				absentContains:  []string{"/audiobooks/Charles Dickens"},
+			})
+		},
+	)
+
+	step(t, "06 clean missing ABS items through REST operation endpoint", func(t *testing.T) {
+		cleanRESTABSMissing(t, ctx, []string{"/audiobooks/loose"})
+		triggerRESTABSScan(t, ctx)
+		waitForRESTABSState(t, ctx, absStateExpectation{
+			expectedCount:  1,
+			missingCount:   0,
+			activeContains: []string{"/audiobooks/unsorted-audio"},
+			absentContains: []string{"/audiobooks/loose"},
+		})
 	})
 }
 

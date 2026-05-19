@@ -397,6 +397,12 @@ select:focus {
   margin-top: 12px;
 }
 
+.operation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .library-list,
 .mapping-list {
   display: grid;
@@ -480,6 +486,10 @@ select:focus {
   font-size: 13px;
 }
 
+.operation-list {
+  margin-top: 12px;
+}
+
 .primary-action,
 .secondary-action,
 .danger-action {
@@ -526,6 +536,20 @@ select:focus {
   background: var(--danger-soft);
   color: #ffdada;
   font-size: 12px;
+}
+
+.success-note {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid rgba(40, 201, 123, 0.42);
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.operation-card .success-note {
+  color: var(--text);
 }
 
 .result-grid.compact {
@@ -587,6 +611,36 @@ select:focus {
   display: grid;
   gap: 14px;
   max-width: 720px;
+}
+
+.operation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.operation-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 16px;
+}
+
+.operation-card h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 760;
+}
+
+.operation-card p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.danger-card {
+  border-color: rgba(249, 112, 112, 0.34);
 }
 
 .warning-panel {
@@ -689,7 +743,8 @@ select:focus {
   }
 
   .configure-grid,
-  .preview-layout {
+  .preview-layout,
+  .operation-grid {
     grid-template-columns: 1fr;
   }
 
