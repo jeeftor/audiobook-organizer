@@ -317,7 +317,7 @@ test('contracts ABS operation controls with mocked backend responses', async ({ 
   await expect(page.getByText('Cleanup completed for lib-audio.')).toBeVisible()
   expect(cleanBody?.config).toEqual(expect.objectContaining({ library_id: 'lib-audio' }))
 
-  await page.getByRole('button', { name: 'Review Check logs and undo' }).click()
+  await page.getByRole('button', { name: 'Review Inspect backend results' }).click()
   await expect(page.getByRole('heading', { name: 'ABS Operation Results' })).toBeVisible()
   await expect(page.locator('.review-layout .result-grid strong').filter({ hasText: 'lib-audio' })).toHaveCount(2)
 })
@@ -338,6 +338,9 @@ test('keeps ABS later stages locked when setup requests fail', async ({ page }) 
 
   await expect(page.locator('.inline-alert').filter({ hasText: 'abs token is required' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Review Inspect backend results' }).click()
+  await expect(page.getByRole('heading', { name: 'ABS Results Need Attention' })).toBeVisible()
+  await expect(page.locator('.review-layout .error-list').getByText('ABS libraries: abs token is required')).toBeVisible()
   await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
   await expect(page.locator('.inline-alert').filter({ hasText: 'ABS setup must load libraries' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
@@ -410,7 +413,9 @@ test('contracts organize preview and run UI state with mocked backend responses'
   await page.getByRole('button', { name: 'Run Organize' }).click()
 
   await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
-  await expect(page.getByText('/library/output/.abook-org.log')).toBeVisible()
+  await expect(
+    page.locator('.review-layout .result-grid strong').filter({ hasText: '/library/output/.abook-org.log' }),
+  ).toBeVisible()
   expect(runBody?.config).toEqual(expect.objectContaining({ dry_run: false }))
 })
 
@@ -431,6 +436,9 @@ test('keeps organize run locked when preview fails', async ({ page }) => {
 
   await expect(page.locator('.inline-alert').filter({ hasText: 'preview exploded' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Review Inspect backend results' }).click()
+  await expect(page.getByRole('heading', { name: 'Organize Results Need Attention' })).toBeVisible()
+  await expect(page.locator('.review-layout .error-list').getByText('Organize preview: preview exploded')).toBeVisible()
 })
 
 test('contracts rename preview UI state with mocked backend responses', async ({ page }) => {
@@ -524,6 +532,11 @@ test('keeps rename run unavailable when preview fails', async ({ page }) => {
 
   await expect(page.locator('.inline-alert').filter({ hasText: 'rename preview exploded' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Review Inspect backend results' }).click()
+  await expect(page.getByRole('heading', { name: 'Rename Results Need Attention' })).toBeVisible()
+  await expect(
+    page.locator('.review-layout .error-list').getByText('Rename preview: rename preview exploded'),
+  ).toBeVisible()
 })
 
 test('separates workflow modes and gates run behind preview review', async ({ page }) => {
