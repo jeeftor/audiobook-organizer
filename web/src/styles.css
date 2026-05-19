@@ -671,6 +671,43 @@ select:focus {
   max-width: 680px;
 }
 
+.empty-note {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.recovery-note {
+  margin-top: 14px;
+  padding: 10px 11px;
+  border: 1px solid rgba(40, 201, 123, 0.42);
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.review-details {
+  margin-top: 16px;
+}
+
+.review-details h4 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.error-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #ffdada;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .result-grid {
   display: grid;
   grid-template-columns: 130px minmax(0, 1fr);

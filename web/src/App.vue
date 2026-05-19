@@ -230,7 +230,9 @@
                 <span>Metadata found</span><strong>{{ organizePreview.summary.MetadataFound.length }}</strong>
                 <span>Planned moves</span><strong>{{ organizePreview.summary.Moves.length }}</strong>
                 <span>Warnings</span><strong>{{ organizePreview.summary.MetadataMissing.length }}</strong>
-                <span>Log path</span><strong>{{ organizePreview.log_path || 'Not created during dry-run' }}</strong>
+                <template v-if="organizePreview.log_path">
+                  <span>Log path</span><strong>{{ organizePreview.log_path }}</strong>
+                </template>
               </div>
               <ul v-if="organizePreview.summary.MetadataMissing.length > 0" class="warning-list">
                 <li v-for="missing in organizePreview.summary.MetadataMissing.slice(0, 4)" :key="missing">{{ missing }}</li>
@@ -369,36 +371,90 @@
           </template>
         </section>
 
-        <section v-else-if="activeWorkflow === 'organize' && organizeRun" class="review-layout">
-          <h3>Organize Run Complete</h3>
-          <p>The reviewed organize plan finished with backend results.</p>
-          <div class="result-grid">
-            <span>Job status</span><strong>Complete</strong>
-            <span>Files organized</span><strong>{{ organizeRun.summary.Moves.length }}</strong>
-            <span>Undo log</span><strong>{{ organizeRun.log_path || 'Not reported' }}</strong>
-            <span>Warnings</span><strong>{{ organizeRun.summary.MetadataMissing.length }}</strong>
+        <section v-else-if="activeWorkflow === 'organize'" class="review-layout">
+          <h3>{{ organizeReviewHeading }}</h3>
+          <p>{{ organizeReviewCopy }}</p>
+          <div v-if="organizeReviewSummary" class="result-grid">
+            <span>Job status</span><strong>{{ organizeRun ? 'Complete' : 'Preview complete' }}</strong>
+            <span>{{ organizeRun ? 'Files organized' : 'Planned moves' }}</span><strong>{{ organizeReviewSummary.summary.Moves.length }}</strong>
+            <span>Metadata found</span><strong>{{ organizeReviewSummary.summary.MetadataFound.length }}</strong>
+            <span>Warnings</span><strong>{{ organizeReviewSummary.summary.MetadataMissing.length }}</strong>
+            <template v-if="organizeRun?.log_path">
+              <span>Undo log</span><strong>{{ organizeRun.log_path }}</strong>
+            </template>
+          </div>
+          <p v-else-if="organizeRunError" class="inline-alert">{{ organizeRunError }}</p>
+          <p v-else-if="organizePreviewError" class="inline-alert">{{ organizePreviewError }}</p>
+          <p v-else class="empty-note">No organize run has completed.</p>
+          <div v-if="organizeRun?.log_path" class="recovery-note">
+            Undo details are available in the backend log at {{ organizeRun.log_path }}.
+          </div>
+          <div v-if="organizeReviewWarnings.length > 0" class="review-details">
+            <h4>Warnings</h4>
+            <ul class="warning-list">
+              <li v-for="warning in organizeReviewWarnings" :key="warning">{{ warning }}</li>
+            </ul>
+          </div>
+          <div v-if="organizeReviewErrors.length > 0" class="review-details">
+            <h4>Errors</h4>
+            <ul class="error-list">
+              <li v-for="error in organizeReviewErrors" :key="error">{{ error }}</li>
+            </ul>
+          </div>
+        </section>
+
+        <section v-else-if="activeWorkflow === 'rename'" class="review-layout">
+          <h3>{{ renameReviewHeading }}</h3>
+          <p>{{ renameReviewCopy }}</p>
+          <div v-if="renamePreview" class="result-grid">
+            <span>Files scanned</span><strong>{{ renamePreview.summary.FilesScanned }}</strong>
+            <span>Candidates</span><strong>{{ renamePreview.candidates.length }}</strong>
+            <span>Conflicts</span><strong>{{ renamePreview.summary.ConflictsFound }}</strong>
+            <span>Skipped</span><strong>{{ renamePreview.summary.FilesSkipped }}</strong>
+            <span>Errors</span><strong>{{ renamePreview.summary.Errors.length }}</strong>
+          </div>
+          <p v-else-if="renamePreviewError" class="inline-alert">{{ renamePreviewError }}</p>
+          <p v-else class="empty-note">No rename preview has completed.</p>
+          <div v-if="renameReviewWarnings.length > 0" class="review-details">
+            <h4>Warnings</h4>
+            <ul class="warning-list">
+              <li v-for="warning in renameReviewWarnings" :key="warning">{{ warning }}</li>
+            </ul>
+          </div>
+          <div v-if="renameReviewErrors.length > 0" class="review-details">
+            <h4>Errors</h4>
+            <ul class="error-list">
+              <li v-for="error in renameReviewErrors" :key="error">{{ error }}</li>
+            </ul>
           </div>
         </section>
 
         <section v-else-if="activeWorkflow === 'abs'" class="review-layout">
-          <h3>ABS Operation Results</h3>
-          <p>Backend results from item loading, library state checks, scan triggers, and cleanup appear here.</p>
-          <div class="result-grid">
+          <h3>{{ absReviewHeading }}</h3>
+          <p>{{ absReviewCopy }}</p>
+          <div v-if="hasABSReviewResults" class="result-grid">
             <span>Metadata items</span><strong>{{ absItems?.items.length ?? 0 }}</strong>
             <span>Library state items</span><strong>{{ absLibraryState?.items.length ?? 0 }}</strong>
             <span>Missing / invalid</span><strong>{{ absMissingCount }} / {{ absInvalidCount }}</strong>
-            <span>Last scan</span><strong>{{ absScanResult?.triggered ? absScanResult.library_id : 'Not triggered' }}</strong>
-            <span>Last cleanup</span><strong>{{ absCleanResult?.cleaned ? absCleanResult.library_id : 'Not run' }}</strong>
+            <template v-if="absScanResult">
+              <span>Last scan</span><strong>{{ absScanResult.triggered ? absScanResult.library_id : 'Not triggered' }}</strong>
+            </template>
+            <template v-if="absCleanResult">
+              <span>Last cleanup</span><strong>{{ absCleanResult.cleaned ? absCleanResult.library_id : 'Not cleaned' }}</strong>
+            </template>
           </div>
-        </section>
-
-        <section v-else class="review-layout">
-          <h3>Result Review</h3>
-          <p>Run results, log paths, undo guidance, and follow-up warnings will appear here after an executed job.</p>
-          <div class="result-grid">
-            <span>Job status</span><strong>Waiting for run</strong>
-            <span>Undo log</span><strong>Not created</strong>
-            <span>Warnings</span><strong>None yet</strong>
+          <p v-else class="empty-note">No ABS backend action has completed.</p>
+          <div v-if="absReviewWarnings.length > 0" class="review-details">
+            <h4>Warnings</h4>
+            <ul class="warning-list">
+              <li v-for="warning in absReviewWarnings" :key="warning">{{ warning }}</li>
+            </ul>
+          </div>
+          <div v-if="absReviewErrors.length > 0" class="review-details">
+            <h4>Errors</h4>
+            <ul class="error-list">
+              <li v-for="error in absReviewErrors" :key="error">{{ error }}</li>
+            </ul>
           </div>
         </section>
       </section>
@@ -516,7 +572,7 @@ const stages = [
   { id: 'configure' as const, index: '1', label: 'Configure & Scan', description: 'Choose workflow inputs' },
   { id: 'preview' as const, index: '2', label: 'Preview', description: 'Review dry-run output' },
   { id: 'run' as const, index: '3', label: 'Run', description: 'Execute after review' },
-  { id: 'review' as const, index: '4', label: 'Review', description: 'Check logs and undo' },
+  { id: 'review' as const, index: '4', label: 'Review', description: 'Inspect backend results' },
 ]
 
 const stageText: Record<StageId, { heading: string; copy: string }> = {
@@ -608,7 +664,7 @@ const absScanError = ref('')
 const absCleanError = ref('')
 const absCleanConfirmed = ref(false)
 const events = ref<ActivityEvent[]>([
-  { time: 'Pending', level: 'info', event: 'Startup checks', detail: 'Loading server health, config, and options.' },
+  { time: now(), level: 'info', event: 'Local UI ready', detail: 'No workflow request has run yet.' },
 ])
 
 const currentWorkflow = computed(() => workflows.find((workflow) => workflow.id === activeWorkflow.value) ?? workflows[0])
@@ -699,6 +755,137 @@ const absCleanActionLabel = computed(() =>
 )
 const absMissingCount = computed(() => absLibraryState.value?.items.filter((item) => item.is_missing).length ?? 0)
 const absInvalidCount = computed(() => absLibraryState.value?.items.filter((item) => item.is_invalid).length ?? 0)
+const organizeReviewSummary = computed(() => organizeRun.value ?? organizePreview.value)
+const organizeReviewWarnings = computed(() => organizeReviewSummary.value?.summary.MetadataMissing ?? [])
+const organizeReviewErrors = computed(() => {
+  const errors: string[] = []
+  if (organizePreviewStatus.value === 'error' && organizePreviewError.value) {
+    errors.push(`Organize preview: ${organizePreviewError.value}`)
+  }
+  if (organizeRunStatus.value === 'error' && organizeRunError.value) {
+    errors.push(`Organize run: ${organizeRunError.value}`)
+  }
+  return errors
+})
+const organizeReviewHeading = computed(() => {
+  if (organizeRun.value) {
+    return 'Organize Run Complete'
+  }
+  if (organizePreview.value) {
+    return 'Organize Preview Results'
+  }
+  if (organizeReviewErrors.value.length > 0) {
+    return 'Organize Results Need Attention'
+  }
+  return 'Organize Results'
+})
+const organizeReviewCopy = computed(() => {
+  if (organizeRun.value) {
+    return 'The reviewed organize plan finished with backend results.'
+  }
+  if (organizePreview.value) {
+    return 'The latest backend organize preview is available for inspection before execution.'
+  }
+  if (organizeReviewErrors.value.length > 0) {
+    return 'The backend reported an error. Details remain available here while you adjust inputs or retry.'
+  }
+  return 'Completed organize runs will appear here after you run a reviewed preview.'
+})
+const renameReviewWarnings = computed(() => {
+  const warnings = renamePreview.value?.candidates
+    .filter((candidate) => candidate.IsConflict || candidate.IsNoOp)
+    .map((candidate) => {
+      if (candidate.IsConflict) {
+        return `Conflict: ${candidate.CurrentPath} -> ${candidate.ProposedPath}`
+      }
+      return `Skipped unchanged: ${candidate.CurrentPath}`
+    }) ?? []
+  return warnings
+})
+const renameReviewErrors = computed(() => {
+  const errors: string[] = []
+  if (renamePreviewStatus.value === 'error' && renamePreviewError.value) {
+    errors.push(`Rename preview: ${renamePreviewError.value}`)
+  }
+  if (renamePreview.value) {
+    errors.push(...renamePreview.value.summary.Errors)
+    errors.push(
+      ...renamePreview.value.candidates
+        .filter((candidate) => candidate.Error)
+        .map((candidate) => `${candidate.CurrentPath}: ${candidate.Error}`),
+    )
+  }
+  return errors
+})
+const renameReviewHeading = computed(() => {
+  if (renamePreview.value) {
+    return 'Rename Preview Results'
+  }
+  if (renameReviewErrors.value.length > 0) {
+    return 'Rename Results Need Attention'
+  }
+  return 'Rename Results'
+})
+const renameReviewCopy = computed(() => {
+  if (renamePreview.value) {
+    return 'The latest backend rename preview is available for inspection. Rename execution is not exposed by the web UI yet.'
+  }
+  if (renameReviewErrors.value.length > 0) {
+    return 'The backend reported an error. Details remain available here while you adjust inputs or retry.'
+  }
+  return 'Completed rename previews will appear here after you request candidates from the backend.'
+})
+const hasABSReviewResults = computed(
+  () => !!absItems.value || !!absLibraryState.value || !!absScanResult.value || !!absCleanResult.value,
+)
+const absReviewWarnings = computed(() => {
+  const warnings: string[] = []
+  if (absLibraryState.value) {
+    warnings.push(
+      ...absLibraryState.value.items
+        .filter((item) => item.is_missing || item.is_invalid)
+        .map((item) => {
+          const states = [item.is_missing ? 'missing' : '', item.is_invalid ? 'invalid' : ''].filter(Boolean).join(', ')
+          return `${item.title || item.id}: ${states} at ${item.path}`
+        }),
+    )
+  }
+  if (absScanResult.value && !absScanResult.value.triggered) {
+    warnings.push(`ABS scan was not triggered for ${absScanResult.value.library_id}.`)
+  }
+  if (absCleanResult.value && !absCleanResult.value.cleaned) {
+    warnings.push(`ABS cleanup did not report changes for ${absCleanResult.value.library_id}.`)
+  }
+  return warnings
+})
+const absReviewErrors = computed(() =>
+  [
+    absLibrariesError.value && `ABS libraries: ${absLibrariesError.value}`,
+    absPathError.value && `ABS path validation: ${absPathError.value}`,
+    absItemsError.value && `ABS items: ${absItemsError.value}`,
+    absLibraryStateError.value && `ABS library state: ${absLibraryStateError.value}`,
+    absScanError.value && `ABS scan: ${absScanError.value}`,
+    absCleanError.value && `ABS cleanup: ${absCleanError.value}`,
+  ].filter((error): error is string => Boolean(error)),
+)
+const absReviewHeading = computed(() => {
+  if (hasABSReviewResults.value) {
+    return 'ABS Operation Results'
+  }
+  if (absReviewErrors.value.length > 0) {
+    return 'ABS Results Need Attention'
+  }
+  return 'ABS Results'
+})
+const absReviewCopy = computed(() => {
+  if (hasABSReviewResults.value) {
+    return 'Completed ABS backend actions are summarized here.'
+  }
+  if (absReviewErrors.value.length > 0) {
+    return 'The backend reported an error. Details remain available here while you adjust inputs or retry.'
+  }
+  return 'Completed ABS backend actions will appear here after you load items, check state, trigger a scan, or clean missing records.'
+})
 const isRunActionDisabled = computed(() => {
   if (activeWorkflow.value === 'rename') {
     return true
@@ -713,20 +900,13 @@ function selectWorkflow(workflow: WorkflowId) {
   activeWorkflow.value = workflow
   activeStage.value = 'configure'
   previewReady.value = false
-  if (workflow === 'organize') {
-    resetOrganizeResults()
-  } else if (workflow === 'rename') {
-    resetRenameResults()
-  }
   ensureScanModeFitsWorkflow()
-  events.value = [
-    {
-      time: now(),
-      level: 'info',
-      event: `${currentWorkflow.value.label} selected`,
-      detail: 'Configure inputs before preview.',
-    },
-  ]
+  addEvent({
+    time: now(),
+    level: 'info',
+    event: `Local navigation: ${currentWorkflow.value.label} selected`,
+    detail: 'Configure inputs before preview.',
+  })
 }
 
 function isStageLocked(stage: StageId) {
@@ -740,15 +920,6 @@ function isStageLocked(stage: StageId) {
     return !absSetupReady.value || absScanStatus.value === 'loading' || absCleanStatus.value === 'loading'
   }
   return !previewReady.value
-}
-
-function markPreviewReady() {
-  previewReady.value = true
-  activeStage.value = 'run'
-  events.value = [
-    { time: now(), level: 'ok', event: 'Preview reviewed', detail: `${currentWorkflow.value.label} run stage unlocked.` },
-    ...events.value,
-  ]
 }
 
 function stateLabel(name: string, state: LoadState) {
@@ -765,17 +936,40 @@ function addEvent(event: ActivityEvent) {
   events.value = [event, ...events.value]
 }
 
+function addRequestStart(label: string, detail: string) {
+  addEvent({ time: now(), level: 'info', event: `Request started: ${label}`, detail })
+}
+
+function addRequestSuccess(label: string, detail: string) {
+  addEvent({ time: now(), level: 'ok', event: `Request succeeded: ${label}`, detail })
+}
+
+function addRequestError(label: string, detail: string) {
+  addEvent({ time: now(), level: 'warn', event: `Request failed: ${label}`, detail })
+}
+
+function addActionError(label: string, detail: string, requestStarted: boolean) {
+  if (requestStarted) {
+    addRequestError(label, detail)
+    return
+  }
+  addEvent({ time: now(), level: 'warn', event: `Local validation failed: ${label}`, detail })
+}
+
 async function createOrganizePreview() {
   organizePreviewStatus.value = 'loading'
   organizePreviewError.value = ''
   organizeRun.value = null
   organizeRunError.value = ''
   previewReady.value = false
+  let requestStarted = false
 
   try {
     if (!sourceFolder.value.trim() || !outputFolder.value.trim()) {
       throw new Error('Source and output folders are required for organize preview.')
     }
+    addRequestStart('Organize preview', 'POST /api/organize/preview')
+    requestStarted = true
     const response = normalizeOrganizeResponse(
       await apiPost<OrganizePreviewResponse>('/api/organize/preview', {
         config: buildOrganizerConfig(true),
@@ -783,17 +977,15 @@ async function createOrganizePreview() {
     )
     organizePreview.value = response
     organizePreviewStatus.value = 'success'
-    addEvent({
-      time: now(),
-      level: 'ok',
-      event: 'Organize preview ready',
-      detail: `${response.summary.Moves.length} planned move(s), ${response.summary.MetadataMissing.length} warning(s).`,
-    })
+    addRequestSuccess(
+      'Organize preview',
+      `${response.summary.Moves.length} planned move(s), ${response.summary.MetadataMissing.length} warning(s).`,
+    )
   } catch (error) {
     organizePreview.value = null
     organizePreviewStatus.value = 'error'
     organizePreviewError.value = error instanceof Error ? error.message : 'Preview failed.'
-    addEvent({ time: now(), level: 'warn', event: 'Organize preview failed', detail: organizePreviewError.value })
+    addActionError('Organize preview', organizePreviewError.value, requestStarted)
   }
 }
 
@@ -803,13 +995,14 @@ function reviewOrganizePreview() {
   }
   previewReady.value = true
   activeStage.value = 'run'
-  addEvent({ time: now(), level: 'ok', event: 'Preview reviewed', detail: 'Organize run stage unlocked.' })
+  addEvent({ time: now(), level: 'info', event: 'Local review: Organize preview accepted', detail: 'Run stage unlocked.' })
 }
 
 async function createRenamePreview() {
   renamePreviewStatus.value = 'loading'
   renamePreviewError.value = ''
   previewReady.value = false
+  let requestStarted = false
 
   try {
     if (!sourceFolder.value.trim()) {
@@ -818,6 +1011,8 @@ async function createRenamePreview() {
     if (!renameTemplate.value.trim()) {
       throw new Error('Rename template is required for preview.')
     }
+    addRequestStart('Rename preview', 'POST /api/rename/preview')
+    requestStarted = true
     const response = normalizeRenameResponse(
       await apiPost<RenamePreviewResponse>('/api/rename/preview', {
         config: buildRenameConfig(),
@@ -825,17 +1020,15 @@ async function createRenamePreview() {
     )
     renamePreview.value = response
     renamePreviewStatus.value = 'success'
-    addEvent({
-      time: now(),
-      level: 'ok',
-      event: 'Rename preview ready',
-      detail: `${response.candidates.length} candidate(s), ${response.summary.ConflictsFound} conflict(s).`,
-    })
+    addRequestSuccess(
+      'Rename preview',
+      `${response.candidates.length} candidate(s), ${response.summary.ConflictsFound} conflict(s).`,
+    )
   } catch (error) {
     renamePreview.value = null
     renamePreviewStatus.value = 'error'
     renamePreviewError.value = error instanceof Error ? error.message : 'Rename preview failed.'
-    addEvent({ time: now(), level: 'warn', event: 'Rename preview failed', detail: renamePreviewError.value })
+    addActionError('Rename preview', renamePreviewError.value, requestStarted)
   }
 }
 
@@ -847,8 +1040,8 @@ function reviewRenamePreview() {
   activeStage.value = 'run'
   addEvent({
     time: now(),
-    level: 'ok',
-    event: 'Rename candidates reviewed',
+    level: 'info',
+    event: 'Local review: Rename candidates accepted',
     detail: 'Rename execution remains deferred until the backend supports it.',
   })
 }
@@ -858,21 +1051,19 @@ async function loadABSLibraries() {
   absLibrariesError.value = ''
   absLibraries.value = []
   previewReady.value = false
+  let requestStarted = false
 
   try {
+    addRequestStart('ABS libraries', 'POST /api/abs/libraries')
+    requestStarted = true
     const response = await apiPost<ABSLibrariesResponse>('/api/abs/libraries', buildABSConfig())
     absLibraries.value = Array.isArray(response.libraries) ? response.libraries : []
     absLibrariesStatus.value = 'success'
-    addEvent({
-      time: now(),
-      level: 'ok',
-      event: 'ABS libraries loaded',
-      detail: `${absLibraries.value.length} library/libraries returned.`,
-    })
+    addRequestSuccess('ABS libraries', `${absLibraries.value.length} library/libraries returned.`)
   } catch (error) {
     absLibrariesStatus.value = 'error'
     absLibrariesError.value = error instanceof Error ? error.message : 'ABS library request failed.'
-    addEvent({ time: now(), level: 'warn', event: 'ABS libraries failed', detail: absLibrariesError.value })
+    addActionError('ABS libraries', absLibrariesError.value, requestStarted)
   }
 }
 
@@ -881,24 +1072,22 @@ async function testABSPathMappings() {
   absPathError.value = ''
   absResolvedMappings.value = []
   previewReady.value = false
+  let requestStarted = false
 
   try {
+    addRequestStart('ABS path validation', 'POST /api/abs/test-paths')
+    requestStarted = true
     const response = await apiPost<ABSPathMappingResponse>('/api/abs/test-paths', {
       input_dir: sourceFolder.value.trim(),
       config: buildABSConfig(),
     })
     absResolvedMappings.value = response.mappings ?? []
     absPathStatus.value = 'success'
-    addEvent({
-      time: now(),
-      level: 'ok',
-      event: 'ABS paths validated',
-      detail: `${absResolvedMappings.value.length} path mapping(s) resolved.`,
-    })
+    addRequestSuccess('ABS path validation', `${absResolvedMappings.value.length} path mapping(s) resolved.`)
   } catch (error) {
     absPathStatus.value = 'error'
     absPathError.value = error instanceof Error ? error.message : 'ABS path validation failed.'
-    addEvent({ time: now(), level: 'warn', event: 'ABS path validation failed', detail: absPathError.value })
+    addActionError('ABS path validation', absPathError.value, requestStarted)
   }
 }
 
@@ -906,24 +1095,22 @@ async function loadABSItems() {
   absItemsStatus.value = 'loading'
   absItemsError.value = ''
   absItems.value = null
+  let requestStarted = false
 
   try {
     assertABSSetupReady()
+    addRequestStart('ABS items', 'POST /api/abs/items')
+    requestStarted = true
     const response = await apiPost<ABSItemsResponse>('/api/abs/items', {
       config: buildABSConfig(),
     })
     absItems.value = { items: response.items ?? [] }
     absItemsStatus.value = 'success'
-    addEvent({
-      time: now(),
-      level: 'ok',
-      event: 'ABS items loaded',
-      detail: `${absItems.value.items.length} metadata item(s) returned.`,
-    })
+    addRequestSuccess('ABS items', `${absItems.value.items.length} metadata item(s) returned.`)
   } catch (error) {
     absItemsStatus.value = 'error'
     absItemsError.value = error instanceof Error ? error.message : 'ABS item loading failed.'
-    addEvent({ time: now(), level: 'warn', event: 'ABS item loading failed', detail: absItemsError.value })
+    addActionError('ABS items', absItemsError.value, requestStarted)
   }
 }
 
@@ -931,24 +1118,25 @@ async function loadABSLibraryState() {
   absLibraryStateStatus.value = 'loading'
   absLibraryStateError.value = ''
   absLibraryState.value = null
+  let requestStarted = false
 
   try {
     assertABSSetupReady()
+    addRequestStart('ABS library state', 'POST /api/abs/library-state')
+    requestStarted = true
     const response = await apiPost<ABSLibraryStateResponse>('/api/abs/library-state', {
       config: buildABSConfig(),
     })
     absLibraryState.value = { ...response, items: response.items ?? [] }
     absLibraryStateStatus.value = 'success'
-    addEvent({
-      time: now(),
-      level: 'ok',
-      event: 'ABS library state loaded',
-      detail: `${absLibraryState.value.items.length} item(s), ${absMissingCount.value} missing, ${absInvalidCount.value} invalid.`,
-    })
+    addRequestSuccess(
+      'ABS library state',
+      `${absLibraryState.value.items.length} item(s), ${absMissingCount.value} missing, ${absInvalidCount.value} invalid.`,
+    )
   } catch (error) {
     absLibraryStateStatus.value = 'error'
     absLibraryStateError.value = error instanceof Error ? error.message : 'ABS library state request failed.'
-    addEvent({ time: now(), level: 'warn', event: 'ABS library state failed', detail: absLibraryStateError.value })
+    addActionError('ABS library state', absLibraryStateError.value, requestStarted)
   }
 }
 
@@ -956,24 +1144,25 @@ async function triggerABSScan() {
   absScanStatus.value = 'loading'
   absScanError.value = ''
   absScanResult.value = null
+  let requestStarted = false
 
   try {
     assertABSSetupReady()
+    addRequestStart('ABS scan trigger', 'POST /api/abs/scan-trigger')
+    requestStarted = true
     const response = await apiPost<ABSScanTriggerResponse>('/api/abs/scan-trigger', {
       config: buildABSConfig(),
     })
     absScanResult.value = response
     absScanStatus.value = 'success'
-    addEvent({
-      time: now(),
-      level: 'ok',
-      event: 'ABS scan triggered',
-      detail: response.triggered ? `Library ${response.library_id} accepted the scan request.` : 'Backend did not report a scan trigger.',
-    })
+    addRequestSuccess(
+      'ABS scan trigger',
+      response.triggered ? `Library ${response.library_id} accepted the scan request.` : 'Backend did not report a scan trigger.',
+    )
   } catch (error) {
     absScanStatus.value = 'error'
     absScanError.value = error instanceof Error ? error.message : 'ABS scan trigger failed.'
-    addEvent({ time: now(), level: 'warn', event: 'ABS scan failed', detail: absScanError.value })
+    addActionError('ABS scan trigger', absScanError.value, requestStarted)
   }
 }
 
@@ -981,6 +1170,7 @@ async function cleanABSMissing() {
   absCleanStatus.value = 'loading'
   absCleanError.value = ''
   absCleanResult.value = null
+  let requestStarted = false
 
   try {
     assertABSSetupReady()
@@ -991,22 +1181,22 @@ async function cleanABSMissing() {
       absCleanStatus.value = 'idle'
       return
     }
+    addRequestStart('ABS missing item cleanup', 'POST /api/abs/clean-missing')
+    requestStarted = true
     const response = await apiPost<ABSCleanMissingResponse>('/api/abs/clean-missing', {
       config: buildABSConfig(),
     })
     absCleanResult.value = response
     absCleanStatus.value = 'success'
     absCleanConfirmed.value = false
-    addEvent({
-      time: now(),
-      level: 'ok',
-      event: 'ABS missing items cleaned',
-      detail: response.cleaned ? `Library ${response.library_id} cleanup completed.` : 'Backend did not report cleanup.',
-    })
+    addRequestSuccess(
+      'ABS missing item cleanup',
+      response.cleaned ? `Library ${response.library_id} cleanup completed.` : 'Backend did not report cleanup.',
+    )
   } catch (error) {
     absCleanStatus.value = 'error'
     absCleanError.value = error instanceof Error ? error.message : 'ABS missing-item cleanup failed.'
-    addEvent({ time: now(), level: 'warn', event: 'ABS cleanup failed', detail: absCleanError.value })
+    addActionError('ABS missing item cleanup', absCleanError.value, requestStarted)
   }
 }
 
@@ -1036,7 +1226,10 @@ async function runOrganize() {
 
   organizeRunStatus.value = 'loading'
   organizeRunError.value = ''
+  let requestStarted = false
   try {
+    addRequestStart('Organize run', 'POST /api/organize/run')
+    requestStarted = true
     const response = normalizeOrganizeResponse(
       await apiPost<OrganizeRunResponse>('/api/organize/run', {
         config: buildOrganizerConfig(false),
@@ -1045,16 +1238,11 @@ async function runOrganize() {
     organizeRun.value = response
     organizeRunStatus.value = 'success'
     activeStage.value = 'review'
-    addEvent({
-      time: now(),
-      level: 'ok',
-      event: 'Organize run complete',
-      detail: `${response.summary.Moves.length} file operation(s).`,
-    })
+    addRequestSuccess('Organize run', `${response.summary.Moves.length} file operation(s).`)
   } catch (error) {
     organizeRunStatus.value = 'error'
     organizeRunError.value = error instanceof Error ? error.message : 'Organize run failed.'
-    addEvent({ time: now(), level: 'warn', event: 'Organize run failed', detail: organizeRunError.value })
+    addActionError('Organize run', organizeRunError.value, requestStarted)
   }
 }
 
@@ -1214,13 +1402,17 @@ function now() {
 }
 
 onMounted(async () => {
+  addRequestStart('Health check', 'GET /api/health')
   try {
     const response = await apiGet<HealthResponse>('/api/health')
     health.value = response.status
+    addRequestSuccess('Health check', `Server reported ${response.status}.`)
   } catch {
     health.value = 'offline'
+    addRequestError('Health check', 'Server health request failed.')
   }
 
+  addRequestStart('Initial config', 'GET /api/config/initial')
   try {
     const config = await apiGet<WebConfig>('/api/config/initial')
     organizerDefaults.value = config.organizer
@@ -1245,23 +1437,24 @@ onMounted(async () => {
           }))
         : absPathMappings.value
     configState.value = 'ready'
-    addEvent({ time: now(), level: 'ok', event: 'Config loaded', detail: 'Startup config is ready.' })
+    addRequestSuccess('Initial config', 'Startup config is ready.')
   } catch {
     configState.value = 'fallback'
-    addEvent({ time: now(), level: 'warn', event: 'Config unavailable', detail: 'Using local defaults.' })
+    addRequestError('Initial config', 'Config unavailable. Using local defaults.')
   }
 
+  addRequestStart('Config options', 'GET /api/config/options')
   try {
     const options = await apiGet<OptionsResponse>('/api/config/options')
     layouts.value = Array.isArray(options.layouts) ? options.layouts : []
     scanModes.value = Array.isArray(options.scan_modes) ? options.scan_modes : []
     optionsState.value = 'ready'
     ensureScanModeFitsWorkflow()
-    addEvent({ time: now(), level: 'ok', event: 'Options loaded', detail: 'Layout and scan mode options are ready.' })
+    addRequestSuccess('Config options', 'Layout and scan mode options are ready.')
   } catch {
     optionsState.value = 'fallback'
     ensureScanModeFitsWorkflow()
-    addEvent({ time: now(), level: 'warn', event: 'Options unavailable', detail: 'Using built-in option labels.' })
+    addRequestError('Config options', 'Options unavailable. Using built-in option labels.')
   }
 })
 

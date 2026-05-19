@@ -54,6 +54,17 @@ test('creates real rename preview candidates while execution stays deferred', as
     await expect(page.getByRole('heading', { name: 'Rename Execution Deferred' })).toBeVisible()
     await expect(page.getByText(/Rename execution is deferred/)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Rename Execution Deferred' })).toBeDisabled()
+    await page.getByRole('button', { name: 'Review Inspect backend results' }).click()
+    await expect(page.getByRole('heading', { name: 'Rename Preview Results' })).toBeVisible()
+    await expect(page.locator('.review-layout .result-grid')).toContainText('Files scanned')
+    await expect(page.locator('.review-layout .result-grid')).toContainText('4')
+    await expect(page.locator('.review-layout .warning-list').getByText(/Conflict:/)).toBeVisible()
+    await expect(
+      page.locator('.review-layout .error-list li').filter({ hasText: /Failed to extract metadata/ }).first(),
+    ).toBeVisible()
+    await expect(page.locator('.event-row').filter({ hasText: 'Request started: Rename preview' })).toHaveCount(1)
+    await expect(page.locator('.event-row').filter({ hasText: 'Request succeeded: Rename preview' })).toHaveCount(1)
+    await expect(page.locator('.event-row').filter({ hasText: 'Local review: Rename candidates accepted' })).toHaveCount(1)
     expect(renameRequests).not.toContain('/api/rename/run')
   } finally {
     await fixture.cleanup()

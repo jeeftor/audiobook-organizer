@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release workflows build the web frontend before packaging the single binary.
 - Organize summaries now report directories missing metadata even when verbose console logging is disabled, so web previews show real warning counts.
 - Rename previews now report skipped files, extraction errors, and duplicate target conflicts in backend summaries used by the web UI.
+- Web activity and review panels now show real request lifecycle events, completed backend summaries, persistent warnings/errors, and undo-log guidance only when a backend log path exists.
 
 ### Changed
 

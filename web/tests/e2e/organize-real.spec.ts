@@ -56,7 +56,17 @@ test('runs organize preview and execution against real filesystem fixtures', asy
     await page.getByRole('button', { name: 'Run Organize' }).click()
 
     await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
-    await expect(page.getByText(fixture.expectedLog)).toBeVisible()
+    await expect(page.locator('.review-layout .result-grid strong').filter({ hasText: fixture.expectedLog })).toBeVisible()
+    await expect(page.getByText(`Undo details are available in the backend log at ${fixture.expectedLog}.`)).toBeVisible()
+    await expect(page.locator('.review-layout .warning-list').getByText(fixture.missingDir)).toBeVisible()
+    await expect(page.locator('.event-row').filter({ hasText: 'Request started: Organize preview' })).toHaveCount(1)
+    await expect(page.locator('.event-row').filter({ hasText: 'Request succeeded: Organize preview' })).toHaveCount(1)
+    await expect(page.locator('.event-row').filter({ hasText: 'Local review: Organize preview accepted' })).toHaveCount(1)
+    await expect(page.locator('.event-row').filter({ hasText: 'Request started: Organize run' })).toHaveCount(1)
+    await expect(page.locator('.event-row').filter({ hasText: 'Request succeeded: Organize run' })).toHaveCount(1)
+    await expect(page.getByText('Waiting for run')).toHaveCount(0)
+    await expect(page.getByText('Not created')).toHaveCount(0)
+    await expect(page.getByText('None yet')).toHaveCount(0)
     await expect.poll(() => pathExists(fixture.expectedFile)).toBe(true)
     expect(organizeRequests).toContain('/api/organize/run')
   } finally {
