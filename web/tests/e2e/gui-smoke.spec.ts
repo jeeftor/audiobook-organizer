@@ -54,6 +54,38 @@ test('uses backend bootstrap options and scopes ABS scan mode to ABS workflow', 
   await expect(page.locator('select[aria-label="Metadata source"] option[value="abs"]')).toHaveCount(1)
 })
 
+test('keeps staged workflows usable without document overflow on narrow viewports', async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 851 })
+  await loadApp(page)
+
+  await expectNoDocumentOverflow(page)
+  await expect(page.getByRole('button', { name: /Organize/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Preview Review dry-run output' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Source folder' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Output folder' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
+  await expect(page.getByRole('button', { name: 'Create Dry-run Preview' })).toBeVisible()
+  await expectNoDocumentOverflow(page)
+
+  await page.getByRole('button', { name: /Rename/ }).click()
+  await expect(page.getByRole('textbox', { name: 'Rename template' })).toBeVisible()
+  await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
+  await expect(page.getByRole('button', { name: 'Create Rename Preview' })).toBeVisible()
+  await expectNoDocumentOverflow(page)
+
+  await page.getByRole('button', { name: /Audiobookshelf/ }).click()
+  await expect(page.getByRole('textbox', { name: 'ABS server URL' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'ABS path prefix' })).toBeVisible()
+  await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
+  await expect(page.getByText('ABS setup must load libraries and validate paths first.')).toBeVisible()
+  await expectNoDocumentOverflow(page)
+
+  await page.getByRole('button', { name: 'Review Inspect backend results' }).click()
+  await expect(page.getByRole('heading', { name: 'ABS Results' })).toBeVisible()
+  await expectNoDocumentOverflow(page)
+})
+
 test('shows bootstrap fallback state when config and options fail', async ({ page }) => {
   await page.route('**/api/config/initial', async (route) => {
     await route.fulfill({
@@ -570,4 +602,28 @@ async function loadApp(page: Page, options: { allowFailedResourceMessages?: bool
   await expect(page.locator('#app')).not.toBeEmpty()
 
   expect(consoleMessages, 'No browser console warnings/errors during initial render').toEqual([])
+}
+
+async function expectNoDocumentOverflow(page: Page): Promise<void> {
+  const overflow = await page.evaluate(() => {
+    const viewportWidth = document.documentElement.clientWidth
+    const documentWidth = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth)
+    const overflowers = Array.from(document.querySelectorAll<HTMLElement>('body *'))
+      .filter((element) => element.scrollWidth > element.clientWidth + 1)
+      .slice(0, 8)
+      .map((element) => ({
+        tag: element.tagName.toLowerCase(),
+        className: element.className.toString(),
+        ariaLabel: element.getAttribute('aria-label'),
+        text: element.textContent?.replace(/\s+/g, ' ').trim().slice(0, 80),
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      }))
+
+    return { viewportWidth, documentWidth, overflowers }
+  })
+
+  expect(overflow.documentWidth, JSON.stringify(overflow.overflowers, null, 2)).toBeLessThanOrEqual(
+    overflow.viewportWidth + 1,
+  )
 }
