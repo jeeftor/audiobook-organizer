@@ -54,9 +54,74 @@
           <div class="panel-section">
             <h3>{{ currentWorkflow.configureTitle }}</h3>
             <label>Source folder</label>
-            <input v-model="sourceFolder" aria-label="Source folder" />
+            <div
+              class="path-control"
+              :class="{ dragging: activePathDropTarget === 'source' }"
+              data-path-field="source"
+              @dragenter.prevent="activePathDropTarget = 'source'"
+              @dragover.prevent="activePathDropTarget = 'source'"
+              @dragleave.prevent="activePathDropTarget = null"
+              @drop.prevent="handlePathDrop('source', $event)"
+            >
+              <input v-model="sourceFolder" aria-label="Source folder" @input="clearPathMessage('source')" />
+              <button
+                class="icon-button"
+                type="button"
+                aria-label="Choose source folder"
+                title="Choose source folder"
+                @click="openPathPicker('source')"
+              >
+                <FolderOpen :size="16" />
+              </button>
+              <input
+                ref="sourceFolderPicker"
+                class="file-picker"
+                type="file"
+                aria-label="Source folder directory picker"
+                tabindex="-1"
+                webkitdirectory
+                directory
+                multiple
+                @change="handlePathPickerChange('source', $event)"
+              />
+            </div>
+            <p v-if="sourcePathMessage" class="hint path-message">{{ sourcePathMessage }}</p>
             <label v-if="activeWorkflow !== 'rename'">Output folder</label>
-            <input v-if="activeWorkflow !== 'rename'" v-model="outputFolder" aria-label="Output folder" />
+            <div
+              v-if="activeWorkflow !== 'rename'"
+              class="path-control"
+              :class="{ dragging: activePathDropTarget === 'output' }"
+              data-path-field="output"
+              @dragenter.prevent="activePathDropTarget = 'output'"
+              @dragover.prevent="activePathDropTarget = 'output'"
+              @dragleave.prevent="activePathDropTarget = null"
+              @drop.prevent="handlePathDrop('output', $event)"
+            >
+              <input v-model="outputFolder" aria-label="Output folder" @input="clearPathMessage('output')" />
+              <button
+                class="icon-button"
+                type="button"
+                aria-label="Choose output folder"
+                title="Choose output folder"
+                @click="openPathPicker('output')"
+              >
+                <FolderOpen :size="16" />
+              </button>
+              <input
+                ref="outputFolderPicker"
+                class="file-picker"
+                type="file"
+                aria-label="Output folder directory picker"
+                tabindex="-1"
+                webkitdirectory
+                directory
+                multiple
+                @change="handlePathPickerChange('output', $event)"
+              />
+            </div>
+            <p v-if="activeWorkflow !== 'rename' && outputPathMessage" class="hint path-message">
+              {{ outputPathMessage }}
+            </p>
             <label>{{ currentWorkflow.modeLabel }}</label>
             <select
               v-model="scanMode"
@@ -499,6 +564,7 @@ import {
   AudioLines,
   Eye,
   FilePenLine,
+  FolderOpen,
   FolderInput,
   Play,
   Plus,
@@ -530,6 +596,7 @@ import {
 
 type WorkflowId = 'organize' | 'rename' | 'abs'
 type StageId = 'configure' | 'preview' | 'run' | 'review'
+type PathFieldId = 'source' | 'output'
 type LoadState = 'loading' | 'ready' | 'fallback'
 type CredentialState = 'empty' | 'redacted'
 type RequestState = 'idle' | 'loading' | 'success' | 'error'
@@ -635,6 +702,11 @@ const activeStage = ref<StageId>('configure')
 const previewReady = ref(false)
 const sourceFolder = ref('')
 const outputFolder = ref('')
+const sourceFolderPicker = ref<HTMLInputElement | null>(null)
+const outputFolderPicker = ref<HTMLInputElement | null>(null)
+const sourcePathMessage = ref('')
+const outputPathMessage = ref('')
+const activePathDropTarget = ref<PathFieldId | null>(null)
 const scanMode = ref('json')
 const layout = ref('author-series-title')
 const useEmbeddedMetadata = ref(false)
@@ -976,6 +1048,92 @@ function addActionError(label: string, detail: string, requestStarted: boolean) 
     return
   }
   addEvent({ time: now(), level: 'warn', event: `Local validation failed: ${label}`, detail })
+}
+
+function openPathPicker(field: PathFieldId) {
+  clearPathMessage(field)
+  const picker = field === 'source' ? sourceFolderPicker.value : outputFolderPicker.value
+  if (!picker) {
+    setPathMessage(field, 'Folder selection is unavailable here. Type or paste the folder path instead.')
+    return
+  }
+  picker.value = ''
+  picker.click()
+}
+
+function handlePathPickerChange(field: PathFieldId, event: Event) {
+  const input = event.target as HTMLInputElement
+  applyPathFiles(field, input.files, 'selected')
+  input.value = ''
+}
+
+function handlePathDrop(field: PathFieldId, event: DragEvent) {
+  activePathDropTarget.value = null
+  applyPathFiles(field, event.dataTransfer?.files ?? null, 'dropped')
+}
+
+function applyPathFiles(field: PathFieldId, files: FileList | null, action: 'selected' | 'dropped') {
+  if (!files || files.length === 0) {
+    setPathMessage(field, 'No folder files were available. Type or paste the folder path instead.')
+    return
+  }
+
+  const path = extractLocalDirectoryPath(files[0])
+  if (!path) {
+    const actionLabel = action === 'selected' ? 'selected' : 'dropped'
+    setPathMessage(
+      field,
+      `Folder ${actionLabel}, but this browser did not expose a local path. Type or paste the folder path instead.`,
+    )
+    return
+  }
+
+  setPathValue(field, path)
+  setPathMessage(field, `${pathLabel(field)} set from ${action} folder.`)
+}
+
+function extractLocalDirectoryPath(file: File): string {
+  const filePath = (file as File & { path?: string }).path
+  if (!filePath) {
+    return ''
+  }
+  const relativeSegments = file.webkitRelativePath.split('/').filter(Boolean)
+  let path = filePath
+  const levelsToRemove = relativeSegments.length > 0 ? relativeSegments.length : 1
+  for (let index = 0; index < levelsToRemove; index += 1) {
+    path = parentPath(path)
+  }
+  return path
+}
+
+function parentPath(path: string): string {
+  const trimmed = path.replace(/[\\/]+$/, '')
+  const index = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'))
+  return index > 0 ? trimmed.slice(0, index) : trimmed
+}
+
+function setPathValue(field: PathFieldId, value: string) {
+  if (field === 'source') {
+    sourceFolder.value = value
+    return
+  }
+  outputFolder.value = value
+}
+
+function clearPathMessage(field: PathFieldId) {
+  setPathMessage(field, '')
+}
+
+function setPathMessage(field: PathFieldId, message: string) {
+  if (field === 'source') {
+    sourcePathMessage.value = message
+    return
+  }
+  outputPathMessage.value = message
+}
+
+function pathLabel(field: PathFieldId): string {
+  return field === 'source' ? 'Source folder' : 'Output folder'
 }
 
 async function createOrganizePreview() {

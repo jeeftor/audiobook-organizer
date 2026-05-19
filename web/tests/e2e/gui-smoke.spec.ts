@@ -1,3 +1,6 @@
+import { mkdtemp, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { startTestServer, type TestServer } from './server'
 
@@ -52,6 +55,40 @@ test('uses backend bootstrap options and scopes ABS scan mode to ABS workflow', 
 
   await page.getByRole('button', { name: /Audiobookshelf/ }).click()
   await expect(page.locator('select[aria-label="Metadata source"] option[value="abs"]')).toHaveCount(1)
+})
+
+test('supports folder picker and drop affordances while preserving manual path entry', async ({ page }) => {
+  await loadApp(page)
+
+  const sourceInput = page.getByRole('textbox', { name: 'Source folder' })
+  const outputInput = page.getByRole('textbox', { name: 'Output folder' })
+  await sourceInput.fill('/manual/source')
+  await outputInput.fill('/manual/output')
+
+  await expect(page.getByRole('button', { name: 'Choose source folder' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Choose output folder' })).toBeVisible()
+
+  const pickerDir = await mkdtemp(join(tmpdir(), 'abo-picker-'))
+  await writeFile(join(pickerDir, 'fixture.m4b'), 'fixture')
+  await page.getByLabel('Output folder directory picker').setInputFiles(pickerDir)
+  await expect(
+    page.locator('.path-message').filter({ hasText: 'Folder selected, but this browser did not expose a local path' }),
+  ).toBeVisible()
+  await expect(outputInput).toHaveValue('/manual/output')
+
+  const dataTransfer = await page.evaluateHandle(() => {
+    const transfer = new DataTransfer()
+    const file = new File(['fixture'], 'book.m4b', { type: 'audio/mp4' })
+    Object.defineProperty(file, 'path', { value: '/dropped/source/book.m4b' })
+    transfer.items.add(file)
+    return transfer
+  })
+  await page.locator('[data-path-field="source"]').dispatchEvent('drop', { dataTransfer })
+  await expect(sourceInput).toHaveValue('/dropped/source')
+  await expect(page.locator('.path-message').filter({ hasText: 'Source folder set from dropped folder.' })).toBeVisible()
+
+  await sourceInput.fill('/typed/source')
+  await expect(page.locator('.path-message').filter({ hasText: 'Source folder set from dropped folder.' })).toHaveCount(0)
 })
 
 test('keeps staged workflows usable without document overflow on narrow viewports', async ({ page }) => {
