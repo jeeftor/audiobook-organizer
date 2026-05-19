@@ -60,6 +60,57 @@ jobs:
       run: |
         go tool cover -func=coverage.out
 
+  web-ui-e2e:
+    name: Web UI Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: 'stable'
+        cache: true
+        cache-dependency-path: go.sum
+
+    - name: Set up Node
+      uses: actions/setup-node@v6
+      with:
+        node-version: '24'
+        cache: npm
+        cache-dependency-path: web/package-lock.json
+
+    - name: Cache Playwright browsers
+      uses: actions/cache@v5
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('web/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-
+
+    - name: Install frontend dependencies
+      working-directory: web
+      run: npm ci
+
+    - name: Install Playwright Chromium
+      working-directory: web
+      run: npx playwright install --with-deps chromium
+
+    - name: Run Playwright web UI tests
+      run: make gui-test
+
+    - name: Upload Playwright artifacts on failure
+      if: failure()
+      uses: actions/upload-artifact@v7
+      with:
+        name: web-ui-playwright-artifacts
+        path: |
+          web/playwright-report/**
+          web/test-results/**
+
   abs-e2e:
     name: ABS matrix / ${{ matrix.name }}
     runs-on: ubuntu-latest

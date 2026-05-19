@@ -31,6 +31,12 @@ make gui-test-headed
 make gui-test-ui
 ```
 
+CI runs the same browser suite in the `Web UI Playwright` job. The job installs
+frontend dependencies with `npm ci`, installs Playwright-managed Chromium with
+Linux browser dependencies, and then runs `make gui-test`. On failure it uploads
+the Playwright HTML report, traces, screenshots, and videos from
+`web/playwright-report/` and `web/test-results/`.
+
 Direct npm equivalents:
 
 ```bash
@@ -56,15 +62,25 @@ If Playwright reports a missing executable such as `chromium_headless_shell-<rev
 
 ## Current Coverage
 
-The initial suite covers:
+The current suite covers:
 
-- REST tests for auth, config/options, static app serving, method validation, malformed JSON, organize preview, rename preview, and no-Docker ABS path mapping validation.
-- The local Go web server starts and serves embedded assets.
-- Authenticated API endpoints reject missing tokens and accept the generated session token.
+- REST tests for auth, config/options, static app serving, method validation,
+  malformed JSON, organize preview, rename preview, and no-Docker ABS path
+  mapping validation.
+- The local Go web server starts with a generated session token and serves the
+  embedded web app.
+- Authenticated API endpoints reject missing tokens and accept the generated
+  session token.
 - The dashboard renders without browser console warnings or errors.
-- The health check changes the server status to connected.
-- Table selection updates the inspector.
-- The scan button writes a visible job-console event.
+- Workflow navigation, backend bootstrap state, folder picker/drop behavior,
+  narrow viewport overflow checks, and bootstrap fallback states.
+- Real organize preview and execution against temporary filesystem fixtures.
+- Real rename preview against temporary filesystem fixtures, including
+  conflicts, skipped files, extraction errors, and the current deferred
+  execution state.
+- Mocked browser contract checks for ABS setup and operations. Real ABS behavior
+  is covered by the Docker-backed Go E2E matrix until browser-driven ABS tests
+  are added.
 
 ## Expansion Plan
 
