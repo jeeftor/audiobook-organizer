@@ -25,9 +25,19 @@
   box-sizing: border-box;
 }
 
+html {
+  min-width: 0;
+  background: var(--bg);
+}
+
 body {
   margin: 0;
   background: var(--bg);
+  min-width: 0;
+}
+
+#app {
+  min-width: 0;
 }
 
 button,
@@ -59,6 +69,10 @@ button:disabled {
   padding: 0 20px;
   border-bottom: 1px solid var(--line);
   background: #12161b;
+}
+
+.topbar > div {
+  min-width: 0;
 }
 
 .topbar h1 {
@@ -121,6 +135,7 @@ button:disabled {
 }
 
 .workflow-card {
+  min-width: 0;
   min-height: 82px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -183,6 +198,7 @@ button:disabled {
 
 .stage-item {
   width: 100%;
+  min-width: 0;
   min-height: 68px;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -215,6 +231,7 @@ button:disabled {
 .stage-item strong,
 .stage-item small {
   display: block;
+  overflow-wrap: anywhere;
 }
 
 .stage-item strong {
@@ -296,6 +313,7 @@ button:disabled {
 .preview-checklist,
 .warning-panel,
 .review-layout {
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
@@ -352,6 +370,7 @@ select:focus {
 }
 
 .check-row input {
+  flex: 0 0 auto;
   width: 15px;
   min-height: 15px;
   accent-color: var(--accent);
@@ -773,10 +792,24 @@ select:focus {
 @media (max-width: 1080px) {
   .workspace {
     grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-areas:
+      "rail main"
+      "activity activity";
+  }
+
+  .stage-rail {
+    grid-area: rail;
+  }
+
+  .stage-panel {
+    grid-area: main;
   }
 
   .activity-panel {
-    display: none;
+    grid-area: activity;
+    max-height: 260px;
+    border-left: 0;
+    border-top: 1px solid var(--line);
   }
 
   .configure-grid,
@@ -800,9 +833,29 @@ select:focus {
     display: block;
   }
 
-  .topbar,
+  .topbar {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 8px 10px;
+    min-height: 58px;
+    padding: 10px 14px;
+  }
+
+  .topbar-spacer {
+    display: none;
+  }
+
+  .status-dot {
+    justify-self: end;
+  }
+
+  .server-status {
+    grid-column: 2 / 4;
+  }
+
   .workflow-switcher,
-  .stage-panel {
+  .stage-panel,
+  .activity-panel {
     padding-left: 14px;
     padding-right: 14px;
   }
@@ -834,5 +887,53 @@ select:focus {
 
   .stage-header h2 {
     font-size: 23px;
+  }
+
+  .activity-panel {
+    max-height: none;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 520px) {
+  .stage-panel {
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .panel-section,
+  .preview-empty,
+  .preview-checklist,
+  .warning-panel,
+  .review-layout,
+  .operation-card {
+    padding: 14px;
+  }
+
+  .action-row > *,
+  .operation-actions > *,
+  .primary-action,
+  .secondary-action,
+  .danger-action {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .check-row {
+    align-items: flex-start;
+    line-height: 1.35;
+  }
+
+  .result-grid,
+  .result-grid.compact {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .result-grid strong {
+    margin-bottom: 6px;
   }
 }
