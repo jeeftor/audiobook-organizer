@@ -20,6 +20,19 @@ Use this shared reference for Audiobook Organizer repo-local skills.
 - PRs target `master`; prefer Squash and merge; issues normally close through PR merge.
 - Repository auto-merge and delete-branch-on-merge are enabled. When required checks are green and the PR is otherwise mergeable, enable auto-merge. If GitHub reports `REVIEW_REQUIRED`, report the branch protection mismatch instead of trying to self-approve.
 - Do not treat a local commit or draft PR as done. Finish the cycle by getting the PR ready, passing required checks, enabling or completing merge back into `master`, confirming the linked issue closed, and cleaning up the branch or worktree.
+- After tracked work is complete, suggest the next useful work item before ending the final response. Base the suggestion on current open issues, parent/child dependencies, recently completed workflow chains, and any follow-up issues created during the work. Do not start the next task unless the user asks.
+
+## Next Work Recommendation
+
+When a feature, fix, docs, test, or chore issue is finished through PR merge or explicit issue closeout:
+
+1. Inspect the remaining open issues with `gh issue list --state open --limit 30 --json number,title,updatedAt,url`.
+2. Check parent and sibling issues that were affected by the completed work, especially audit, umbrella, and matrix issues.
+3. Prefer recommendations that unblock closeout or continue the same workflow chain before switching domains.
+4. Identify parallel candidates only when their likely files and services do not overlap heavily.
+5. End with one concise recommendation and, when useful, one or two alternatives. Do not automatically create branches, issues, worktrees, or subagents for the next item without user direction.
+
+For web UI audit work, parent closeout usually comes before new implementation: close or update completed umbrella/symptom issues, then pick the next still-open child issue.
 
 ## Architecture Map
 

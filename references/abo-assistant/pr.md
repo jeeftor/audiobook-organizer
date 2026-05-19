@@ -48,6 +48,7 @@ Prefer enabling auto-merge once checks are green. If GitHub reports `REVIEW_REQU
 - Directly close an issue only when the user explicitly asks, the issue is obsolete/duplicate, or the work intentionally completed outside PR merge.
 - Before closeout, verify acceptance criteria against code, tests, docs, changelog, and PR state.
 - Do not close a user-facing workflow issue based only on mocked/stubbed tests. Confirm real E2E evidence or documented maintainer acceptance of the gap.
+- After closeout, use the next-work recommendation guidance in `references/abo-assistant/common.md` before ending the user-facing response. Suggest what to do next, but do not start it without user direction.
 
 ## Watcher Duties
 
@@ -56,4 +57,4 @@ Prefer enabling auto-merge once checks are green. If GitHub reports `REVIEW_REQU
 3. Apply mechanical or clearly requested fixes.
 4. Ask before risky rebases, behavior changes, or ambiguous maintainer feedback.
 5. If required checks are green and the PR is otherwise mergeable, enable auto-merge with squash/delete-branch when available.
-6. Summarize what changed, what remains blocked, and which checks should rerun.
+6. Summarize what changed, what remains blocked, which checks should rerun, and the next recommended work item when the PR closes an issue.

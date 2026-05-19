@@ -35,3 +35,7 @@ If they choose existing issues, inspect open issues first and help pick one befo
 - PR drafting, creation, or watching: `$abo-pr`.
 
 If intent is clear, apply the relevant specialist workflow directly in the current agent. If the user explicitly asks for subagents or parallel work, delegate bounded tasks to specialist subagents.
+
+## Closeout
+
+When a routed task completes, use `references/abo-assistant/common.md` next-work recommendation guidance before ending the response. Recommend the next issue, closeout step, or parallel-safe pairing based on the current open issue list and dependency chain, but wait for the user before starting new work.
