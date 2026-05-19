@@ -24,6 +24,9 @@ make gui-rest-test
 # Build Vue assets and run Playwright headless tests
 make gui-test
 
+# Run the Docker-backed browser test for real ABS setup and operations
+make gui-test-abs
+
 # Run headed for local debugging
 make gui-test-headed
 
@@ -31,11 +34,17 @@ make gui-test-headed
 make gui-test-ui
 ```
 
-CI runs the same browser suite in the `Web UI Playwright` job. The job installs
-frontend dependencies with `npm ci`, installs Playwright-managed Chromium with
-Linux browser dependencies, and then runs `make gui-test`. On failure it uploads
-the Playwright HTML report, traces, screenshots, and videos from
-`web/playwright-report/` and `web/test-results/`.
+CI runs the normal browser suite in the `Web UI Playwright` job. The job
+installs frontend dependencies with `npm ci`, installs Playwright-managed
+Chromium with Linux browser dependencies, and then runs `make gui-test`. On
+failure it uploads the Playwright HTML report, traces, screenshots, and videos
+from `web/playwright-report/` and `web/test-results/`.
+
+CI runs the Docker-backed ABS browser suite separately in the `Web UI ABS
+Playwright` job with `make gui-test-abs`. That job seeds the ABS fixtures,
+resets both ABS containers through the normal harness reset contract, starts the
+real Go web UI, and drives the browser through the real ABS setup and operation
+endpoints.
 
 Direct npm equivalents:
 
@@ -44,6 +53,7 @@ cd web
 npm install
 npm run install:browsers
 npm run test:e2e
+ABO_ABS_PLAYWRIGHT=1 npm run test:e2e -- --project=chromium-desktop tests/e2e/abs-real.spec.ts
 npm run test:e2e:headed
 npm run test:e2e:ui
 ```
@@ -78,9 +88,11 @@ The current suite covers:
 - Real rename preview against temporary filesystem fixtures, including
   conflicts, skipped files, extraction errors, and the current deferred
   execution state.
-- Mocked browser contract checks for ABS setup and operations. Real ABS behavior
-  is covered by the Docker-backed Go E2E matrix until browser-driven ABS tests
-  are added.
+- Mocked browser contract checks for ABS setup and operations.
+- Real browser-driven ABS setup and operation coverage against the Docker ABS
+  harness, including URL/token entry, library discovery, path mapping
+  validation, metadata-item loading, library-state loading, scan triggering,
+  destructive cleanup gating, and missing-item cleanup.
 
 ## Expansion Plan
 
@@ -89,7 +101,6 @@ As the GUI moves from scaffold to real workflows, add tests in this order:
 1. Real source/output configuration state.
 2. Organize preview API calls with fixture directories.
 3. Rename preview API calls with fixture files.
-4. ABS library discovery and path mapping using the local ABS harness.
-5. Scan-trigger and missing-item cleanup flows after organizer moves.
-6. Accessibility checks for keyboard navigation and visible focus states.
-7. Visual regression snapshots for the main desktop and mobile layouts.
+4. Browser-driven ABS organize/import flows after ABS metadata setup.
+5. Accessibility checks for keyboard navigation and visible focus states.
+6. Visual regression snapshots for the main desktop and mobile layouts.
