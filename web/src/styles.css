@@ -383,6 +383,37 @@ select:focus {
   line-height: 1.45;
 }
 
+.path-control {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  gap: 8px;
+  align-items: stretch;
+  border-radius: 8px;
+}
+
+.path-control.dragging {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.path-control .icon-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.file-picker {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.path-message {
+  margin-top: 8px;
+}
+
 .deferred-state {
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr);
