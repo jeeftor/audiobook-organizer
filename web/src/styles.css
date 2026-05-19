@@ -441,8 +441,9 @@ select:focus {
   text-align: left;
 }
 
-.library-option:hover {
+.library-option.selected {
   border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .library-option strong {

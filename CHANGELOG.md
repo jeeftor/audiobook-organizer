@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wired the local web UI organize workflow to real preview and run endpoints with review gating and backend result summaries.
 - Wired the local web UI rename workflow to real preview candidates while keeping rename execution explicitly deferred.
 - Wired local web UI Audiobookshelf setup controls to load libraries and validate path mappings with explicit credential input.
+- Improved the local web UI Audiobookshelf setup flow so users test the ABS URL/token first, then choose from discovered libraries instead of typing a library ID.
 - Wired local web UI Audiobookshelf operation controls to load item metadata, inspect missing/invalid library state, trigger scans, and clean missing items behind destructive-action gating.
 - Made the local web UI responsive on narrow browser widths, keeping workflow controls, details, and activity visible without document-level horizontal overflow.
 
