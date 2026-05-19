@@ -173,18 +173,19 @@ test('contracts ABS setup controls with mocked backend responses', async ({ page
   await page.getByRole('textbox', { name: 'Source folder' }).fill('/host/audiobooks')
   await page.getByLabel('ABS server URL').fill('http://localhost:13378')
   await page.getByLabel('ABS API token').fill('test-token')
-  await page.getByLabel('ABS library ID').fill('pending-library')
+  await expect(page.getByLabel('ABS library')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Validate Paths' })).toBeDisabled()
   await page.getByLabel('Local path prefix').fill('/host/audiobooks')
-  await page.getByRole('button', { name: 'Load Libraries' }).click()
+  await page.getByRole('button', { name: 'Test Connection' }).click()
 
-  await expect(page.getByRole('button', { name: /Audiobooks lib-audio/ })).toBeVisible()
-  await page.getByRole('button', { name: /Audiobooks lib-audio/ }).click()
-  await expect(page.getByLabel('ABS library ID')).toHaveValue('lib-audio')
+  await expect(page.getByLabel('ABS library')).toBeVisible()
+  await expect(page.getByLabel('ABS library')).toHaveValue('lib-audio')
+  await expect(page.locator('.library-option.selected').filter({ hasText: 'Audiobooks' })).toBeVisible()
   expect(librariesBody).toEqual(
     expect.objectContaining({
       url: 'http://localhost:13378',
       token: 'test-token',
-      library_id: 'pending-library',
+      library_id: '',
     }),
   )
 
@@ -316,9 +317,9 @@ test('contracts ABS operation controls with mocked backend responses', async ({ 
   await page.getByRole('textbox', { name: 'Source folder' }).fill('/host/audiobooks')
   await page.getByLabel('ABS server URL').fill('http://localhost:13378')
   await page.getByLabel('ABS API token').fill('test-token')
-  await page.getByLabel('ABS library ID').fill('lib-audio')
   await page.getByLabel('Local path prefix').fill('/host/audiobooks')
-  await page.getByRole('button', { name: 'Load Libraries' }).click()
+  await page.getByRole('button', { name: 'Test Connection' }).click()
+  await expect(page.getByLabel('ABS library')).toHaveValue('lib-audio')
   await page.getByRole('button', { name: 'Validate Paths' }).click()
 
   await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
@@ -359,20 +360,23 @@ test('keeps ABS later stages locked when setup requests fail', async ({ page }) 
     await route.fulfill({
       status: 400,
       contentType: 'application/json',
-      body: JSON.stringify({ error: 'abs token is required' }),
+      body: JSON.stringify({ error: 'abs connection failed' }),
     })
   })
 
   await loadApp(page)
   await page.getByRole('button', { name: /Audiobookshelf/ }).click()
   await page.getByLabel('ABS server URL').fill('http://localhost:13378')
-  await page.getByRole('button', { name: 'Load Libraries' }).click()
+  await page.getByLabel('ABS API token').fill('bad-token')
+  await page.getByRole('button', { name: 'Test Connection' }).click()
 
-  await expect(page.locator('.inline-alert').filter({ hasText: 'abs token is required' })).toBeVisible()
+  await expect(page.locator('.inline-alert').filter({ hasText: 'abs connection failed' })).toBeVisible()
+  await expect(page.getByLabel('ABS library')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Validate Paths' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
   await page.getByRole('button', { name: 'Review Inspect backend results' }).click()
   await expect(page.getByRole('heading', { name: 'ABS Results Need Attention' })).toBeVisible()
-  await expect(page.locator('.review-layout .error-list').getByText('ABS libraries: abs token is required')).toBeVisible()
+  await expect(page.locator('.review-layout .error-list').getByText('ABS libraries: abs connection failed')).toBeVisible()
   await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
   await expect(page.locator('.inline-alert').filter({ hasText: 'ABS setup must load libraries' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()

@@ -97,25 +97,39 @@
             <p v-if="absCredentialState === 'redacted' && !absToken" class="hint">
               Saved ABS credentials are redacted. Enter a fresh token before sending requests.
             </p>
-            <label>Library ID</label>
-            <input v-model="absLibrary" aria-label="ABS library ID" />
             <div class="action-row">
               <button class="secondary-action" :disabled="absLibrariesStatus === 'loading'" @click="loadABSLibraries">
                 <Server :size="18" /> {{ absLibrariesActionLabel }}
               </button>
             </div>
             <p v-if="absLibrariesError" class="inline-alert">{{ absLibrariesError }}</p>
+            <template v-if="absLibrariesStatus === 'success' && absLibraries.length > 0">
+              <label>Library</label>
+              <select v-model="absLibrary" aria-label="ABS library">
+                <option value="" disabled>Select a library</option>
+                <option
+                  v-for="library in absLibraries"
+                  :key="library.id"
+                  :value="library.id"
+                >
+                  {{ library.name || library.id }} ({{ library.id }})
+                </option>
+              </select>
+            </template>
+            <p v-else-if="absLibrariesStatus === 'success'" class="hint">
+              The ABS server responded, but no libraries were returned.
+            </p>
+            <p v-else class="hint">Test the ABS URL and token before choosing a library.</p>
             <div v-if="absLibraries.length > 0" class="library-list">
-              <button
+              <div
                 v-for="library in absLibraries"
                 :key="library.id"
                 class="library-option"
-                type="button"
-                @click="selectABSLibrary(library.id)"
+                :class="{ selected: absLibrary === library.id }"
               >
                 <strong>{{ library.name || library.id }}</strong>
                 <span>{{ library.id }} · {{ library.mediaType || 'library' }}</span>
-              </button>
+              </div>
             </div>
             <label>Custom Header</label>
             <div class="split-row">
@@ -151,7 +165,12 @@
               <button class="secondary-action" type="button" @click="addABSPathMapping">
                 <Plus :size="18" /> Add Mapping
               </button>
-              <button class="primary-action" :disabled="absPathStatus === 'loading'" type="button" @click="testABSPathMappings">
+              <button
+                class="primary-action"
+                :disabled="!absLibrarySelectionReady || absPathStatus === 'loading'"
+                type="button"
+                @click="testABSPathMappings"
+              >
                 <Server :size="18" /> {{ absPathActionLabel }}
               </button>
             </div>
@@ -625,7 +644,7 @@ const renameRecursive = ref(true)
 const preservePath = ref(true)
 const absUrl = ref('')
 const absToken = ref('')
-const absLibrary = ref('main')
+const absLibrary = ref('')
 const absCredentialState = ref<CredentialState>('empty')
 const absHeaderName = ref('')
 const absHeaderValue = ref('')
@@ -701,7 +720,10 @@ const absSetupState = computed(() => {
   }
   return 'Load libraries and validate path mappings to complete ABS setup.'
 })
-const absSetupReady = computed(() => absLibrariesStatus.value === 'success' && absPathStatus.value === 'success')
+const absLibrarySelectionReady = computed(() =>
+  absLibrariesStatus.value === 'success' && absLibraries.value.some((library) => library.id === absLibrary.value),
+)
+const absSetupReady = computed(() => absLibrarySelectionReady.value && absPathStatus.value === 'success')
 const previewHeading = computed(() => {
   if (activeWorkflow.value === 'rename') {
     if (renamePreviewStatus.value === 'success') {
@@ -736,7 +758,7 @@ const renamePreviewActionLabel = computed(() =>
   renamePreviewStatus.value === 'loading' ? 'Creating Preview' : 'Create Rename Preview',
 )
 const absLibrariesActionLabel = computed(() =>
-  absLibrariesStatus.value === 'loading' ? 'Loading Libraries' : 'Load Libraries',
+  absLibrariesStatus.value === 'loading' ? 'Testing Connection' : 'Test Connection',
 )
 const absPathActionLabel = computed(() =>
   absPathStatus.value === 'loading' ? 'Validating Paths' : 'Validate Paths',
@@ -1058,9 +1080,13 @@ async function loadABSLibraries() {
     requestStarted = true
     const response = await apiPost<ABSLibrariesResponse>('/api/abs/libraries', buildABSConfig())
     absLibraries.value = Array.isArray(response.libraries) ? response.libraries : []
+    if (!absLibraries.value.some((library) => library.id === absLibrary.value)) {
+      absLibrary.value = absLibraries.value[0]?.id ?? ''
+    }
     absLibrariesStatus.value = 'success'
     addRequestSuccess('ABS libraries', `${absLibraries.value.length} library/libraries returned.`)
   } catch (error) {
+    absLibrary.value = ''
     absLibrariesStatus.value = 'error'
     absLibrariesError.value = error instanceof Error ? error.message : 'ABS library request failed.'
     addActionError('ABS libraries', absLibrariesError.value, requestStarted)
@@ -1200,10 +1226,6 @@ async function cleanABSMissing() {
   }
 }
 
-function selectABSLibrary(libraryID: string) {
-  absLibrary.value = libraryID
-}
-
 function addABSPathMapping() {
   absPathMappings.value = [...absPathMappings.value, { abs_prefix: '', local_prefix: '' }]
 }
@@ -1288,7 +1310,7 @@ function buildABSConfig(): ABSConfig {
   return {
     url: absUrl.value.trim(),
     token: absToken.value,
-    library_id: absLibrary.value.trim() || 'main',
+    library_id: absLibrary.value.trim(),
     sqlite_path: absSQLitePath.value.trim() || undefined,
     path_mappings: absPathMappings.value
       .map((mapping) => ({
@@ -1335,6 +1357,7 @@ function resetRenameResults() {
 
 function resetABSConnectionResults() {
   absLibraries.value = []
+  absLibrary.value = ''
   absLibrariesStatus.value = 'idle'
   absLibrariesError.value = ''
   resetABSOperationResults()
