@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -77,8 +78,22 @@ var absScanCmd = &cobra.Command{
   audiobook-organizer abs scan-trigger \
     --abs-url=http://localhost:13378 \
     --abs-token=eyJhbG... \
-    --library=main`,
+    --abs-library=main`,
 	RunE: runABSScan,
+}
+
+// absOrganizeCmd organizes already-indexed ABS items using ABS as the metadata source.
+var absOrganizeCmd = &cobra.Command{
+	Use:   "organize",
+	Short: "Organize already-indexed items using ABS metadata",
+	Example: `  audiobook-organizer abs organize \
+    --abs-url=http://localhost:13378 \
+    --abs-token=eyJhbG... \
+    --abs-library=Audiobooks \
+    --abs-path-map="/audiobooks:/mnt/media/audiobooks" \
+    --dir=/mnt/media/audiobooks \
+    --layout=author-title`,
+	RunE: runABSOrganize,
 }
 
 // absTestPathsCmd tests path discovery
@@ -106,6 +121,7 @@ var absWebSocketCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(absCmd)
 	absCmd.AddCommand(absScanCmd)
+	absCmd.AddCommand(absOrganizeCmd)
 	absCmd.AddCommand(absTestPathsCmd)
 	absCmd.AddCommand(absScanTriggerCmd)
 	absCmd.AddCommand(absWebSocketCmd)
@@ -129,6 +145,8 @@ func init() {
 	absScanCmd.Flags().
 		BoolVar(&absCheckFiles, "check-files", false, "Verify files exist on disk (slower)")
 
+	addABSOrganizeFlags()
+
 	// Header flags (for Cloudflare/proxy auth)
 	absCmd.PersistentFlags().
 		StringVar(&absHeaderFile, "header-file", "", "File with custom headers (KEY=VALUE format, one per line)")
@@ -140,6 +158,21 @@ func init() {
 	viper.BindPFlag("abs.token", absCmd.PersistentFlags().Lookup("abs-token"))
 	viper.BindPFlag("abs.library", absCmd.PersistentFlags().Lookup("abs-library"))
 	viper.BindPFlag("abs.sqlite", absCmd.PersistentFlags().Lookup("abs-sqlite"))
+}
+
+func addABSOrganizeFlags() {
+	absOrganizeCmd.Flags().
+		BoolVar(&absAllLibraries, "abs-all-libraries", false, "Organize all libraries instead of just one (requires path mappings)")
+	absOrganizeCmd.Flags().
+		StringVar(&replaceSpace, "replace_space", "", "Character to replace spaces")
+	absOrganizeCmd.Flags().
+		BoolVar(&undo, "undo", false, "Restore files to their original locations")
+	absOrganizeCmd.Flags().
+		BoolVar(&prompt, "prompt", false, "Prompt for confirmation before moving each book")
+	absOrganizeCmd.Flags().
+		BoolVar(&removeEmpty, removeEmptyKey, false, "Remove empty directories after moving files")
+	absOrganizeCmd.Flags().
+		StringVarP(&layout, "layout", "l", "author-series-title", "Directory structure layout:\n  - author-series-title:        Author/Series/Title/ (default)\n  - author-series-title-number: Author/Series/#1 - Title/ (include series number in title)\n  - author-title:               Author/Title/ (ignore series)\n  - author-only:                Author/ (flatten all books)")
 }
 
 func runABSScan(cmd *cobra.Command, args []string) error {
@@ -158,25 +191,32 @@ func runABSScan(cmd *cobra.Command, args []string) error {
 		return runDiscoveryMode(absURL, absToken, verbose)
 	}
 
-	// Auto-detect library if not specified, or resolve by name
-	if absLibraryID == "" || absLibraryID == "main" {
-		selectedLib, err := selectLibrary(absURL, absToken, "")
-		if err != nil {
-			return err
+	// Auto-detect library if not specified, or resolve by name. All-libraries
+	// mode deliberately skips single-library selection.
+	if !absAllLibraries {
+		if absLibraryID == "" || absLibraryID == "main" {
+			selectedLib, err := selectLibrary(absURL, absToken, "")
+			if err != nil {
+				return err
+			}
+			absLibraryID = selectedLib
+		} else {
+			// User provided a library - try to resolve it (could be UUID or name)
+			resolvedLib, err := selectLibrary(absURL, absToken, absLibraryID)
+			if err != nil {
+				return err
+			}
+			absLibraryID = resolvedLib
 		}
-		absLibraryID = selectedLib
-	} else {
-		// User provided a library - try to resolve it (could be UUID or name)
-		resolvedLib, err := selectLibrary(absURL, absToken, absLibraryID)
-		if err != nil {
-			return err
-		}
-		absLibraryID = resolvedLib
 	}
 
 	if verbose {
 		fmt.Printf("📡 Using API: %s\n", absURL)
-		fmt.Printf("📚 Library: %s\n", absLibraryID)
+		if absAllLibraries {
+			fmt.Printf("📚 Library: all\n")
+		} else {
+			fmt.Printf("📚 Library: %s\n", absLibraryID)
+		}
 		fmt.Printf("📁 Input dir: %s\n", inputDir)
 	}
 
@@ -326,20 +366,370 @@ func runABSScan(cmd *cobra.Command, args []string) error {
 	}
 
 	// Note about organization
-	fmt.Println("\nNote: Full organization integration coming in next update.")
-	fmt.Println("For now, use this command to verify ABS connectivity and metadata.")
+	fmt.Println(
+		"\nTo execute these moves with ABS metadata, use `audiobook-organizer abs organize`.",
+	)
 
 	// If output dir specified and not dry run, trigger library scan at end
 	if outputDir != "" && !dryRun {
 		fmt.Println("\nTo trigger ABS library scan after organizing:")
 		fmt.Printf(
-			"  audiobook-organizer abs scan-trigger --abs-url=%s --abs-token=*** --library=%s\n",
+			"  audiobook-organizer abs scan-trigger --abs-url=%s --abs-token=*** --abs-library=%s\n",
 			absURL,
 			absLibraryID,
 		)
 	}
 
 	return nil
+}
+
+func runABSOrganize(cmd *cobra.Command, args []string) error {
+	config, err := organizerConfigFromABSCommand(cmd)
+	if err != nil {
+		return err
+	}
+
+	org, err := organizer.NewOrganizer(&config)
+	if err != nil {
+		return err
+	}
+
+	if config.Undo {
+		return org.Execute()
+	}
+
+	if err := validateABSConnectionFlags(); err != nil {
+		return err
+	}
+
+	organizer.PrintBlue("🔍 Resolving paths...")
+	if err := org.ResolvePaths(); err != nil {
+		return err
+	}
+
+	provider, selectedLibraryID, err := newABSMetadataProvider(org.BaseDir())
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("📡 Loading ABS metadata...")
+	if err := provider.LoadAllItems(); err != nil {
+		return fmt.Errorf("loading ABS items: %w", err)
+	}
+	items, err := provider.GetAllItems()
+	if err != nil {
+		return fmt.Errorf("getting ABS metadata: %w", err)
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].SourcePath < items[j].SourcePath
+	})
+
+	startTime := time.Now()
+	fmt.Println("📚 Organizing with ABS metadata...")
+	processed := 0
+	for _, item := range items {
+		sourcePath := item.SourcePath
+		if sourcePath == "" || !isPathWithin(org.BaseDir(), sourcePath) {
+			continue
+		}
+		if err := org.OrganizePathWithMetadata(sourcePath, item); err != nil {
+			if config.SkipErrors {
+				organizer.PrintYellow("⏩ Skipping %s: %v", sourcePath, err)
+				continue
+			}
+			return fmt.Errorf("organizing ABS item %s: %w", sourcePath, err)
+		}
+		processed++
+	}
+
+	if processed == 0 {
+		return fmt.Errorf("no mapped ABS items found under --dir %s", org.BaseDir())
+	}
+
+	if err := org.Finish(startTime); err != nil {
+		return err
+	}
+
+	if !config.DryRun {
+		organizer.PrintCyan("\n📝 Log file location: %s", org.GetLogPath())
+		if selectedLibraryID != "" {
+			organizer.PrintCyan("To update ABS after these changes, run:")
+			organizer.PrintBase(
+				"  audiobook-organizer abs scan-trigger --abs-url=%s --abs-token=*** --abs-library=%s",
+				absURL,
+				selectedLibraryID,
+			)
+		}
+	}
+	return nil
+}
+
+func organizerConfigFromABSCommand(cmd *cobra.Command) (organizer.OrganizerConfig, error) {
+	inputDir, err := inputDirFromCommand(cmd)
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	outputDir, err := outputDirFromCommand(cmd)
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	authorFieldsList := []string{}
+	authorFieldsValue, err := stringFlagOrViper(cmd, authorFieldsKey)
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	if authorFieldsValue != "" {
+		authorFieldsList = strings.Split(authorFieldsValue, ",")
+	}
+
+	flatValue, err := boolFlagOrViper(cmd, "flat")
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	useEmbeddedValue, err := boolFlagOrViper(cmd, useEmbeddedMetaKey)
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	if flatValue {
+		useEmbeddedValue = true
+	}
+
+	replaceSpaceValue, err := stringFlagOrViper(cmd, "replace_space")
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	verboseValue, err := boolFlagOrViper(cmd, "verbose")
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	dryRunValue, err := boolFlagOrViper(cmd, dryRunKey)
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	undoValue, err := boolFlagOrViper(cmd, "undo")
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	promptValue, err := boolFlagOrViper(cmd, "prompt")
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	removeEmptyValue, err := boolFlagOrViper(cmd, removeEmptyKey)
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	skipErrorsValue, err := boolFlagOrViper(cmd, "skip-errors")
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	layoutValue, err := stringFlagOrViper(cmd, "layout")
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	titleFieldValue, err := stringFlagOrViper(cmd, titleFieldKey)
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	seriesFieldValue, err := stringFlagOrViper(cmd, seriesFieldKey)
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	trackFieldValue, err := stringFlagOrViper(cmd, trackFieldKey)
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+	discFieldValue, err := stringFlagOrViper(cmd, discFieldKey)
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
+
+	return organizer.OrganizerConfig{
+		BaseDir:             inputDir,
+		OutputDir:           outputDir,
+		ReplaceSpace:        replaceSpaceValue,
+		Verbose:             verboseValue,
+		DryRun:              dryRunValue,
+		Undo:                undoValue,
+		Prompt:              promptValue,
+		RemoveEmpty:         removeEmptyValue,
+		UseEmbeddedMetadata: useEmbeddedValue,
+		Flat:                flatValue,
+		SkipErrors:          skipErrorsValue,
+		Layout:              layoutValue,
+		FieldMapping: organizer.FieldMapping{
+			TitleField:   titleFieldValue,
+			SeriesField:  seriesFieldValue,
+			AuthorFields: authorFieldsList,
+			TrackField:   trackFieldValue,
+			DiscField:    discFieldValue,
+		},
+	}, nil
+}
+
+func inputDirFromCommand(cmd *cobra.Command) (string, error) {
+	inputChanged := commandFlagChanged(cmd, "input")
+	dirChanged := commandFlagChanged(cmd, "dir")
+	if inputChanged {
+		return commandStringFlag(cmd, "input")
+	}
+	if dirChanged {
+		return commandStringFlag(cmd, "dir")
+	}
+	if dir := viper.GetString("dir"); dir != "" {
+		return dir, nil
+	}
+	return viper.GetString("input"), nil
+}
+
+func outputDirFromCommand(cmd *cobra.Command) (string, error) {
+	outputChanged := commandFlagChanged(cmd, "output")
+	outChanged := commandFlagChanged(cmd, "out")
+	if outputChanged {
+		return commandStringFlag(cmd, "output")
+	}
+	if outChanged {
+		return commandStringFlag(cmd, "out")
+	}
+	if out := viper.GetString("out"); out != "" {
+		return out, nil
+	}
+	return viper.GetString("output"), nil
+}
+
+func stringFlagOrViper(cmd *cobra.Command, name string) (string, error) {
+	if commandFlagChanged(cmd, name) {
+		return commandStringFlag(cmd, name)
+	}
+	return viper.GetString(name), nil
+}
+
+func boolFlagOrViper(cmd *cobra.Command, name string) (bool, error) {
+	if commandFlagChanged(cmd, name) {
+		return commandBoolFlag(cmd, name)
+	}
+	return viper.GetBool(name), nil
+}
+
+func commandFlagChanged(cmd *cobra.Command, name string) bool {
+	if flag := cmd.Flags().Lookup(name); flag != nil {
+		return flag.Changed
+	}
+	if flag := cmd.InheritedFlags().Lookup(name); flag != nil {
+		return flag.Changed
+	}
+	return false
+}
+
+func commandStringFlag(cmd *cobra.Command, name string) (string, error) {
+	if flag := cmd.Flags().Lookup(name); flag != nil {
+		return cmd.Flags().GetString(name)
+	}
+	return cmd.InheritedFlags().GetString(name)
+}
+
+func commandBoolFlag(cmd *cobra.Command, name string) (bool, error) {
+	if flag := cmd.Flags().Lookup(name); flag != nil {
+		return cmd.Flags().GetBool(name)
+	}
+	return cmd.InheritedFlags().GetBool(name)
+}
+
+func validateABSConnectionFlags() error {
+	if absURL == "" {
+		return fmt.Errorf("--abs-url is required")
+	}
+	if absToken == "" {
+		return fmt.Errorf("--abs-token is required")
+	}
+	return nil
+}
+
+func newABSMetadataProvider(inputDir string) (*abs.MetadataProvider, string, error) {
+	if absAllLibraries {
+		if len(absPathMaps) == 0 {
+			return nil, "", fmt.Errorf(
+				"--abs-all-libraries requires --abs-path-map (need path mappings to match books to libraries)",
+			)
+		}
+		mappings, err := parseABSPathMappings()
+		if err != nil {
+			return nil, "", err
+		}
+		provider := abs.NewMetadataProviderAllLibraries(absURL, absToken, mappings)
+		provider.SetClient(createABSClient(absURL, absToken))
+		return provider, "", nil
+	}
+
+	selectedLibraryID := absLibraryID
+	if selectedLibraryID == "" || selectedLibraryID == "main" {
+		var err error
+		selectedLibraryID, err = selectLibrary(absURL, absToken, "")
+		if err != nil {
+			return nil, "", err
+		}
+	} else {
+		resolvedLibraryID, err := selectLibrary(absURL, absToken, selectedLibraryID)
+		if err != nil {
+			return nil, "", err
+		}
+		selectedLibraryID = resolvedLibraryID
+	}
+
+	var provider *abs.MetadataProvider
+	var err error
+	switch {
+	case absSQLite != "":
+		provider, err = abs.NewMetadataProviderWithSQLite(
+			absURL,
+			absToken,
+			selectedLibraryID,
+			absSQLite,
+			inputDir,
+		)
+		if err != nil {
+			return nil, "", fmt.Errorf(
+				"path discovery failed: %w\n\nHint: Use --abs-path-map for manual mode",
+				err,
+			)
+		}
+	case len(absPathMaps) > 0:
+		mappings, err := parseABSPathMappings()
+		if err != nil {
+			return nil, "", err
+		}
+		provider = abs.NewMetadataProvider(absURL, absToken, selectedLibraryID, mappings)
+	default:
+		mappings, err := autoDetectPathMappings(absURL, absToken, selectedLibraryID, inputDir)
+		if err != nil {
+			return nil, "", fmt.Errorf(
+				"auto-detection failed: %w\n\nPlease provide --abs-path-map manually",
+				err,
+			)
+		}
+		provider = abs.NewMetadataProvider(absURL, absToken, selectedLibraryID, mappings)
+	}
+	provider.SetClient(createABSClient(absURL, absToken))
+	return provider, selectedLibraryID, nil
+}
+
+func parseABSPathMappings() ([]abs.PathMapping, error) {
+	var mappings []abs.PathMapping
+	for _, rawMapping := range absPathMaps {
+		mapping, err := abs.ParsePathMapping(rawMapping)
+		if err != nil {
+			return nil, err
+		}
+		mappings = append(mappings, mapping)
+	}
+	return mappings, nil
+}
+
+func isPathWithin(basePath string, candidatePath string) bool {
+	rel, err := filepath.Rel(basePath, candidatePath)
+	if err != nil {
+		return false
+	}
+	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
 }
 
 func runABSTestPaths(cmd *cobra.Command, args []string) error {

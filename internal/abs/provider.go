@@ -190,6 +190,12 @@ func (p *MetadataProvider) convertToOrganizerMetadata(item *LibraryItem) organiz
 	if len(meta.Authors) == 0 && absMedia.AuthorName != "" {
 		meta.Authors = append(meta.Authors, absMedia.AuthorName)
 	}
+	if len(meta.Authors) == 0 && item.AuthorNamesFirstLast != "" {
+		meta.Authors = append(meta.Authors, splitABSNames(item.AuthorNamesFirstLast)...)
+	}
+	if len(meta.Authors) == 0 && item.AuthorNamesLastFirst != "" {
+		meta.Authors = append(meta.Authors, splitABSNames(item.AuthorNamesLastFirst)...)
+	}
 
 	// Series
 	for _, series := range absMedia.Series {
@@ -199,6 +205,11 @@ func (p *MetadataProvider) convertToOrganizerMetadata(item *LibraryItem) organiz
 	}
 
 	// Store ABS-specific data in RawData for advanced use
+	meta.RawData["title"] = meta.Title
+	meta.RawData["authors"] = strings.Join(meta.Authors, ", ")
+	meta.RawData["series"] = strings.Join(meta.Series, ", ")
+	meta.RawData["authorNamesFirstLast"] = item.AuthorNamesFirstLast
+	meta.RawData["authorNamesLastFirst"] = item.AuthorNamesLastFirst
 	meta.RawData["abs_item_id"] = item.ID
 	meta.RawData["abs_library_id"] = item.LibraryID
 	meta.RawData["abs_path"] = item.Path // Original ABS path before mapping
@@ -228,6 +239,17 @@ func (p *MetadataProvider) GetAllItems() ([]organizer.Metadata, error) {
 	}
 
 	return results, nil
+}
+
+func splitABSNames(value string) []string {
+	var names []string
+	for _, name := range strings.Split(value, ",") {
+		name = strings.TrimSpace(name)
+		if name != "" {
+			names = append(names, name)
+		}
+	}
+	return names
 }
 
 // ScanLibrary triggers an ABS library scan

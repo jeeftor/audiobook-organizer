@@ -465,6 +465,35 @@ func (o *Organizer) OrganizeSingleFile(filePath string, provider MetadataProvide
 	return o.executeSingleFileMove(filePath, targetPath, metadata)
 }
 
+// StaticMetadataProvider returns caller-supplied metadata for a known source path.
+type StaticMetadataProvider struct {
+	metadata Metadata
+}
+
+// NewStaticMetadataProvider creates a metadata provider from already-loaded metadata.
+func NewStaticMetadataProvider(metadata Metadata) *StaticMetadataProvider {
+	return &StaticMetadataProvider{metadata: metadata}
+}
+
+// GetMetadata returns the static metadata.
+func (p *StaticMetadataProvider) GetMetadata() (Metadata, error) {
+	return p.metadata, nil
+}
+
+// OrganizePathWithMetadata organizes a known file or directory using caller-supplied metadata.
+func (o *Organizer) OrganizePathWithMetadata(sourcePath string, metadata Metadata) error {
+	info, err := os.Stat(sourcePath)
+	if err != nil {
+		return fmt.Errorf("error checking source path: %w", err)
+	}
+
+	provider := NewStaticMetadataProvider(metadata)
+	if info.IsDir() {
+		return o.OrganizeAudiobook(sourcePath, provider)
+	}
+	return o.OrganizeSingleFile(sourcePath, provider)
+}
+
 // calculateSingleFileTargetPath determines the complete target path for a single file
 // including both directory and filename components.
 func (o *Organizer) calculateSingleFileTargetPath(filePath string, metadata Metadata) string {

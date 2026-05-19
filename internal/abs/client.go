@@ -4,6 +4,7 @@
 package abs
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -198,6 +199,22 @@ func (c *Client) GetLibraryItem(itemID string) (*LibraryItem, error) {
 	}
 
 	return &item, nil
+}
+
+// UpdateLibraryItemMedia updates a library item's media payload.
+func (c *Client) UpdateLibraryItemMedia(itemID string, payload map[string]interface{}) error {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("encoding media update: %w", err)
+	}
+
+	path := fmt.Sprintf("/api/items/%s/media", itemID)
+	resp, err := c.request("PATCH", path, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
 }
 
 // ScanLibrary triggers a library scan

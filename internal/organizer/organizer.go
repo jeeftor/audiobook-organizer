@@ -298,15 +298,18 @@ func (o *Organizer) GetLogPath() string {
 	return filepath.Join(logBase, LogFileName)
 }
 
+// BaseDir returns the resolved base directory currently used by the organizer.
+func (o *Organizer) BaseDir() string {
+	return o.config.BaseDir
+}
+
 // GetSummary returns the current operation summary
 func (o *Organizer) GetSummary() Summary {
 	return o.summary
 }
 
-// Execute runs the main organization process
-func (o *Organizer) Execute() error {
-	// Clean and resolve the paths to absolute, symlink-free paths.
-	color.Blue("🔍 Resolving paths...")
+// ResolvePaths cleans and resolves configured paths to absolute, symlink-free paths.
+func (o *Organizer) ResolvePaths() error {
 	cleanBase := filepath.Clean(o.config.BaseDir)
 	absBase, err := filepath.Abs(cleanBase)
 	if err != nil {
@@ -343,6 +346,35 @@ func (o *Organizer) Execute() error {
 			return fmt.Errorf("error resolving allowed source path %s: %v", p, err)
 		}
 		o.config.AllowedSourcePaths[i] = resolved
+	}
+
+	return nil
+}
+
+// Finish writes pending logs, removes configured empty directories, and prints the summary.
+func (o *Organizer) Finish(startTime time.Time) error {
+	if !o.config.DryRun && len(o.logEntries) > 0 {
+		color.Blue("💾 Saving operation log...")
+		if err := o.saveLog(); err != nil {
+			return fmt.Errorf("error saving log: %v", err)
+		}
+	}
+
+	// Remove empty directories after all moves are complete
+	if err := o.removeEmptySourceDirs(); err != nil {
+		color.Red("❌ Error removing empty directories: %v", err)
+	}
+
+	o.printSummary(startTime)
+	return nil
+}
+
+// Execute runs the main organization process
+func (o *Organizer) Execute() error {
+	// Clean and resolve the paths to absolute, symlink-free paths.
+	color.Blue("🔍 Resolving paths...")
+	if err := o.ResolvePaths(); err != nil {
+		return err
 	}
 
 	// Check if the base path is a file rather than a directory
@@ -382,20 +414,7 @@ func (o *Organizer) Execute() error {
 		return fmt.Errorf("error walking directory: %v", err)
 	}
 
-	if !o.config.DryRun && len(o.logEntries) > 0 {
-		color.Blue("💾 Saving operation log...")
-		if err := o.saveLog(); err != nil {
-			return fmt.Errorf("error saving log: %v", err)
-		}
-	}
-
-	// Remove empty directories after all moves are complete
-	if err := o.removeEmptySourceDirs(); err != nil {
-		color.Red("❌ Error removing empty directories: %v", err)
-	}
-
-	o.printSummary(startTime)
-	return nil
+	return o.Finish(startTime)
 }
 
 // isEmptyDir checks if a directory is empty
