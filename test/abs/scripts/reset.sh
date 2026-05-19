@@ -223,6 +223,14 @@ copy_fixture \
 	"$REPO_ROOT/testdata/mp3flat/perouse_01_scott_64kb.mp3" \
 	"$ROOT_DIR/runtime/flat-input/audiobooks/inbox/perouse_01_scott_64kb.mp3"
 detail "flat import fixture: inbox/perouse_01_scott_64kb.mp3"
+copy_fixture \
+	"$REPO_ROOT/testdata/epub/title-author.epub" \
+	"$ROOT_DIR/runtime/flat-input/books/inbox/cool-stuff.epub"
+detail "flat ebook import fixture: inbox/cool-stuff.epub"
+copy_fixture \
+	"$REPO_ROOT/testdata/epub/title-author-series1.epub" \
+	"$ROOT_DIR/runtime/flat-input/books/inbox/testing-knowledge.epub"
+detail "flat ebook import fixture: inbox/testing-knowledge.epub"
 
 write_metadata \
 	"$ROOT_DIR/runtime/metadata/audiobooks/unsorted-audio/drop-001" \

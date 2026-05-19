@@ -76,6 +76,8 @@ jobs:
             run_regex: TestEmbeddedAlreadyIndexed
           - name: embedded-import
             run_regex: TestEmbeddedMetadataImport
+          - name: flat-mechanics
+            run_regex: TestFlatModeMechanics
           - name: flat-import
             run_regex: TestFlatModeImport
           - name: rest-metadata-json
