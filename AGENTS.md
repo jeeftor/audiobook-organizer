@@ -269,3 +269,4 @@ Be careful when editing:
 6. Run the most relevant tests or lint target.
 7. Update docs and `CHANGELOG.md` when the change is user-visible.
 8. Summarize behavior changes and any verification gaps clearly.
+9. After tracked work is complete, recommend the next useful issue, closeout step, or parallel-safe pairing based on the current open issue list and workflow dependencies. Do not start the next item unless the user asks.

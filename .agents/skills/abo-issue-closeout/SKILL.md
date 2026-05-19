@@ -23,5 +23,6 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, `references/abo-assistan
 8. After merge, confirm the linked issue closed and the feature branch or worktree was cleaned up. Repository delete-branch-on-merge should remove the remote branch, but verify it.
 9. Directly close only when the user explicitly asks, the issue is duplicate/obsolete, or the work intentionally completed without a PR.
 10. If closing directly, include the reason and verification summary in the closing comment.
+11. After issue closeout, follow `references/abo-assistant/common.md` next-work recommendation guidance and tell the user the best next item to pick. Do not start the next item unless the user asks.
 
 Do not close an issue with failing or unrun required checks unless the user explicitly accepts the risk and the reason is documented.
