@@ -201,10 +201,25 @@
               <p v-if="renamePreviewError" class="inline-alert">{{ renamePreviewError }}</p>
             </template>
             <template v-else>
-              <button class="primary-action" disabled>
-                <Play :size="18" /> ABS Operations Deferred
-              </button>
+              <div class="operation-actions">
+                <button
+                  class="primary-action"
+                  :disabled="!absSetupReady || absItemsStatus === 'loading'"
+                  @click="loadABSItems"
+                >
+                  <Server :size="18" /> {{ absItemsActionLabel }}
+                </button>
+                <button
+                  class="secondary-action"
+                  :disabled="!absSetupReady || absLibraryStateStatus === 'loading'"
+                  @click="loadABSLibraryState"
+                >
+                  <Eye :size="18" /> {{ absLibraryStateActionLabel }}
+                </button>
+              </div>
               <p v-if="!absSetupReady" class="inline-alert">ABS setup must load libraries and validate paths first.</p>
+              <p v-if="absItemsError" class="inline-alert">{{ absItemsError }}</p>
+              <p v-if="absLibraryStateError" class="inline-alert">{{ absLibraryStateError }}</p>
             </template>
           </div>
           <div v-if="activeWorkflow === 'organize'" class="preview-checklist">
@@ -258,11 +273,36 @@
             </template>
           </div>
           <div v-else class="preview-checklist">
-            <h3>ABS Setup Summary</h3>
+            <h3>ABS Operation Summary</h3>
             <div class="result-grid compact">
               <span>Libraries</span><strong>{{ absLibraries.length }}</strong>
               <span>Mappings</span><strong>{{ absResolvedMappings.length }}</strong>
               <span>Status</span><strong>{{ absSetupReady ? 'Ready for ABS operations' : 'Setup incomplete' }}</strong>
+              <span>Metadata items</span><strong>{{ absItems?.items.length ?? 0 }}</strong>
+              <span>Library items</span><strong>{{ absLibraryState?.items.length ?? 0 }}</strong>
+              <span>Missing / invalid</span><strong>{{ absMissingCount }} / {{ absInvalidCount }}</strong>
+            </div>
+            <div v-if="absItemsStatus === 'loading' || absLibraryStateStatus === 'loading'" class="deferred-state">
+              <Server :size="18" />
+              <span>Loading ABS operation data.</span>
+            </div>
+            <div v-if="absItems" class="move-list operation-list">
+              <div v-for="item in absItems.items.slice(0, 5)" :key="item.source_path + item.title">
+                <span>{{ item.title || 'Untitled ABS item' }}</span>
+                <strong>{{ item.source_path }}</strong>
+              </div>
+            </div>
+            <div v-if="absLibraryState" class="move-list operation-list">
+              <div
+                v-for="item in absLibraryState.items.slice(0, 5)"
+                :key="item.id"
+                :class="{ warning: item.is_missing || item.is_invalid }"
+              >
+                <span>{{ item.title || item.id }}</span>
+                <strong>{{ item.path }}</strong>
+                <em v-if="item.is_missing">Missing</em>
+                <em v-else-if="item.is_invalid">Invalid</em>
+              </div>
             </div>
           </div>
         </section>
@@ -275,18 +315,58 @@
               <p>{{ currentWorkflow.runCopy }}</p>
             </div>
           </div>
-          <p v-if="activeWorkflow === 'organize' && organizeRunError" class="inline-alert">{{ organizeRunError }}</p>
-          <p v-if="activeWorkflow === 'rename'" class="inline-alert">
-            Rename execution is deferred until a backend run endpoint is implemented. This workflow can only preview
-            candidates right now.
-          </p>
-          <button
-            class="danger-action"
-            :disabled="isRunActionDisabled"
-            @click="activeWorkflow === 'organize' ? runOrganize() : undefined"
-          >
-            <Play :size="18" /> {{ currentWorkflow.runAction }}
-          </button>
+          <template v-if="activeWorkflow === 'abs'">
+            <div class="operation-grid">
+              <div class="operation-card">
+                <h3>Library Scan</h3>
+                <p>Trigger a real Audiobookshelf scan for the configured library.</p>
+                <button
+                  class="primary-action"
+                  :disabled="!absSetupReady || absScanStatus === 'loading'"
+                  @click="triggerABSScan"
+                >
+                  <Play :size="18" /> {{ absScanActionLabel }}
+                </button>
+                <p v-if="absScanStatus === 'success'" class="success-note">
+                  Scan triggered for {{ absScanResult?.library_id }}.
+                </p>
+                <p v-if="absScanError" class="inline-alert">{{ absScanError }}</p>
+              </div>
+              <div class="operation-card danger-card">
+                <h3>Clean Missing Items</h3>
+                <p>Remove missing or invalid item records reported by Audiobookshelf for this library.</p>
+                <label class="check-row">
+                  <input v-model="absCleanConfirmed" type="checkbox" />
+                  I understand this removes ABS missing item records
+                </label>
+                <button
+                  class="danger-action"
+                  :disabled="!absSetupReady || !absCleanConfirmed || absCleanStatus === 'loading'"
+                  @click="cleanABSMissing"
+                >
+                  <Trash2 :size="18" /> {{ absCleanActionLabel }}
+                </button>
+                <p v-if="absCleanStatus === 'success'" class="success-note">
+                  Cleanup completed for {{ absCleanResult?.library_id }}.
+                </p>
+                <p v-if="absCleanError" class="inline-alert">{{ absCleanError }}</p>
+              </div>
+            </div>
+          </template>
+          <template v-else>
+            <p v-if="activeWorkflow === 'organize' && organizeRunError" class="inline-alert">{{ organizeRunError }}</p>
+            <p v-if="activeWorkflow === 'rename'" class="inline-alert">
+              Rename execution is deferred until a backend run endpoint is implemented. This workflow can only preview
+              candidates right now.
+            </p>
+            <button
+              class="danger-action"
+              :disabled="isRunActionDisabled"
+              @click="activeWorkflow === 'organize' ? runOrganize() : undefined"
+            >
+              <Play :size="18" /> {{ currentWorkflow.runAction }}
+            </button>
+          </template>
         </section>
 
         <section v-else-if="activeWorkflow === 'organize' && organizeRun" class="review-layout">
@@ -297,6 +377,18 @@
             <span>Files organized</span><strong>{{ organizeRun.summary.Moves.length }}</strong>
             <span>Undo log</span><strong>{{ organizeRun.log_path || 'Not reported' }}</strong>
             <span>Warnings</span><strong>{{ organizeRun.summary.MetadataMissing.length }}</strong>
+          </div>
+        </section>
+
+        <section v-else-if="activeWorkflow === 'abs'" class="review-layout">
+          <h3>ABS Operation Results</h3>
+          <p>Backend results from item loading, library state checks, scan triggers, and cleanup appear here.</p>
+          <div class="result-grid">
+            <span>Metadata items</span><strong>{{ absItems?.items.length ?? 0 }}</strong>
+            <span>Library state items</span><strong>{{ absLibraryState?.items.length ?? 0 }}</strong>
+            <span>Missing / invalid</span><strong>{{ absMissingCount }} / {{ absInvalidCount }}</strong>
+            <span>Last scan</span><strong>{{ absScanResult?.triggered ? absScanResult.library_id : 'Not triggered' }}</strong>
+            <span>Last cleanup</span><strong>{{ absCleanResult?.cleaned ? absCleanResult.library_id : 'Not run' }}</strong>
           </div>
         </section>
 
@@ -341,10 +433,14 @@ import {
 import {
   apiGet,
   apiPost,
+  type ABSCleanMissingResponse,
   type ABSConfig,
+  type ABSItemsResponse,
   type ABSLibrariesResponse,
   type ABSLibrary,
+  type ABSLibraryStateResponse,
   type ABSPathMappingResponse,
+  type ABSScanTriggerResponse,
   type FieldMapping,
   type HealthResponse,
   type Option,
@@ -409,10 +505,10 @@ const workflows = [
     configureTitle: 'ABS-Assisted Setup',
     configureHint: 'ABS connection and mapping controls are shown only for this workflow.',
     modeLabel: 'Metadata source',
-    previewCopy: 'ABS item loading, mapping validation, and organize preview should converge here.',
-    runTitle: 'Run ABS-Assisted Organize',
-    runCopy: 'Library scan triggers and cleanup actions stay staged behind mapping and preview review.',
-    runAction: 'Run ABS Organize',
+    previewCopy: 'Load real ABS metadata and library state through the local backend before maintenance actions.',
+    runTitle: 'ABS Maintenance Actions',
+    runCopy: 'Library scan triggers and cleanup actions require completed ABS setup.',
+    runAction: 'Run ABS Action',
   },
 ]
 
@@ -485,6 +581,10 @@ const layouts = ref<Option[]>([])
 const scanModes = ref<Option[]>([])
 const absLibraries = ref<ABSLibrary[]>([])
 const absResolvedMappings = ref<EditablePathMapping[]>([])
+const absItems = ref<ABSItemsResponse | null>(null)
+const absLibraryState = ref<ABSLibraryStateResponse | null>(null)
+const absScanResult = ref<ABSScanTriggerResponse | null>(null)
+const absCleanResult = ref<ABSCleanMissingResponse | null>(null)
 const organizePreview = ref<OrganizePreviewResponse | null>(null)
 const organizeRun = ref<OrganizeRunResponse | null>(null)
 const renamePreview = ref<RenamePreviewResponse | null>(null)
@@ -493,11 +593,20 @@ const organizeRunStatus = ref<RequestState>('idle')
 const renamePreviewStatus = ref<RequestState>('idle')
 const absLibrariesStatus = ref<RequestState>('idle')
 const absPathStatus = ref<RequestState>('idle')
+const absItemsStatus = ref<RequestState>('idle')
+const absLibraryStateStatus = ref<RequestState>('idle')
+const absScanStatus = ref<RequestState>('idle')
+const absCleanStatus = ref<RequestState>('idle')
 const organizePreviewError = ref('')
 const organizeRunError = ref('')
 const renamePreviewError = ref('')
 const absLibrariesError = ref('')
 const absPathError = ref('')
+const absItemsError = ref('')
+const absLibraryStateError = ref('')
+const absScanError = ref('')
+const absCleanError = ref('')
+const absCleanConfirmed = ref(false)
 const events = ref<ActivityEvent[]>([
   { time: 'Pending', level: 'info', event: 'Startup checks', detail: 'Loading server health, config, and options.' },
 ])
@@ -553,6 +662,15 @@ const previewHeading = computed(() => {
   if (activeWorkflow.value === 'organize' && organizePreviewStatus.value === 'error') {
     return 'Preview needs attention'
   }
+  if (activeWorkflow.value === 'abs') {
+    if (absItemsStatus.value === 'success' || absLibraryStateStatus.value === 'success') {
+      return 'ABS operation data ready'
+    }
+    if (absItemsStatus.value === 'error' || absLibraryStateStatus.value === 'error') {
+      return 'ABS operation needs attention'
+    }
+    return 'Load ABS operation data'
+  }
   return activeWorkflow.value === 'organize' ? 'Create an organize preview' : 'Dry-run preview first'
 })
 const organizePreviewActionLabel = computed(() =>
@@ -567,12 +685,26 @@ const absLibrariesActionLabel = computed(() =>
 const absPathActionLabel = computed(() =>
   absPathStatus.value === 'loading' ? 'Validating Paths' : 'Validate Paths',
 )
+const absItemsActionLabel = computed(() =>
+  absItemsStatus.value === 'loading' ? 'Loading Items' : 'Load ABS Items',
+)
+const absLibraryStateActionLabel = computed(() =>
+  absLibraryStateStatus.value === 'loading' ? 'Checking State' : 'Check Library State',
+)
+const absScanActionLabel = computed(() =>
+  absScanStatus.value === 'loading' ? 'Triggering Scan' : 'Trigger Scan',
+)
+const absCleanActionLabel = computed(() =>
+  absCleanStatus.value === 'loading' ? 'Cleaning Missing Items' : 'Clean Missing Items',
+)
+const absMissingCount = computed(() => absLibraryState.value?.items.filter((item) => item.is_missing).length ?? 0)
+const absInvalidCount = computed(() => absLibraryState.value?.items.filter((item) => item.is_invalid).length ?? 0)
 const isRunActionDisabled = computed(() => {
   if (activeWorkflow.value === 'rename') {
     return true
   }
   if (activeWorkflow.value === 'abs') {
-    return true
+    return !absSetupReady.value
   }
   return !previewReady.value || organizeRunStatus.value === 'loading'
 })
@@ -605,7 +737,7 @@ function isStageLocked(stage: StageId) {
     return !previewReady.value || organizeRunStatus.value === 'loading'
   }
   if (activeWorkflow.value === 'abs') {
-    return true
+    return !absSetupReady.value || absScanStatus.value === 'loading' || absCleanStatus.value === 'loading'
   }
   return !previewReady.value
 }
@@ -770,6 +902,114 @@ async function testABSPathMappings() {
   }
 }
 
+async function loadABSItems() {
+  absItemsStatus.value = 'loading'
+  absItemsError.value = ''
+  absItems.value = null
+
+  try {
+    assertABSSetupReady()
+    const response = await apiPost<ABSItemsResponse>('/api/abs/items', {
+      config: buildABSConfig(),
+    })
+    absItems.value = { items: response.items ?? [] }
+    absItemsStatus.value = 'success'
+    addEvent({
+      time: now(),
+      level: 'ok',
+      event: 'ABS items loaded',
+      detail: `${absItems.value.items.length} metadata item(s) returned.`,
+    })
+  } catch (error) {
+    absItemsStatus.value = 'error'
+    absItemsError.value = error instanceof Error ? error.message : 'ABS item loading failed.'
+    addEvent({ time: now(), level: 'warn', event: 'ABS item loading failed', detail: absItemsError.value })
+  }
+}
+
+async function loadABSLibraryState() {
+  absLibraryStateStatus.value = 'loading'
+  absLibraryStateError.value = ''
+  absLibraryState.value = null
+
+  try {
+    assertABSSetupReady()
+    const response = await apiPost<ABSLibraryStateResponse>('/api/abs/library-state', {
+      config: buildABSConfig(),
+    })
+    absLibraryState.value = { ...response, items: response.items ?? [] }
+    absLibraryStateStatus.value = 'success'
+    addEvent({
+      time: now(),
+      level: 'ok',
+      event: 'ABS library state loaded',
+      detail: `${absLibraryState.value.items.length} item(s), ${absMissingCount.value} missing, ${absInvalidCount.value} invalid.`,
+    })
+  } catch (error) {
+    absLibraryStateStatus.value = 'error'
+    absLibraryStateError.value = error instanceof Error ? error.message : 'ABS library state request failed.'
+    addEvent({ time: now(), level: 'warn', event: 'ABS library state failed', detail: absLibraryStateError.value })
+  }
+}
+
+async function triggerABSScan() {
+  absScanStatus.value = 'loading'
+  absScanError.value = ''
+  absScanResult.value = null
+
+  try {
+    assertABSSetupReady()
+    const response = await apiPost<ABSScanTriggerResponse>('/api/abs/scan-trigger', {
+      config: buildABSConfig(),
+    })
+    absScanResult.value = response
+    absScanStatus.value = 'success'
+    addEvent({
+      time: now(),
+      level: 'ok',
+      event: 'ABS scan triggered',
+      detail: response.triggered ? `Library ${response.library_id} accepted the scan request.` : 'Backend did not report a scan trigger.',
+    })
+  } catch (error) {
+    absScanStatus.value = 'error'
+    absScanError.value = error instanceof Error ? error.message : 'ABS scan trigger failed.'
+    addEvent({ time: now(), level: 'warn', event: 'ABS scan failed', detail: absScanError.value })
+  }
+}
+
+async function cleanABSMissing() {
+  absCleanStatus.value = 'loading'
+  absCleanError.value = ''
+  absCleanResult.value = null
+
+  try {
+    assertABSSetupReady()
+    if (!absCleanConfirmed.value) {
+      throw new Error('Confirm missing-item cleanup before running this destructive action.')
+    }
+    if (!window.confirm('Clean missing ABS item records for this library? This cannot be undone from Audiobook Organizer.')) {
+      absCleanStatus.value = 'idle'
+      return
+    }
+    const response = await apiPost<ABSCleanMissingResponse>('/api/abs/clean-missing', {
+      config: buildABSConfig(),
+    })
+    absCleanResult.value = response
+    absCleanStatus.value = 'success'
+    absCleanConfirmed.value = false
+    addEvent({
+      time: now(),
+      level: 'ok',
+      event: 'ABS missing items cleaned',
+      detail: response.cleaned ? `Library ${response.library_id} cleanup completed.` : 'Backend did not report cleanup.',
+    })
+  } catch (error) {
+    absCleanStatus.value = 'error'
+    absCleanError.value = error instanceof Error ? error.message : 'ABS missing-item cleanup failed.'
+    addEvent({ time: now(), level: 'warn', event: 'ABS cleanup failed', detail: absCleanError.value })
+  }
+}
+
 function selectABSLibrary(libraryID: string) {
   absLibrary.value = libraryID
 }
@@ -873,6 +1113,12 @@ function buildABSConfig(): ABSConfig {
   }
 }
 
+function assertABSSetupReady() {
+  if (!absSetupReady.value) {
+    throw new Error('ABS setup must load libraries and validate paths first.')
+  }
+}
+
 function shouldUseEmbeddedMetadata() {
   return useEmbeddedMetadata.value || scanMode.value === 'embedded-directory' || scanMode.value === 'embedded-file'
 }
@@ -903,6 +1149,7 @@ function resetABSConnectionResults() {
   absLibraries.value = []
   absLibrariesStatus.value = 'idle'
   absLibrariesError.value = ''
+  resetABSOperationResults()
   resetABSPathResults()
 }
 
@@ -910,6 +1157,23 @@ function resetABSPathResults() {
   absResolvedMappings.value = []
   absPathStatus.value = 'idle'
   absPathError.value = ''
+  resetABSOperationResults()
+}
+
+function resetABSOperationResults() {
+  absItems.value = null
+  absLibraryState.value = null
+  absScanResult.value = null
+  absCleanResult.value = null
+  absItemsStatus.value = 'idle'
+  absLibraryStateStatus.value = 'idle'
+  absScanStatus.value = 'idle'
+  absCleanStatus.value = 'idle'
+  absItemsError.value = ''
+  absLibraryStateError.value = ''
+  absScanError.value = ''
+  absCleanError.value = ''
+  absCleanConfirmed.value = false
 }
 
 function normalizeOrganizeResponse<T extends OrganizePreviewResponse | OrganizeRunResponse>(response: T): T {
@@ -1023,6 +1287,14 @@ watch([absUrl, absToken, absHeaderName, absHeaderValue], () => {
   }
   previewReady.value = false
   resetABSConnectionResults()
+})
+
+watch([absLibrary], () => {
+  if (activeWorkflow.value !== 'abs') {
+    return
+  }
+  previewReady.value = false
+  resetABSOperationResults()
 })
 
 watch([sourceFolder, absSQLitePath, absPathMappings], () => {

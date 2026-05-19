@@ -133,6 +133,43 @@ export type ABSPathMappingResponse = {
   mappings: PathMapping[]
 }
 
+export type ABSMetadataItem = {
+  title: string
+  authors: string[]
+  series: string[]
+  source_type: string
+  source_path: string
+}
+
+export type ABSItemsResponse = {
+  items: ABSMetadataItem[]
+}
+
+export type ABSLibraryItem = {
+  id: string
+  path: string
+  rel_path: string
+  is_missing: boolean
+  is_invalid: boolean
+  media_type: string
+  title?: string
+}
+
+export type ABSLibraryStateResponse = {
+  library_id: string
+  items: ABSLibraryItem[]
+}
+
+export type ABSScanTriggerResponse = {
+  triggered: boolean
+  library_id: string
+}
+
+export type ABSCleanMissingResponse = {
+  cleaned: boolean
+  library_id: string
+}
+
 export type WebConfig = {
   host: string
   port: number

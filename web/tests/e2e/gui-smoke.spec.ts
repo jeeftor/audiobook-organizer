@@ -171,9 +171,155 @@ test('contracts ABS setup controls with mocked backend responses', async ({ page
   )
 
   await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
-  await expect(page.getByRole('heading', { name: 'ABS Setup Summary' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'ABS Operation Summary' })).toBeVisible()
   await expect(page.getByText('Ready for ABS operations')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeEnabled()
+})
+
+test('contracts ABS operation controls with mocked backend responses', async ({ page }) => {
+  let itemsBody: Record<string, any> | undefined
+  let libraryStateBody: Record<string, any> | undefined
+  let scanBody: Record<string, any> | undefined
+  let cleanBody: Record<string, any> | undefined
+
+  await page.route('**/api/abs/libraries', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        libraries: [
+          {
+            id: 'lib-audio',
+            name: 'Audiobooks',
+            mediaType: 'book',
+            folders: [{ id: 'folder-audio', path: '/audiobooks', fullPath: '/audiobooks' }],
+          },
+        ],
+      }),
+    })
+  })
+  await page.route('**/api/abs/test-paths', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        mappings: [{ abs_prefix: '/audiobooks', local_prefix: '/host/audiobooks' }],
+      }),
+    })
+  })
+  await page.route('**/api/abs/items', async (route) => {
+    itemsBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        items: [
+          {
+            title: 'Mapped Book',
+            authors: ['ABS Author'],
+            series: [],
+            source_type: 'abs',
+            source_path: '/host/audiobooks/Mapped Book',
+          },
+          {
+            title: 'Second Book',
+            authors: ['ABS Author'],
+            series: [],
+            source_type: 'abs',
+            source_path: '/host/audiobooks/Second Book',
+          },
+        ],
+      }),
+    })
+  })
+  await page.route('**/api/abs/library-state', async (route) => {
+    libraryStateBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        library_id: 'lib-audio',
+        items: [
+          {
+            id: 'item-ok',
+            path: '/audiobooks/Mapped Book',
+            rel_path: 'Mapped Book',
+            is_missing: false,
+            is_invalid: false,
+            media_type: 'book',
+            title: 'Mapped Book',
+          },
+          {
+            id: 'item-missing',
+            path: '/audiobooks/Missing Book',
+            rel_path: 'Missing Book',
+            is_missing: true,
+            is_invalid: true,
+            media_type: 'book',
+            title: 'Missing Book',
+          },
+        ],
+      }),
+    })
+  })
+  await page.route('**/api/abs/scan-trigger', async (route) => {
+    scanBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ triggered: true, library_id: 'lib-audio' }),
+    })
+  })
+  await page.route('**/api/abs/clean-missing', async (route) => {
+    cleanBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ cleaned: true, library_id: 'lib-audio' }),
+    })
+  })
+
+  await loadApp(page)
+  await page.getByRole('button', { name: /Audiobookshelf/ }).click()
+  await page.getByRole('textbox', { name: 'Source folder' }).fill('/host/audiobooks')
+  await page.getByLabel('ABS server URL').fill('http://localhost:13378')
+  await page.getByLabel('ABS API token').fill('test-token')
+  await page.getByLabel('ABS library ID').fill('lib-audio')
+  await page.getByLabel('Local path prefix').fill('/host/audiobooks')
+  await page.getByRole('button', { name: 'Load Libraries' }).click()
+  await page.getByRole('button', { name: 'Validate Paths' }).click()
+
+  await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
+  await expect(page.getByRole('button', { name: 'Load ABS Items' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Check Library State' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Load ABS Items' }).click()
+  await page.getByRole('button', { name: 'Check Library State' }).click()
+
+  await expect(page.getByRole('heading', { name: 'ABS operation data ready' })).toBeVisible()
+  await expect(page.getByText('/host/audiobooks/Mapped Book')).toBeVisible()
+  await expect(page.locator('.move-list em').filter({ hasText: 'Missing' })).toBeVisible()
+  expect(itemsBody?.config).toEqual(expect.objectContaining({ library_id: 'lib-audio' }))
+  expect(libraryStateBody?.config).toEqual(expect.objectContaining({ library_id: 'lib-audio' }))
+
+  await page.getByRole('button', { name: 'Run Execute after review' }).click()
+  await expect(page.getByText('Scan triggered for lib-audio.')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Trigger Scan' }).click()
+  await expect(page.getByText('Scan triggered for lib-audio.')).toBeVisible()
+  expect(scanBody?.config).toEqual(expect.objectContaining({ library_id: 'lib-audio' }))
+
+  await expect(page.getByRole('button', { name: 'Clean Missing Items' })).toBeDisabled()
+  await page.getByLabel('I understand this removes ABS missing item records').check()
+  page.once('dialog', async (dialog) => {
+    expect(dialog.message()).toContain('Clean missing ABS item records')
+    await dialog.accept()
+  })
+  await page.getByRole('button', { name: 'Clean Missing Items' }).click()
+  await expect(page.getByText('Cleanup completed for lib-audio.')).toBeVisible()
+  expect(cleanBody?.config).toEqual(expect.objectContaining({ library_id: 'lib-audio' }))
+
+  await page.getByRole('button', { name: 'Review Check logs and undo' }).click()
+  await expect(page.getByRole('heading', { name: 'ABS Operation Results' })).toBeVisible()
+  await expect(page.locator('.review-layout .result-grid strong').filter({ hasText: 'lib-audio' })).toHaveCount(2)
 })
 
 test('keeps ABS later stages locked when setup requests fail', async ({ page }) => {

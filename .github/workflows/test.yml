@@ -84,6 +84,10 @@ jobs:
             run_regex: TestRESTHarness_EmbeddedMetadataImportLifecycle
           - name: rest-flat-import
             run_regex: TestRESTHarness_FlatModeImportLifecycle
+          - name: rest-abs-setup
+            run_regex: TestRESTHarness_ABSSetupEndpoints
+          - name: rest-abs-operations
+            run_regex: TestRESTHarness_ABSOperationEndpoints
     env:
       ABS_IMAGE: ghcr.io/advplyr/audiobookshelf:latest
       ABS_FIXTURE_CACHE_DIR: test/abs/.cache/staging-data
