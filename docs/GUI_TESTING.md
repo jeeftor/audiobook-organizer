@@ -84,7 +84,10 @@ The current suite covers:
 - The dashboard renders without browser console warnings or errors.
 - Workflow navigation, backend bootstrap state, folder picker/drop behavior,
   narrow viewport overflow checks, and bootstrap fallback states.
-- Real organize preview and execution against temporary filesystem fixtures.
+- Real organize preview and execution against temporary filesystem fixtures,
+  including `metadata.json`, embedded EPUB metadata, numbered layout selection,
+  remove-empty execution, dry-run immutability, undo-log creation, and backend
+  path validation errors.
 - Real rename preview against temporary filesystem fixtures, including
   conflicts, skipped files, extraction errors, and the current deferred
   execution state.
@@ -98,9 +101,7 @@ The current suite covers:
 
 As the GUI moves from scaffold to real workflows, add tests in this order:
 
-1. Real source/output configuration state.
-2. Organize preview API calls with fixture directories.
-3. Rename preview API calls with fixture files.
-4. Browser-driven ABS organize/import flows after ABS metadata setup.
-5. Accessibility checks for keyboard navigation and visible focus states.
-6. Visual regression snapshots for the main desktop and mobile layouts.
+1. Rename execution once the backend run endpoint exists.
+2. Browser-driven ABS organize/import flows after ABS metadata setup.
+3. Accessibility checks for keyboard navigation and visible focus states.
+4. Visual regression snapshots for the main desktop and mobile layouts.
