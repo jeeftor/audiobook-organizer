@@ -115,6 +115,7 @@ audiobook-organizer rename --dir=/path --undo
 | `--flat` | - | `false` | Process files individually (auto-enables `--use-embedded-metadata`) |
 | `--skip-errors` | - | `false` | Skip files with missing/invalid metadata instead of stopping |
 | `--layout` | - | `author-series-title` | Directory structure pattern |
+| `--layout-template` | - | (none) | Custom directory layout template that overrides `--layout` |
 | `--author-fields` | - | `authors` | Comma-separated fields to try for author |
 | `--series-field` | - | `series` | Field to use as series |
 | `--title-field` | - | `title` | Field to use as title |
@@ -191,6 +192,13 @@ audiobook-organizer \
 audiobook-organizer \
   --dir=/media/audiobooks \
   --layout=author-title
+```
+
+**Custom layout template:**
+```bash
+audiobook-organizer \
+  --dir=/media/audiobooks \
+  --layout-template="{author}/{series}/{series-count} - {title} ({narrator})"
 ```
 
 **Replace spaces with underscores:**
@@ -818,6 +826,15 @@ audiobook-organizer abs organize \
   --abs-path-map="/audiobooks:/mnt/audiobooks" \
   --dir=/mnt/audiobooks \
   --layout=author-title
+
+# Move files with a custom layout template
+audiobook-organizer abs organize \
+  --abs-url=http://localhost:13378 \
+  --abs-token=eyJhbG... \
+  --abs-library=Audiobooks \
+  --abs-path-map="/audiobooks:/mnt/audiobooks" \
+  --dir=/mnt/audiobooks \
+  --layout-template="{author}/{series}/{series-count} - {title}"
 
 # Undo the previous ABS metadata organization run
 audiobook-organizer abs organize --dir=/mnt/audiobooks --undo

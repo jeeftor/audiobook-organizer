@@ -36,6 +36,7 @@ type OrganizerConfig struct {
 	Flat                bool
 	SkipErrors          bool   // Skip files with missing/invalid metadata instead of stopping
 	Layout              string // Directory structure layout (author-series-title, author-title, author-only)
+	LayoutTemplate      string // Custom directory layout template overriding Layout when set
 	AuthorFormat        string
 	FieldMapping        FieldMapping // Configuration for mapping metadata fields
 	AllowedSourcePaths  []string     // When non-empty, only process book dirs whose path is in this list
@@ -106,7 +107,12 @@ func (c *OrganizerConfig) Validate() error {
 		"series-title":               true,
 		"series-title-number":        true,
 	}
-	if c.Layout != "" && !validLayouts[c.Layout] {
+	if c.LayoutTemplate != "" {
+		if err := ValidateTemplate(c.LayoutTemplate); err != nil {
+			return fmt.Errorf("invalid layout template: %w", err)
+		}
+	}
+	if c.LayoutTemplate == "" && c.Layout != "" && !validLayouts[c.Layout] {
 		return fmt.Errorf(
 			"invalid layout: %s\n\nValid options are:\n  author-series-title (default)\n  author-series-title-number\n  author-series\n  author-title\n  author-only\n  series-title\n  series-title-number",
 			c.Layout,
@@ -180,39 +186,126 @@ func NewLayoutCalculator(config *OrganizerConfig, sanitizer func(string) string)
 
 // CalculateTargetPath determines the target directory path based on metadata and layout
 func (lc *LayoutCalculator) CalculateTargetPath(metadata Metadata) string {
+	targetPath, _ := lc.CalculateTargetPathE(metadata)
+	return targetPath
+}
+
+// CalculateTargetPathE determines the target directory path and reports template errors.
+func (lc *LayoutCalculator) CalculateTargetPathE(metadata Metadata) (string, error) {
+	return lc.CalculateTargetPathInBaseE(metadata, lc.getTargetBase())
+}
+
+// CalculateTargetPathInBaseE determines the target directory path under a caller-selected base.
+func (lc *LayoutCalculator) CalculateTargetPathInBaseE(
+	metadata Metadata,
+	targetBase string,
+) (string, error) {
+	if strings.TrimSpace(lc.config.LayoutTemplate) != "" {
+		return lc.calculateCustomTemplatePath(metadata, targetBase)
+	}
+
 	authorDir := lc.sanitizer(strings.Join(metadata.Authors, ","))
 	titleDir := lc.sanitizer(metadata.Title)
-	targetBase := lc.getTargetBase()
 
 	switch lc.config.Layout {
 	case "author-only":
-		return filepath.Join(targetBase, authorDir)
+		return filepath.Join(targetBase, authorDir), nil
 	case "author-series":
 		// Author/Series layout (no title subdirectory)
 		// Used for multi-file audiobooks where each file is a chapter
 		if validSeries := metadata.GetValidSeries(); validSeries != "" {
 			seriesDir := lc.sanitizer(validSeries)
-			return filepath.Join(targetBase, authorDir, seriesDir)
+			return filepath.Join(targetBase, authorDir, seriesDir), nil
 		}
 		// If no series, fall back to author/title
-		return filepath.Join(targetBase, authorDir, titleDir)
+		return filepath.Join(targetBase, authorDir, titleDir), nil
 	case "author-title":
-		return filepath.Join(targetBase, authorDir, titleDir)
+		return filepath.Join(targetBase, authorDir, titleDir), nil
 	case "author-series-title", "":
-		return filepath.Join(targetBase, authorDir, lc.calculateSeriesPath(titleDir, metadata))
+		return filepath.Join(targetBase, authorDir, lc.calculateSeriesPath(titleDir, metadata)), nil
 	case "author-series-title-number":
 		return filepath.Join(
 			targetBase,
 			authorDir,
 			lc.calculateSeriesPathWithNumber(titleDir, metadata),
-		)
+		), nil
 	case "series-title":
-		return filepath.Join(targetBase, lc.calculateSeriesPath(titleDir, metadata))
+		return filepath.Join(targetBase, lc.calculateSeriesPath(titleDir, metadata)), nil
 	case "series-title-number":
-		return filepath.Join(targetBase, lc.calculateSeriesPathWithNumber(titleDir, metadata))
+		return filepath.Join(targetBase, lc.calculateSeriesPathWithNumber(titleDir, metadata)), nil
 	default:
-		return filepath.Join(targetBase, authorDir, titleDir)
+		return filepath.Join(targetBase, authorDir, titleDir), nil
 	}
+}
+
+func (lc *LayoutCalculator) calculateCustomTemplatePath(
+	metadata Metadata,
+	targetBase string,
+) (string, error) {
+	template := strings.TrimSpace(lc.config.LayoutTemplate)
+	if filepath.IsAbs(template) || filepath.VolumeName(template) != "" ||
+		startsWithPathSeparator(template) {
+		return "", fmt.Errorf("layout template must be relative")
+	}
+
+	segments := splitLayoutTemplateSegments(template)
+	pathSegments := make([]string, 0, len(segments))
+	for _, segment := range segments {
+		if segment == "" {
+			continue
+		}
+		if segment == "." || segment == ".." {
+			return "", fmt.Errorf("layout template must not contain traversal segment %q", segment)
+		}
+
+		rendered, err := renderTemplateSegment(segment, metadata, lc.config.AuthorFormat)
+		if err != nil {
+			return "", err
+		}
+		rendered = strings.TrimSpace(rendered)
+		if rendered == "" {
+			continue
+		}
+		if rendered == "." || rendered == ".." {
+			return "", fmt.Errorf("layout template rendered unsafe segment %q", rendered)
+		}
+		pathSegments = append(pathSegments, lc.sanitizer(rendered))
+	}
+	if len(pathSegments) == 0 {
+		return "", fmt.Errorf("layout template rendered no usable path segments")
+	}
+
+	return filepath.Join(append([]string{targetBase}, pathSegments...)...), nil
+}
+
+func renderTemplateSegment(segment string, metadata Metadata, authorFormat string) (string, error) {
+	template, err := ParseTemplate(segment)
+	if err != nil {
+		return "", err
+	}
+	renderer := NewTemplateRenderer(template, NewAuthorFormatter(parseAuthorFormat(authorFormat)))
+	return renderer.Render(metadata)
+}
+
+func parseAuthorFormat(authorFormat string) AuthorFormat {
+	switch strings.ToLower(strings.TrimSpace(authorFormat)) {
+	case "last-first":
+		return AuthorFormatLastFirst
+	case "preserve":
+		return AuthorFormatPreserve
+	default:
+		return AuthorFormatFirstLast
+	}
+}
+
+func splitLayoutTemplateSegments(template string) []string {
+	return strings.FieldsFunc(template, func(r rune) bool {
+		return r == '/' || r == '\\'
+	})
+}
+
+func startsWithPathSeparator(template string) bool {
+	return strings.HasPrefix(template, "/") || strings.HasPrefix(template, "\\")
 }
 
 // getTargetBase returns the base directory for organizing files

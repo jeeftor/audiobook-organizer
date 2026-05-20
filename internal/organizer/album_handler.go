@@ -225,7 +225,10 @@ func (o *Organizer) organizeAlbumGroup(albumGroup *AlbumGroup) error {
 	albumGroup.SortFilesByTrackNumber()
 
 	// Calculate target directory based on the album metadata
-	targetDir := o.calculateAlbumTargetDir(albumGroup.Metadata)
+	targetDir, err := o.calculateAlbumTargetDirE(albumGroup.Metadata)
+	if err != nil {
+		return fmt.Errorf("error calculating album target directory: %w", err)
+	}
 
 	if o.config.Verbose {
 		PrintGreen("📂 Organizing album: %s by %s to %s",
@@ -278,10 +281,19 @@ func (o *Organizer) organizeAlbumGroup(albumGroup *AlbumGroup) error {
 
 // calculateAlbumTargetDir calculates the target directory for an album based on metadata
 func (o *Organizer) calculateAlbumTargetDir(metadata Metadata) string {
+	targetDir, _ := o.calculateAlbumTargetDirE(metadata)
+	return targetDir
+}
+
+func (o *Organizer) calculateAlbumTargetDirE(metadata Metadata) (string, error) {
 	baseDir := o.config.OutputDir
 	if baseDir == "" {
 		// If no output directory is specified, use the current directory
 		baseDir = "."
+	}
+
+	if strings.TrimSpace(o.config.LayoutTemplate) != "" {
+		return o.layoutCalculator.CalculateTargetPathInBaseE(metadata, baseDir)
 	}
 
 	// Use PathBuilder for cleaner path construction
@@ -289,12 +301,12 @@ func (o *Organizer) calculateAlbumTargetDir(metadata Metadata) string {
 
 	switch o.config.Layout {
 	case "author-only":
-		return pathBuilder.AddAuthor(strings.Join(metadata.Authors, ",")).Build(baseDir)
+		return pathBuilder.AddAuthor(strings.Join(metadata.Authors, ",")).Build(baseDir), nil
 	case "author-title":
 		return pathBuilder.
 			AddAuthor(strings.Join(metadata.Authors, ",")).
 			AddTitle(metadata.Title).
-			Build(baseDir)
+			Build(baseDir), nil
 	case "author-series-title", "":
 		pathBuilder.AddAuthor(strings.Join(metadata.Authors, ","))
 		if validSeries := metadata.GetValidSeries(); validSeries != "" {
@@ -307,11 +319,11 @@ func (o *Organizer) calculateAlbumTargetDir(metadata Metadata) string {
 			// No series, just add the title
 			pathBuilder.AddTitle(metadata.Title)
 		}
-		return pathBuilder.Build(baseDir)
+		return pathBuilder.Build(baseDir), nil
 	default:
 		return pathBuilder.
 			AddAuthor(strings.Join(metadata.Authors, ",")).
 			AddTitle(metadata.Title).
-			Build(baseDir)
+			Build(baseDir), nil
 	}
 }

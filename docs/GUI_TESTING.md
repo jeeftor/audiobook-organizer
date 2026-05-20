@@ -87,8 +87,8 @@ The current suite covers:
   gating, confirmation cancel behavior, and recovery after corrected input.
 - Real organize preview and execution against temporary filesystem fixtures,
   including `metadata.json`, embedded EPUB metadata, numbered layout selection,
-  remove-empty execution, dry-run immutability, undo-log creation, and backend
-  path validation errors.
+  custom layout templates, remove-empty execution, dry-run immutability,
+  undo-log creation, and backend path validation errors.
 - Real rename preview and execution against temporary filesystem fixtures,
   including conflicts, skipped files, extraction errors, filesystem mutations,
   final summaries, and undo-log guidance.

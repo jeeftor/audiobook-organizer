@@ -140,6 +140,7 @@ Common organization flags:
 | `--flat` | Process files individually; also enables embedded metadata |
 | `--remove-empty` | Remove empty source directories after moving |
 | `--skip-errors` | Continue past missing or invalid metadata |
+| `--layout-template` | Custom directory layout template overriding `--layout` |
 | `--author-fields`, `--title-field`, `--series-field`, `--track-field`, `--disc-field` | Field mapping overrides |
 
 See [docs/CLI.md](docs/CLI.md) for the full CLI reference.
@@ -286,6 +287,15 @@ audiobook-organizer \
   --dry-run
 ```
 
+Custom templates can override the fixed layouts:
+
+```bash
+audiobook-organizer \
+  --dir=/path/to/books \
+  --out=/path/to/organized \
+  --layout-template="{author}/{series}/{series-count} - {title} ({narrator})"
+```
+
 See [docs/LAYOUTS.md](docs/LAYOUTS.md).
 
 ## Configuration
@@ -304,6 +314,7 @@ Example:
 dir: "/path/to/audiobooks"
 out: "/path/to/organized"
 layout: "author-series-title"
+layout-template: ""
 use-embedded-metadata: true
 remove-empty: true
 author-fields: "authors,narrators,album_artist,artist"
@@ -316,6 +327,7 @@ Environment examples:
 export AO_DIR="/path/to/audiobooks"
 export AO_OUTPUT="/path/to/organized"
 export AO_LAYOUT="author-series-title"
+export AO_LAYOUT_TEMPLATE="{author}/{series}/{series-count} - {title}"
 export AO_USE_EMBEDDED_METADATA=true
 ```
 

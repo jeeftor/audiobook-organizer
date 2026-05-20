@@ -364,7 +364,10 @@ func (o *Organizer) OrganizeAudiobook(sourcePath string, provider MetadataProvid
 		return err
 	}
 
-	targetPath := o.layoutCalculator.CalculateTargetPath(metadata)
+	targetPath, err := o.layoutCalculator.CalculateTargetPathE(metadata)
+	if err != nil {
+		return fmt.Errorf("error calculating target path: %w", err)
+	}
 
 	if o.isAlreadyInCorrectLocation(sourcePath, targetPath) {
 		return nil
@@ -452,7 +455,10 @@ func (o *Organizer) OrganizeSingleFile(filePath string, provider MetadataProvide
 		return err
 	}
 
-	targetPath := o.calculateSingleFileTargetPath(filePath, metadata)
+	targetPath, err := o.calculateSingleFileTargetPathE(filePath, metadata)
+	if err != nil {
+		return fmt.Errorf("error calculating target path: %w", err)
+	}
 
 	if o.isAlreadyInCorrectLocation(filePath, targetPath) {
 		return nil
@@ -497,27 +503,50 @@ func (o *Organizer) OrganizePathWithMetadata(sourcePath string, metadata Metadat
 // calculateSingleFileTargetPath determines the complete target path for a single file
 // including both directory and filename components.
 func (o *Organizer) calculateSingleFileTargetPath(filePath string, metadata Metadata) string {
-	targetDir := o.calculateSingleFileTargetDir(filePath, metadata)
+	targetPath, _ := o.calculateSingleFileTargetPathE(filePath, metadata)
+	return targetPath
+}
+
+func (o *Organizer) calculateSingleFileTargetPathE(
+	filePath string,
+	metadata Metadata,
+) (string, error) {
+	targetDir, err := o.calculateSingleFileTargetDirE(filePath, metadata)
+	if err != nil {
+		return "", err
+	}
 	targetFileName := AddTrackPrefix(filepath.Base(filePath), metadata.TrackNumber)
-	return filepath.Join(targetDir, targetFileName)
+	return filepath.Join(targetDir, targetFileName), nil
 }
 
 // calculateSingleFileTargetDir determines the target directory for a single file
 // based on the configured layout (author-only, author-title, author-series-title).
 func (o *Organizer) calculateSingleFileTargetDir(filePath string, metadata Metadata) string {
+	targetDir, _ := o.calculateSingleFileTargetDirE(filePath, metadata)
+	return targetDir
+}
+
+func (o *Organizer) calculateSingleFileTargetDirE(
+	filePath string,
+	metadata Metadata,
+) (string, error) {
 	baseDir := o.getBaseDirForSingleFile(filePath)
+
+	if strings.TrimSpace(o.config.LayoutTemplate) != "" {
+		return o.layoutCalculator.CalculateTargetPathInBaseE(metadata, baseDir)
+	}
 
 	// Use PathBuilder for cleaner path construction
 	pathBuilder := NewPathBuilder().WithSanitizer(o.SanitizePath)
 
 	switch o.config.Layout {
 	case "author-only":
-		return pathBuilder.AddAuthor(strings.Join(metadata.Authors, ",")).Build(baseDir)
+		return pathBuilder.AddAuthor(strings.Join(metadata.Authors, ",")).Build(baseDir), nil
 	case "author-title":
 		return pathBuilder.
 			AddAuthor(strings.Join(metadata.Authors, ",")).
 			AddTitle(metadata.Title).
-			Build(baseDir)
+			Build(baseDir), nil
 	case "author-series-title", "":
 		pathBuilder.AddAuthor(strings.Join(metadata.Authors, ","))
 		if validSeries := metadata.GetValidSeries(); validSeries != "" {
@@ -530,12 +559,12 @@ func (o *Organizer) calculateSingleFileTargetDir(filePath string, metadata Metad
 			// No series, just add the title
 			pathBuilder.AddTitle(metadata.Title)
 		}
-		return pathBuilder.Build(baseDir)
+		return pathBuilder.Build(baseDir), nil
 	default:
 		return pathBuilder.
 			AddAuthor(strings.Join(metadata.Authors, ",")).
 			AddTitle(metadata.Title).
-			Build(baseDir)
+			Build(baseDir), nil
 	}
 }
 

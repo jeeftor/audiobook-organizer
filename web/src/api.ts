@@ -26,6 +26,7 @@ export type OrganizerConfig = {
   flat: boolean
   skip_errors: boolean
   layout: string
+  layout_template: string
   author_format: string
   field_mapping: FieldMapping
   allowed_source_paths?: string[]

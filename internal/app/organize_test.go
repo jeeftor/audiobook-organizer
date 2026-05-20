@@ -46,6 +46,34 @@ func TestPreviewOrganizeReportsMetadataMissingWithoutVerbose(t *testing.T) {
 	assertStringSliceContains(t, resp.Summary.MetadataMissing, mustResolvePath(t, missingDir))
 }
 
+func TestPreviewOrganizeUsesCustomLayoutTemplate(t *testing.T) {
+	service := NewService(DefaultWebConfig("127.0.0.1", 0, false, "", ""))
+	inputDir, outputDir := createOrganizeFixture(t)
+	config := organizeTestConfig(inputDir, outputDir, false)
+	config.LayoutTemplate = "${author}/${series}/${series-count} - ${title} (${narrator})"
+
+	resp, err := service.PreviewOrganize(context.Background(), OrganizeRequest{
+		Config: config,
+	})
+	if err != nil {
+		t.Fatalf("PreviewOrganize() error = %v", err)
+	}
+
+	if got := len(resp.Summary.Moves); got != 1 {
+		t.Fatalf("Moves length = %d, want 1", got)
+	}
+	wantTarget := filepath.Join(
+		outputDir,
+		"App Author",
+		"App Series",
+		"1 - App Test Book (App Narrator)",
+	)
+	if resp.Summary.Moves[0].To != wantTarget {
+		t.Fatalf("move target = %q, want %q", resp.Summary.Moves[0].To, wantTarget)
+	}
+	assertFileNotExists(t, filepath.Join(wantTarget, "audio.mp3"))
+}
+
 func TestRunOrganizeForcesRunAndReturnsLogPath(t *testing.T) {
 	service := NewService(DefaultWebConfig("127.0.0.1", 0, false, "", ""))
 	inputDir, outputDir := createOrganizeFixture(t)
@@ -105,7 +133,7 @@ func createOrganizeFixture(t *testing.T) (string, string) {
 	writeFile(
 		t,
 		filepath.Join(bookDir, "metadata.json"),
-		`{"title":"App Test Book","authors":["App Author"],"series":["App Series #1"]}`,
+		`{"title":"App Test Book","authors":["App Author"],"series":["App Series #1"],"narrator":"App Narrator"}`,
 	)
 	writeFile(t, filepath.Join(bookDir, "audio.mp3"), "fake audio")
 

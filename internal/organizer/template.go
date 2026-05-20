@@ -33,10 +33,14 @@ type TemplateField struct {
 }
 
 // Template parsing regex - matches {field_name} or {field_name|fallback}
-var templateRegex = regexp.MustCompile(`\{([^}]+)\}`)
+var (
+	templateRegex       = regexp.MustCompile(`\{([^}]+)\}`)
+	dollarTemplateRegex = regexp.MustCompile(`\$\{([^}]+)\}`)
+)
 
 // ParseTemplate parses a template string into tokens
 func ParseTemplate(templateStr string) (*Template, error) {
+	templateStr = dollarTemplateRegex.ReplaceAllString(templateStr, `{$1}`)
 	tokens := []templateToken{}
 	lastIdx := 0
 
@@ -110,7 +114,8 @@ func (tr *TemplateRenderer) Render(metadata Metadata) (string, error) {
 
 // resolveField resolves a template field name to its value from metadata
 func (tr *TemplateRenderer) resolveField(fieldName string, metadata Metadata) string {
-	switch strings.ToLower(fieldName) {
+	normalizedFieldName := normalizeTemplateFieldName(fieldName)
+	switch normalizedFieldName {
 	case "author":
 		if len(metadata.Authors) > 0 {
 			return tr.authorFormatter.FormatAuthor(metadata.Authors[0])
@@ -141,7 +146,7 @@ func (tr *TemplateRenderer) resolveField(fieldName string, metadata Metadata) st
 	case "series_full":
 		return metadata.GetValidSeries()
 
-	case "series_number":
+	case "series_number", "series_count":
 		return GetSeriesNumberFromMetadata(metadata)
 
 	case "album":
@@ -154,26 +159,63 @@ func (tr *TemplateRenderer) resolveField(fieldName string, metadata Metadata) st
 		return ""
 
 	case "year":
-		if year, ok := metadata.RawData["year"].(int); ok {
+		if year, ok := rawTemplateValue(metadata, fieldName, normalizedFieldName).(int); ok {
 			return fmt.Sprintf("%d", year)
 		}
-		if year, ok := metadata.RawData["year"].(float64); ok {
+		if year, ok := rawTemplateValue(metadata, fieldName, normalizedFieldName).(float64); ok {
 			return fmt.Sprintf("%d", int(year))
 		}
 		return ""
 
 	case "narrator":
-		if narrator, ok := metadata.RawData["narrator"].(string); ok {
-			return narrator
-		}
-		return ""
+		return stringifyTemplateValue(rawTemplateValue(metadata, "narrator", "narrators"))
+
+	case "narrators":
+		return stringifyTemplateValue(rawTemplateValue(metadata, fieldName, normalizedFieldName))
 
 	default:
-		// Try RawData for custom fields
+		return stringifyTemplateValue(rawTemplateValue(metadata, fieldName, normalizedFieldName))
+	}
+}
+
+func normalizeTemplateFieldName(fieldName string) string {
+	return strings.ReplaceAll(strings.ToLower(strings.TrimSpace(fieldName)), "-", "_")
+}
+
+func rawTemplateValue(metadata Metadata, fieldNames ...string) interface{} {
+	if metadata.RawData == nil {
+		return nil
+	}
+	for _, fieldName := range fieldNames {
 		if val, ok := metadata.RawData[fieldName]; ok {
-			return fmt.Sprintf("%v", val)
+			return val
 		}
+		normalizedFieldName := normalizeTemplateFieldName(fieldName)
+		if val, ok := metadata.RawData[normalizedFieldName]; ok {
+			return val
+		}
+	}
+	return nil
+}
+
+func stringifyTemplateValue(value interface{}) string {
+	switch typed := value.(type) {
+	case nil:
 		return ""
+	case string:
+		return typed
+	case []string:
+		return strings.Join(typed, ", ")
+	case []interface{}:
+		values := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if text := stringifyTemplateValue(item); text != "" {
+				values = append(values, text)
+			}
+		}
+		return strings.Join(values, ", ")
+	default:
+		return fmt.Sprintf("%v", typed)
 	}
 }
 

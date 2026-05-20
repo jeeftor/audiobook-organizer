@@ -36,6 +36,7 @@ var (
 	flat                bool
 	skipErrors          bool
 	layout              string // Directory structure layout
+	layoutTemplate      string // Custom directory structure template
 
 	// Field mapping flags
 	titleField   string
@@ -82,6 +83,7 @@ var envAliases = map[string][]string{
 	useEmbeddedMetaKey: {"AO_USE_EMBEDDED_METADATA", "AUDIOBOOK_ORGANIZER_USE_EMBEDDED_METADATA"},
 	"flat":             {"AO_FLAT", "AUDIOBOOK_ORGANIZER_FLAT"},
 	"layout":           {"AO_LAYOUT", "AUDIOBOOK_ORGANIZER_LAYOUT"},
+	"layout-template":  {"AO_LAYOUT_TEMPLATE", "AUDIOBOOK_ORGANIZER_LAYOUT_TEMPLATE"},
 
 	// Field mapping environment variables
 	titleFieldKey:   {"AO_TITLE_FIELD", "AUDIOBOOK_ORGANIZER_TITLE_FIELD"},
@@ -160,6 +162,7 @@ var rootCmd = &cobra.Command{
 				Flat:                viper.GetBool("flat"),
 				SkipErrors:          viper.GetBool("skip-errors"),
 				Layout:              viper.GetString("layout"),
+				LayoutTemplate:      viper.GetString("layout-template"),
 				FieldMapping: organizer.FieldMapping{
 					TitleField:   viper.GetString(titleFieldKey),
 					SeriesField:  viper.GetString(seriesFieldKey),
@@ -274,6 +277,8 @@ func init() {
 		BoolVar(&removeEmpty, removeEmptyKey, false, "Remove empty directories after moving files")
 	rootCmd.Flags().
 		StringVarP(&layout, "layout", "l", "author-series-title", "Directory structure layout:\n  - author-series-title:        Author/Series/Title/ (default)\n  - author-series-title-number: Author/Series/#1 - Title/ (include series number in title)\n  - author-title:               Author/Title/ (ignore series)\n  - author-only:                Author/ (flatten all books)")
+	rootCmd.Flags().
+		StringVar(&layoutTemplate, "layout-template", "", "Custom directory layout template overriding --layout (e.g. \"{author}/{series}/{series-count} - {title}\")")
 
 	// Field mapping flags (persistent for all commands)
 	rootCmd.PersistentFlags().
@@ -309,6 +314,7 @@ func init() {
 	viper.BindPFlag("prompt", rootCmd.Flags().Lookup("prompt"))
 	viper.BindPFlag(removeEmptyKey, rootCmd.Flags().Lookup(removeEmptyKey))
 	viper.BindPFlag("layout", rootCmd.Flags().Lookup("layout"))
+	viper.BindPFlag("layout-template", rootCmd.Flags().Lookup("layout-template"))
 
 	// Set up environment variable handling
 	viper.SetEnvPrefix("AUDIOBOOK_ORGANIZER") // This will still be used for unmapped variables

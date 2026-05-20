@@ -6,6 +6,13 @@ import (
 	"testing"
 )
 
+func pathTestSanitizer(value string) string {
+	for _, char := range []string{"/", "<", ">", ":", "|", "?", "*", "`", "\""} {
+		value = strings.ReplaceAll(value, char, "_")
+	}
+	return strings.Trim(value, " ._")
+}
+
 func TestCalculateTargetPathWithSeriesNumber(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -826,6 +833,105 @@ func TestSeriesOnlyLayouts(t *testing.T) {
 			result := lc.CalculateTargetPath(tt.metadata)
 			if result != tt.expected {
 				t.Errorf("CalculateTargetPath() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestCustomLayoutTemplate(t *testing.T) {
+	tests := []struct {
+		name     string
+		template string
+		metadata Metadata
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "renders nested layout with narrator and series-count alias",
+			template: "${author}/${series}/${series-count} - ${title} (${narrator})",
+			metadata: Metadata{
+				Title:   "The Obelisk Gate",
+				Authors: []string{"N. K. Jemisin"},
+				Series:  []string{"The Broken Earth #2"},
+				RawData: map[string]interface{}{
+					"narrator": "Robin Miles",
+				},
+			},
+			expected: filepath.Join(
+				"testbase",
+				"N. K. Jemisin",
+				"The Broken Earth",
+				"2 - The Obelisk Gate (Robin Miles)",
+			),
+		},
+		{
+			name:     "uses fallback for missing optional segment value",
+			template: "{author}/{series|Standalone}/{title}",
+			metadata: Metadata{
+				Title:   "Kindred",
+				Authors: []string{"Octavia E. Butler"},
+				RawData: map[string]interface{}{},
+			},
+			expected: filepath.Join("testbase", "Octavia E. Butler", "Standalone", "Kindred"),
+		},
+		{
+			name:     "sanitizes rendered path segments independently",
+			template: "{author}/{title} ({narrator})",
+			metadata: Metadata{
+				Title:   "Book: With Unsafe/Characters",
+				Authors: []string{"Author: Name"},
+				RawData: map[string]interface{}{
+					"narrator": "Narrator/Name",
+				},
+			},
+			expected: filepath.Join(
+				"testbase",
+				"Author_ Name",
+				"Book_ With Unsafe_Characters (Narrator_Name)",
+			),
+		},
+		{
+			name:     "rejects parent traversal segment",
+			template: "{author}/../{title}",
+			metadata: Metadata{
+				Title:   "Unsafe",
+				Authors: []string{"Test Author"},
+				RawData: map[string]interface{}{},
+			},
+			wantErr: true,
+		},
+		{
+			name:     "rejects absolute template path",
+			template: "/{author}/{title}",
+			metadata: Metadata{
+				Title:   "Unsafe",
+				Authors: []string{"Test Author"},
+				RawData: map[string]interface{}{},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &OrganizerConfig{
+				BaseDir:        "testbase",
+				LayoutTemplate: tt.template,
+			}
+			lc := NewLayoutCalculator(config, pathTestSanitizer)
+
+			got, err := lc.CalculateTargetPathE(tt.metadata)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("CalculateTargetPathE() expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("CalculateTargetPathE() error = %v", err)
+			}
+			if got != tt.expected {
+				t.Fatalf("CalculateTargetPathE() = %q, want %q", got, tt.expected)
 			}
 		})
 	}

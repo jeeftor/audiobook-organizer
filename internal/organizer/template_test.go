@@ -184,6 +184,41 @@ func TestTemplateRender(t *testing.T) {
 			want:    "prefix_Test_suffix",
 			wantErr: false,
 		},
+		{
+			name:     "dollar brace syntax is normalized",
+			template: "${author} - ${title}",
+			metadata: Metadata{
+				Title:   "The Fifth Season",
+				Authors: []string{"N. K. Jemisin"},
+			},
+			want:    "N. K. Jemisin - The Fifth Season",
+			wantErr: false,
+		},
+		{
+			name:     "series-count alias resolves series number",
+			template: "{series-count} - {title}",
+			metadata: Metadata{
+				Title:   "The Obelisk Gate",
+				Authors: []string{"N. K. Jemisin"},
+				Series:  []string{"The Broken Earth #2"},
+				RawData: map[string]interface{}{},
+			},
+			want:    "2 - The Obelisk Gate",
+			wantErr: false,
+		},
+		{
+			name:     "narrator array renders as comma separated value",
+			template: "{title} ({narrators})",
+			metadata: Metadata{
+				Title:   "The Stone Sky",
+				Authors: []string{"N. K. Jemisin"},
+				RawData: map[string]interface{}{
+					"narrators": []interface{}{"Robin Miles", "LeVar Burton"},
+				},
+			},
+			want:    "The Stone Sky (Robin Miles, LeVar Burton)",
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

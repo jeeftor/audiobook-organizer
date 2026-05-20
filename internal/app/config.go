@@ -35,6 +35,7 @@ type OrganizerConfigDTO struct {
 	Flat                bool            `json:"flat"`
 	SkipErrors          bool            `json:"skip_errors"`
 	Layout              string          `json:"layout"`
+	LayoutTemplate      string          `json:"layout_template"`
 	AuthorFormat        string          `json:"author_format"`
 	FieldMapping        FieldMappingDTO `json:"field_mapping"`
 	AllowedSourcePaths  []string        `json:"allowed_source_paths,omitempty"`
@@ -112,6 +113,7 @@ func (d OrganizerConfigDTO) ToOrganizerConfig() organizer.OrganizerConfig {
 		Flat:                d.Flat,
 		SkipErrors:          d.SkipErrors,
 		Layout:              d.Layout,
+		LayoutTemplate:      d.LayoutTemplate,
 		AuthorFormat:        d.AuthorFormat,
 		FieldMapping:        d.FieldMapping.ToFieldMapping(),
 		AllowedSourcePaths:  d.AllowedSourcePaths,
@@ -187,6 +189,7 @@ func DefaultWebConfig(host string, port int, open bool, inputDir, outputDir stri
 			OutputDir:           outputDir,
 			DryRun:              true,
 			Layout:              "author-series-title",
+			LayoutTemplate:      "",
 			UseEmbeddedMetadata: false,
 			FieldMapping:        FieldMappingFromOrganizer(organizer.DefaultFieldMapping()),
 		},

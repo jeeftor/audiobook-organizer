@@ -45,6 +45,7 @@ out: "/path/to/organized"
 
 # Organization options
 layout: "author-series-title"
+layout-template: ""
 replace_space: ""
 remove-empty: true
 use-embedded-metadata: false
@@ -110,6 +111,7 @@ EOF
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `layout` | string | `author-series-title` | Directory structure pattern (see [LAYOUTS.md](LAYOUTS.md)) |
+| `layout-template` | string | (empty) | Custom directory layout template that overrides `layout` |
 | `replace_space` | string | (empty) | Character to replace spaces in paths |
 | `remove-empty` | boolean | `false` | Remove empty directories after organizing |
 | `use-embedded-metadata` | boolean | `false` | Extract metadata from audio file tags |
@@ -189,6 +191,7 @@ export AUDIOBOOK_ORGANIZER_OUTPUT="/path/to/output"
 
 ```bash
 export AO_LAYOUT="author-series-title"
+export AO_LAYOUT_TEMPLATE="{author}/{series}/{series-count} - {title}"
 export AO_REPLACE_SPACE="_"
 export AO_REMOVE_EMPTY=true
 export AO_USE_EMBEDDED_METADATA=true
