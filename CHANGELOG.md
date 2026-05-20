@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Embedded EPUB ABS coverage**: Added Docker-backed already-indexed EPUB current-behavior coverage for embedded metadata workflows.
 - **ABS browser UI coverage**: Added Docker-backed Playwright coverage for the web Audiobookshelf setup and operation controls against real ABS instances.
 - **Organize browser coverage**: Expanded real Playwright coverage for embedded EPUB metadata, numbered layouts, remove-empty execution, dry-run behavior, undo-log creation, and real backend path validation errors.
+- **Web UI gating coverage**: Hardened Playwright checks for organize confirmation cancellation, failed preview lockouts, retry recovery, and ABS cleanup acknowledgement gating.
 - **ABS metadata organization**: Added `audiobook-organizer abs organize` so already-indexed Audiobookshelf items can be reorganized with ABS API metadata while reusing the normal organizer move, dry-run, undo, layout, logging, and scan follow-up flow.
 - **Text-only metadata inspection**: `audiobook-organizer metadata` now prints non-interactive metadata scan results, `metadata --json` writes machine-readable output, and `metadata-tui` keeps the old interactive metadata exploration workflow explicit.
 

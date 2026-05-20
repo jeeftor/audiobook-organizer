@@ -378,6 +378,7 @@ test('contracts ABS operation controls with mocked backend responses', async ({ 
   expect(scanBody?.config).toEqual(expect.objectContaining({ library_id: 'lib-audio' }))
 
   await expect(page.getByRole('button', { name: 'Clean Missing Items' })).toBeDisabled()
+  expect(cleanBody).toBeUndefined()
   await page.getByLabel('I understand this removes ABS missing item records').check()
   page.once('dialog', async (dialog) => {
     expect(dialog.message()).toContain('Clean missing ABS item records')
@@ -493,12 +494,18 @@ test('contracts organize preview and run UI state with mocked backend responses'
 })
 
 test('keeps organize run locked when preview fails', async ({ page }) => {
+  let runRequested = false
+
   await page.route('**/api/organize/preview', async (route) => {
     await route.fulfill({
       status: 400,
       contentType: 'application/json',
       body: JSON.stringify({ error: 'preview exploded' }),
     })
+  })
+  await page.route('**/api/organize/run', async (route) => {
+    runRequested = true
+    await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'run leaked' }) })
   })
 
   await loadApp(page)
@@ -512,6 +519,7 @@ test('keeps organize run locked when preview fails', async ({ page }) => {
   await page.getByRole('button', { name: 'Review Inspect backend results' }).click()
   await expect(page.getByRole('heading', { name: 'Organize Results Need Attention' })).toBeVisible()
   await expect(page.locator('.review-layout .error-list').getByText('Organize preview: preview exploded')).toBeVisible()
+  expect(runRequested).toBe(false)
 })
 
 test('contracts rename preview UI state with mocked backend responses', async ({ page }) => {
@@ -589,12 +597,18 @@ test('contracts rename preview UI state with mocked backend responses', async ({
 })
 
 test('keeps rename run unavailable when preview fails', async ({ page }) => {
+  let runRequested = false
+
   await page.route('**/api/rename/preview', async (route) => {
     await route.fulfill({
       status: 400,
       contentType: 'application/json',
       body: JSON.stringify({ error: 'rename preview exploded' }),
     })
+  })
+  await page.route('**/api/rename/run', async (route) => {
+    runRequested = true
+    await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'run leaked' }) })
   })
 
   await loadApp(page)
@@ -610,6 +624,7 @@ test('keeps rename run unavailable when preview fails', async ({ page }) => {
   await expect(
     page.locator('.review-layout .error-list').getByText('Rename preview: rename preview exploded'),
   ).toBeVisible()
+  expect(runRequested).toBe(false)
 })
 
 test('separates workflow modes and gates run behind preview review', async ({ page }) => {

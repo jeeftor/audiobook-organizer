@@ -83,7 +83,8 @@ The current suite covers:
   session token.
 - The dashboard renders without browser console warnings or errors.
 - Workflow navigation, backend bootstrap state, folder picker/drop behavior,
-  narrow viewport overflow checks, and bootstrap fallback states.
+  narrow viewport overflow checks, bootstrap fallback states, failed-preview
+  gating, confirmation cancel behavior, and recovery after corrected input.
 - Real organize preview and execution against temporary filesystem fixtures,
   including `metadata.json`, embedded EPUB metadata, numbered layout selection,
   remove-empty execution, dry-run immutability, undo-log creation, and backend
@@ -96,6 +97,9 @@ The current suite covers:
   harness, including URL/token entry, library discovery, path mapping
   validation, metadata-item loading, library-state loading, scan triggering,
   destructive cleanup gating, and missing-item cleanup.
+- Supplemental browser contract checks for ABS cleanup acknowledgement gating
+  and failed organize, rename, and ABS requests that must not unlock mutation
+  actions.
 
 ## Expansion Plan
 
