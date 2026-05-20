@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `audiobook-organizer layout-template` now points to the hosted GitHub layout guide so installed binaries show a usable docs link.
 - Removed the deprecated GUI tree and release packaging. Releases now focus on one `audiobook-organizer` binary with CLI, TUI, ABS, and local web UI entrypoints.
 - Improved the README overview, repository metadata, and web page metadata so search results describe the project as an audiobook organizer and renamer for Audiobookshelf with `metadata.json`, EPUB, MP3, and M4B support.
 - Rewrote the root README for the single-binary web UI direction and current command surface.

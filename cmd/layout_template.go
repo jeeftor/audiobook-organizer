@@ -66,7 +66,7 @@ PATH SAFETY
   Absolute templates and "." or ".." path segments are rejected.
 
 MORE DOCS
-  docs/LAYOUTS.md
+  https://github.com/jeeftor/audiobook-organizer/blob/master/docs/LAYOUTS.md
 `
 }
 

@@ -61,11 +61,14 @@ func TestLayoutTemplateCommandOutputCoversFieldsAndSafety(t *testing.T) {
 		"{series|Standalone}",
 		"${field}",
 		"Absolute templates",
-		"docs/LAYOUTS.md",
+		"https://github.com/jeeftor/audiobook-organizer/blob/master/docs/LAYOUTS.md",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("layout-template output missing %q", want)
 		}
+	}
+	if strings.Contains(got, "\n  docs/LAYOUTS.md\n") {
+		t.Error("layout-template output still uses only the local docs path")
 	}
 }
 
