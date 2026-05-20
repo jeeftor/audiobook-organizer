@@ -20,4 +20,13 @@ Read `AGENTS.md` and `references/abo-assistant/common.md`.
 5. Add an issue comment only when the user asks or when repository workflow requires a meaningful update.
 6. Do not close the issue; route closeout through `$abo-issue-closeout`.
 
+## Issue Comments
+
+When posting issue comments, use Markdown formatting when it makes the update clearer:
+
+- Prefer short headings, bullets, and ordered steps for multi-part status or plans.
+- Use tables for compact comparisons, acceptance checks, or option tradeoffs.
+- Use **bold** for important labels or decisions and _italics_ sparingly for emphasis.
+- Keep simple comments simple; do not add formatting that makes a short update heavier.
+
 Prefer `gh issue view <number> --comments` and `gh pr list --search "<issue-number>"` when GitHub access is available.
