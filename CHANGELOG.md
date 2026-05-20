@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Web UI gating coverage**: Hardened Playwright checks for organize confirmation cancellation, failed preview lockouts, retry recovery, and ABS cleanup acknowledgement gating.
 - **ABS metadata organization**: Added `audiobook-organizer abs organize` so already-indexed Audiobookshelf items can be reorganized with ABS API metadata while reusing the normal organizer move, dry-run, undo, layout, logging, and scan follow-up flow.
 - **Custom organization layout templates**: Added `--layout-template` and web UI support for template-driven directory layouts such as `{author}/{series}/{series-count} - {title} ({narrator})`.
+- **Layout template CLI help**: Added `audiobook-organizer layout-template` for an in-terminal field reference, fallback syntax, examples, and path safety rules.
 - **Text-only metadata inspection**: `audiobook-organizer metadata` now prints non-interactive metadata scan results, `metadata --json` writes machine-readable output, and `metadata-tui` keeps the old interactive metadata exploration workflow explicit.
 
 ### Fixed

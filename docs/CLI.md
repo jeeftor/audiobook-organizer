@@ -201,6 +201,12 @@ audiobook-organizer \
   --layout-template="{author}/{series}/{series-count} - {title} ({narrator})"
 ```
 
+Show the available layout template fields and syntax:
+
+```bash
+audiobook-organizer layout-template
+```
+
 **Replace spaces with underscores:**
 ```bash
 audiobook-organizer \

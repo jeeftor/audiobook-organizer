@@ -140,7 +140,7 @@ Common organization flags:
 | `--flat` | Process files individually; also enables embedded metadata |
 | `--remove-empty` | Remove empty source directories after moving |
 | `--skip-errors` | Continue past missing or invalid metadata |
-| `--layout-template` | Custom directory layout template overriding `--layout` |
+| `--layout-template` | Custom directory layout template overriding `--layout`; see `audiobook-organizer layout-template` |
 | `--author-fields`, `--title-field`, `--series-field`, `--track-field`, `--disc-field` | Field mapping overrides |
 
 See [docs/CLI.md](docs/CLI.md) for the full CLI reference.
@@ -169,6 +169,7 @@ audiobook-organizer rename-tui --dir=/path/to/books
 Template help:
 
 ```bash
+audiobook-organizer layout-template
 audiobook-organizer rename help-template
 ```
 
@@ -296,7 +297,7 @@ audiobook-organizer \
   --layout-template="{author}/{series}/{series-count} - {title} ({narrator})"
 ```
 
-See [docs/LAYOUTS.md](docs/LAYOUTS.md).
+Run `audiobook-organizer layout-template` for the in-terminal field reference, or see [docs/LAYOUTS.md](docs/LAYOUTS.md).
 
 ## Configuration
 

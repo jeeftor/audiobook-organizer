@@ -1,6 +1,10 @@
 package cmd
 
-import "testing"
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
 
 func TestRootCommandIncludesLayoutTemplateFlag(t *testing.T) {
 	flag := rootCmd.Flags().Lookup("layout-template")
@@ -23,6 +27,51 @@ func TestRootCommandIncludesLayoutTemplateFlag(t *testing.T) {
 			"second layout-template alias = %q, want AUDIOBOOK_ORGANIZER_LAYOUT_TEMPLATE",
 			aliases[1],
 		)
+	}
+}
+
+func TestRootCommandIncludesLayoutTemplateHelpCommand(t *testing.T) {
+	cmd, _, err := rootCmd.Find([]string{"layout-template"})
+	if err != nil {
+		t.Fatalf("Find(layout-template) error = %v", err)
+	}
+	if cmd == nil {
+		t.Fatal("root command missing layout-template help command")
+	}
+	if cmd.Use != "layout-template" {
+		t.Errorf("layout-template command Use = %q, want layout-template", cmd.Use)
+	}
+}
+
+func TestLayoutTemplateCommandOutputCoversFieldsAndSafety(t *testing.T) {
+	var output bytes.Buffer
+	layoutTemplateCmd.SetOut(&output)
+	t.Cleanup(func() {
+		layoutTemplateCmd.SetOut(nil)
+	})
+
+	layoutTemplateCmd.Run(layoutTemplateCmd, nil)
+
+	got := output.String()
+	for _, want := range []string{
+		"{author}",
+		"{series-count}",
+		"{narrators}",
+		"{publisher-name}",
+		"{series|Standalone}",
+		"${field}",
+		"Absolute templates",
+		"docs/LAYOUTS.md",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("layout-template output missing %q", want)
+		}
+	}
+}
+
+func TestLayoutTemplateCommandSuppressesStartupBanner(t *testing.T) {
+	if shouldPrintStartupBanner([]string{"layout-template"}) {
+		t.Fatal("layout-template reference command should suppress startup banner")
 	}
 }
 
