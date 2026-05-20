@@ -92,7 +92,7 @@ var absOrganizeCmd = &cobra.Command{
     --abs-library=Audiobooks \
     --abs-path-map="/audiobooks:/mnt/media/audiobooks" \
     --dir=/mnt/media/audiobooks \
-    --layout=author-title`,
+    --layout-template="{author}/{series}/{series-count} - {title}"`,
 	RunE: runABSOrganize,
 }
 
@@ -173,6 +173,8 @@ func addABSOrganizeFlags() {
 		BoolVar(&removeEmpty, removeEmptyKey, false, "Remove empty directories after moving files")
 	absOrganizeCmd.Flags().
 		StringVarP(&layout, "layout", "l", "author-series-title", "Directory structure layout:\n  - author-series-title:        Author/Series/Title/ (default)\n  - author-series-title-number: Author/Series/#1 - Title/ (include series number in title)\n  - author-title:               Author/Title/ (ignore series)\n  - author-only:                Author/ (flatten all books)")
+	absOrganizeCmd.Flags().
+		StringVar(&layoutTemplate, "layout-template", "", "Custom directory layout template overriding --layout (e.g. \"{author}/{series}/{series-count} - {title}\")")
 }
 
 func runABSScan(cmd *cobra.Command, args []string) error {
@@ -526,6 +528,10 @@ func organizerConfigFromABSCommand(cmd *cobra.Command) (organizer.OrganizerConfi
 	if err != nil {
 		return organizer.OrganizerConfig{}, err
 	}
+	layoutTemplateValue, err := stringFlagOrViper(cmd, "layout-template")
+	if err != nil {
+		return organizer.OrganizerConfig{}, err
+	}
 	titleFieldValue, err := stringFlagOrViper(cmd, titleFieldKey)
 	if err != nil {
 		return organizer.OrganizerConfig{}, err
@@ -556,6 +562,7 @@ func organizerConfigFromABSCommand(cmd *cobra.Command) (organizer.OrganizerConfi
 		Flat:                flatValue,
 		SkipErrors:          skipErrorsValue,
 		Layout:              layoutValue,
+		LayoutTemplate:      layoutTemplateValue,
 		FieldMapping: organizer.FieldMapping{
 			TitleField:   titleFieldValue,
 			SeriesField:  seriesFieldValue,

@@ -27,7 +27,7 @@ The server generates a temporary token at startup. The browser URL includes that
 
 The first web UI pass is an operational dashboard:
 
-- Left workflow panel for source, output, scan mode, layout, and Audiobookshelf connection settings.
+- Left workflow panel for source, output, scan mode, fixed or custom layout, and Audiobookshelf connection settings.
 - Center table for scanned books, metadata health, destination preview, and conflicts.
 - Right inspector for selected book metadata, field mapping, rename template, and ABS details.
 - Bottom job console for scan, preview, and API activity.
@@ -44,6 +44,16 @@ The web API exposes Audiobookshelf workflow endpoints for:
 - Triggering library scans after organization.
 
 Use the ABS controls in the web UI when you want the organizer to reconcile local filesystem paths with an Audiobookshelf server.
+
+## Custom Layouts
+
+The organize workflow includes a custom layout template field next to the fixed layout selector. When set, the custom template overrides the selected layout for preview and run requests.
+
+Example template:
+
+```text
+{author}/{series}/{series-count} - {title} ({narrator})
+```
 
 ## Development
 

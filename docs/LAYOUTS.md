@@ -1,17 +1,20 @@
 # Directory Layout Guide
 
-The Audiobook Organizer supports **six directory layout patterns** to match your preferred organization style. This guide explains each layout with examples and recommendations.
+The Audiobook Organizer supports fixed directory layout patterns and custom layout templates to match your preferred organization style. This guide explains each layout with examples and recommendations.
 
 ## Overview
 
 Directory layouts control how audiobooks are organized into folder hierarchies. Choose a layout that matches your library management style and player compatibility needs.
 
 **Configure layout via:**
-- **GUI:** Dropdown selector on book list screen
+- **GUI:** Layout selector and custom layout template field in the organize workflow
 - **TUI:** Settings screen
 - **CLI:** `--layout` flag
+- **CLI custom template:** `--layout-template` flag
 - **Config file:** `layout: "author-series-title"`
+- **Config file custom template:** `layout-template: "{author}/{series}/{series-count} - {title}"`
 - **Environment:** `AO_LAYOUT=author-series-title`
+- **Environment custom template:** `AO_LAYOUT_TEMPLATE="{author}/{series}/{series-count} - {title}"`
 
 ---
 
@@ -65,6 +68,32 @@ Brandon Sanderson/
 - You have authors with multiple series (e.g., Brandon Sanderson, Stephen King)
 - Your audiobook player supports deep folder navigation
 - You prefer maximum organization
+
+---
+
+## Custom Layout Templates
+
+Use `--layout-template` when the fixed layout names do not describe the folder structure you want. A custom template overrides `--layout`.
+
+```bash
+audiobook-organizer \
+  --dir=/books \
+  --out=/organized \
+  --layout-template="{author}/{series|Standalone}/{series-count} - {title} ({narrator})"
+```
+
+Template fields use the same renderer as rename templates. Both `{field}` and `${field}` are accepted, and fallback values use `|`:
+
+| Field | Example value |
+| --- | --- |
+| `{author}` | `N. K. Jemisin` |
+| `{title}` | `The Obelisk Gate` |
+| `{series}` | `The Broken Earth` |
+| `{series_number}` or `{series-count}` | `2` |
+| `{narrator}` or `{narrators}` | `Robin Miles` |
+| `{year}` | `2016` |
+
+Each path segment is rendered and sanitized independently, so slashes or other unsafe characters in metadata values cannot create extra directories. Absolute templates and `.` or `..` path segments are rejected.
 
 ---
 

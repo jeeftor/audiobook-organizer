@@ -116,6 +116,12 @@ specifically about series layout. It gives stable, easy-to-assert paths:
 --layout author-title
 ```
 
+Custom layout template coverage belongs in focused organizer, REST, and browser
+tests unless the ABS lifecycle itself is changing. `abs organize` accepts
+`--layout-template` and routes it through the same organizer target-path logic as
+the root organize command, so A5-A6 continue to cover the ABS reconciliation
+lifecycle while non-Docker tests cover template rendering and path safety.
+
 ## Matrix
 
 | ID | Mode | Instance | Library | Command shape | Expected result |
@@ -145,6 +151,7 @@ specifically about series layout. It gives stable, easy-to-assert paths:
 | A4 | ABS scan trigger | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestABSMetadataMode_PreviewAndScanTrigger -count=1 -v` | Implemented. Triggers a scan through the CLI and verifies the ABS API state remains clean. |
 | A5 | ABS organize, already indexed | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestABSMetadataMode_OrganizeAudiobooksLifecycle -count=1 -v` | Implemented. Uses ABS metadata as the source of truth to move already-indexed audiobook folders when no `metadata.json` sidecars are present; verifies filesystem moves, organizer log, ABS missing/new rows after scan, missing cleanup, and final clean ABS state. |
 | A6 | ABS organize, already indexed | plain | Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestABSMetadataMode_OrganizeBooksLifecycle -count=1 -v` | Implemented. Seeds explicit ABS author metadata through the ABS media-update API, then organizes already-indexed EPUB folders using ABS metadata and verifies the same filesystem, scan, cleanup, and final-state lifecycle as A5. |
+| A7 | ABS organize, custom layout template | plain | Audiobooks | Covered by `go test ./cmd ./internal/app ./internal/server ./internal/organizer` and `npx playwright test tests/e2e/organize-real.spec.ts -g "custom layout template" --project chromium-desktop` | Implemented without a new Docker ABS lifecycle row. `abs organize` exposes `--layout-template` and maps it into the shared organizer config; focused command, REST, app, organizer, and real browser filesystem tests verify the custom target path behavior. A5-A6 continue to validate ABS scan/missing-row reconciliation. |
 
 ## Per-Test Verification
 

@@ -149,6 +149,12 @@
               <option v-if="optionsLoading && layoutOptions.length === 0" value="" disabled>Loading options</option>
               <option v-for="option in layoutOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
+            <label>Custom layout template</label>
+            <input
+              v-model="layoutTemplate"
+              aria-label="Custom layout template"
+              placeholder="{author}/{series}/{series-count} - {title}"
+            />
             <label class="check-row"><input v-model="useEmbeddedMetadata" type="checkbox" /> Use embedded metadata</label>
             <label class="check-row"><input v-model="removeEmpty" type="checkbox" /> Remove empty source folders after run</label>
           </div>
@@ -718,6 +724,7 @@ const outputPathMessage = ref('')
 const activePathDropTarget = ref<PathFieldId | null>(null)
 const scanMode = ref('json')
 const layout = ref('author-series-title')
+const layoutTemplate = ref('')
 const useEmbeddedMetadata = ref(false)
 const removeEmpty = ref(false)
 const renameTemplate = ref('{author} - {series} {series_number} - {title}')
@@ -1515,6 +1522,7 @@ function buildOrganizerConfig(dryRun: boolean): OrganizerConfig {
     flat: shouldUseFlatMode(),
     skip_errors: defaults?.skip_errors ?? false,
     layout: layout.value,
+    layout_template: layoutTemplate.value.trim(),
     author_format: defaults?.author_format || 'first-last',
     field_mapping: defaults?.field_mapping ?? defaultFieldMapping,
     allowed_source_paths: defaults?.allowed_source_paths,
@@ -1681,6 +1689,7 @@ onMounted(async () => {
     sourceFolder.value = config.initial?.input_dir || config.organizer?.base_dir || ''
     outputFolder.value = config.initial?.output_dir || config.organizer?.output_dir || ''
     layout.value = config.organizer?.layout || layout.value
+    layoutTemplate.value = config.organizer?.layout_template || ''
     useEmbeddedMetadata.value = config.organizer?.use_embedded_metadata ?? false
     removeEmpty.value = config.organizer?.remove_empty ?? false
     renameTemplate.value = config.rename?.template || renameTemplate.value
@@ -1719,7 +1728,7 @@ onMounted(async () => {
   }
 })
 
-watch([sourceFolder, outputFolder, scanMode, layout, useEmbeddedMetadata, removeEmpty], () => {
+watch([sourceFolder, outputFolder, scanMode, layout, layoutTemplate, useEmbeddedMetadata, removeEmpty], () => {
   if (activeWorkflow.value !== 'organize') {
     return
   }

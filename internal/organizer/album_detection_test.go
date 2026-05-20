@@ -876,6 +876,79 @@ func TestAlbumGroupSorting(t *testing.T) {
 	}
 }
 
+func TestCustomLayoutTemplateAlbumGroupDryRun(t *testing.T) {
+	tempDir := t.TempDir()
+	outputDir := filepath.Join(tempDir, "output")
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		t.Fatalf("Failed to create output directory: %v", err)
+	}
+
+	config := OrganizerConfig{
+		BaseDir:        tempDir,
+		OutputDir:      outputDir,
+		DryRun:         true,
+		LayoutTemplate: "{author}/{series}/{series-count} - {title}",
+		FieldMapping:   DefaultFieldMapping(),
+	}
+	org, err := NewOrganizer(&config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
+
+	group := NewAlbumGroup(Metadata{
+		Title:   "Album Book",
+		Authors: []string{"Template Author"},
+		Series:  []string{"Album Series #5"},
+		RawData: map[string]interface{}{},
+	})
+	firstFile := filepath.Join(tempDir, "disc", "part2.mp3")
+	secondFile := filepath.Join(tempDir, "disc", "part1.mp3")
+	group.AddFile(firstFile, 2)
+	group.AddFile(secondFile, 1)
+
+	if err := org.organizeAlbumGroup(group); err != nil {
+		t.Fatalf("organizeAlbumGroup() error = %v", err)
+	}
+
+	if len(org.summary.Moves) != 2 {
+		t.Fatalf("summary moves = %d, want 2", len(org.summary.Moves))
+	}
+	expectedDir := filepath.Join(outputDir, "Template Author", "Album Series", "5 - Album Book")
+	expectedFirstMove := filepath.Join(expectedDir, "01 - part1.mp3")
+	if org.summary.Moves[0].To != expectedFirstMove {
+		t.Fatalf(
+			"first album move target = %q, want %q",
+			org.summary.Moves[0].To,
+			expectedFirstMove,
+		)
+	}
+}
+
+func TestCustomLayoutTemplateAlbumGroupRejectsTraversalSegment(t *testing.T) {
+	tempDir := t.TempDir()
+	config := OrganizerConfig{
+		BaseDir:        tempDir,
+		DryRun:         true,
+		LayoutTemplate: "{author}/../{title}",
+		FieldMapping:   DefaultFieldMapping(),
+	}
+	org, err := NewOrganizer(&config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
+
+	group := NewAlbumGroup(Metadata{
+		Title:   "Unsafe Album",
+		Authors: []string{"Template Author"},
+	})
+	group.AddFile(filepath.Join(tempDir, "part1.mp3"), 1)
+
+	err = org.organizeAlbumGroup(group)
+	if err == nil {
+		t.Fatal("organizeAlbumGroup() expected traversal error, got nil")
+	}
+}
+
 // Mock types for testing
 type mockDirEntry struct {
 	name  string

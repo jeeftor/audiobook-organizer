@@ -130,7 +130,7 @@ test('uses numbered layout and removes empty source folders after organize run',
     await loadApp(page)
     await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
     await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
-    await page.getByLabel('Layout').selectOption('author-series-title-number')
+    await page.getByRole('combobox', { name: 'Layout' }).selectOption('author-series-title-number')
     await page.getByLabel('Remove empty source folders after run').check()
     await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
     await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
@@ -154,6 +154,41 @@ test('uses numbered layout and removes empty source folders after organize run',
     await expect.poll(() => pathExists(fixture.expectedFile)).toBe(true)
     await expect.poll(() => pathExists(fixture.expectedLog)).toBe(true)
     await expect.poll(() => pathExists(fixture.bookDir)).toBe(false)
+  } finally {
+    await fixture.cleanup()
+  }
+})
+
+test('uses a custom layout template for real organize preview and execution', async ({ page }) => {
+  test.setTimeout(60_000)
+
+  const fixture = await createCustomLayoutTemplateFixture()
+  try {
+    await loadApp(page)
+    await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
+    await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
+    await page
+      .getByRole('textbox', { name: 'Custom layout template' })
+      .fill('{author}/{series}/{series-count} - {title} ({narrator})')
+    await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
+    await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
+    await expectSummaryValue(page, 'Metadata found', '1')
+    await expectSummaryValue(page, 'Planned moves', '1')
+    await expect(page.getByText(fixture.expectedDir)).toBeVisible()
+    await expect.poll(() => pathExists(fixture.expectedFile)).toBe(false)
+
+    await page.getByRole('button', { name: 'Review Preview & Continue' }).click()
+    page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toContain('Run Organize will change files')
+      await dialog.accept()
+    })
+    await page.getByRole('button', { name: 'Run Organize' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
+    await expect.poll(() => pathExists(fixture.expectedFile)).toBe(true)
+    await expect.poll(() => pathExists(fixture.expectedLog)).toBe(true)
   } finally {
     await fixture.cleanup()
   }
@@ -319,6 +354,40 @@ async function createNumberedLayoutFixture(): Promise<NumberedLayoutFixture> {
     expectedFile: join(expectedDir, 'audio.mp3'),
     expectedLog: join(resolvedOutputDir, '.abook-org.log'),
     bookDir,
+    cleanup: () => rm(root, { recursive: true, force: true }),
+  }
+}
+
+async function createCustomLayoutTemplateFixture(): Promise<OrganizeFixture> {
+  const root = await mkFixtureRoot()
+  const sourceDir = join(root, 'source')
+  const outputDir = join(root, 'output')
+  const bookDir = join(sourceDir, 'custom-layout-book')
+
+  await mkdir(bookDir, { recursive: true })
+  await mkdir(outputDir, { recursive: true })
+  await writeFile(
+    join(bookDir, 'metadata.json'),
+    JSON.stringify({
+      title: 'Template Book',
+      authors: ['Template Author'],
+      series: ['Template Series'],
+      series_index: 4,
+      narrator: 'Template Narrator',
+    }),
+  )
+  await writeFile(join(bookDir, 'audio.mp3'), 'fake audio data')
+
+  const expectedDir = join(outputDir, 'Template Author', 'Template Series', '4 - Template Book (Template Narrator)')
+  const resolvedOutputDir = await realpath(outputDir)
+
+  return {
+    sourceDir,
+    outputDir,
+    missingDir: '',
+    expectedDir,
+    expectedFile: join(expectedDir, 'audio.mp3'),
+    expectedLog: join(resolvedOutputDir, '.abook-org.log'),
     cleanup: () => rm(root, { recursive: true, force: true }),
   }
 }

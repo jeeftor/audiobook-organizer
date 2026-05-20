@@ -224,6 +224,40 @@ func TestOrganizePreviewEndpointReturnsDryRunSummary(t *testing.T) {
 	assertJSONArrayLength(t, rec, "summary.Moves", 1)
 }
 
+func TestOrganizePreviewEndpointAcceptsCustomLayoutTemplate(t *testing.T) {
+	handler := newTestHandler(t)
+	inputDir, outputDir := createOrganizerFixture(t)
+
+	body := map[string]any{
+		"config": map[string]any{
+			"base_dir":        inputDir,
+			"output_dir":      outputDir,
+			"dry_run":         false,
+			"layout_template": "${author}/${series}/${series-count} - ${title} (${narrator})",
+			"field_mapping": map[string]any{
+				"title_field":   "title",
+				"series_field":  "series",
+				"author_fields": []string{"authors"},
+			},
+		},
+	}
+
+	rec := performRequest(handler, http.MethodPost, "/api/organize/preview", body, testToken)
+
+	assertStatus(t, rec, http.StatusOK)
+	assertJSONField(
+		t,
+		rec,
+		"summary.Moves.0.to",
+		filepath.Join(
+			outputDir,
+			"REST Author",
+			"REST Series",
+			"1 - REST Test Book (REST Narrator)",
+		),
+	)
+}
+
 func TestOrganizeRunEndpointMovesFiles(t *testing.T) {
 	handler := newTestHandler(t)
 	inputDir, outputDir := createOrganizerFixture(t)
@@ -465,7 +499,7 @@ func createOrganizerFixture(t *testing.T) (string, string) {
 	writeFile(
 		t,
 		filepath.Join(bookDir, "metadata.json"),
-		`{"title":"REST Test Book","authors":["REST Author"],"series":["REST Series #1"]}`,
+		`{"title":"REST Test Book","authors":["REST Author"],"series":["REST Series #1"],"narrator":"REST Narrator"}`,
 	)
 	writeFile(t, filepath.Join(bookDir, "audio.mp3"), "fake audio")
 
