@@ -410,17 +410,16 @@ func (r *Renamer) RenameFile(oldPath, newPath string) error {
 
 // SaveLog saves rename operations to log file
 func (r *Renamer) SaveLog() error {
-	logPath := filepath.Join(r.config.BaseDir, ".abook-rename.log")
 	data, err := json.MarshalIndent(r.logEntries, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(logPath, data, 0o644)
+	return os.WriteFile(r.GetLogPath(), data, 0o644)
 }
 
 // UndoRenames reverses rename operations from log
 func (r *Renamer) UndoRenames() error {
-	logPath := filepath.Join(r.config.BaseDir, ".abook-rename.log")
+	logPath := r.GetLogPath()
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		return fmt.Errorf("no rename log found at %s", logPath)
@@ -460,6 +459,11 @@ func (r *Renamer) UndoRenames() error {
 // GetSummary returns the rename summary
 func (r *Renamer) GetSummary() RenameSummary {
 	return r.summary
+}
+
+// GetLogPath returns the path where rename operation logs are stored.
+func (r *Renamer) GetLogPath() string {
+	return filepath.Join(r.config.BaseDir, ".abook-rename.log")
 }
 
 // promptForRename prompts user for confirmation before renaming

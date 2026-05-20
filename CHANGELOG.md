@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Repo-local AI skills**: Added `abo-*` agent skills for issue workflow, PR workflow, testing, ABS validation, web UI work, and dependency audit/update tasks.
 - **Local web UI foundation**: `audiobook-organizer web` starts a browser-based UI from the same binary as the CLI and TUI. `audiobook-organizer gui` remains as a compatibility alias.
 - **Embedded web assets**: Release builds now compile the Vue frontend into the Go binary so the app can serve its own UI.
-- **Web API surface**: Added initial local REST endpoints for health, initial configuration, option lists, organize preview, rename preview, Audiobookshelf libraries, ABS path mapping tests, ABS item loading, and ABS scan triggers.
+- **Web API surface**: Added initial local REST endpoints for health, initial configuration, option lists, organize preview/run, rename preview/run, Audiobookshelf libraries, ABS path mapping tests, ABS item loading, and ABS scan triggers.
 - **Audiobookshelf web workflow**: The new web foundation treats ABS as a first-class source alongside local metadata and embedded metadata.
 - **Preview-oriented app service layer**: Added an internal application service that converts web requests into organizer, renamer, and ABS operations without coupling the HTTP layer to Cobra command handling.
 - **REST execution coverage for ABS workflows**: Added Docker-backed REST tests for `metadata.json`, embedded metadata import, and flat import workflows against real Audiobookshelf containers.
@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Embedded EPUB ABS coverage**: Added Docker-backed already-indexed EPUB current-behavior coverage for embedded metadata workflows.
 - **ABS browser UI coverage**: Added Docker-backed Playwright coverage for the web Audiobookshelf setup and operation controls against real ABS instances.
 - **Organize browser coverage**: Expanded real Playwright coverage for embedded EPUB metadata, numbered layouts, remove-empty execution, dry-run behavior, undo-log creation, and real backend path validation errors.
+- **Rename browser execution**: Added a local web UI rename run endpoint and real Playwright coverage for preview review, confirmed execution, conflict handling, skipped/error summaries, filesystem results, and `.abook-rename.log` guidance.
 - **Web UI gating coverage**: Hardened Playwright checks for organize confirmation cancellation, failed preview lockouts, retry recovery, and ABS cleanup acknowledgement gating.
 - **ABS metadata organization**: Added `audiobook-organizer abs organize` so already-indexed Audiobookshelf items can be reorganized with ABS API metadata while reusing the normal organizer move, dry-run, undo, layout, logging, and scan follow-up flow.
 - **Text-only metadata inspection**: `audiobook-organizer metadata` now prints non-interactive metadata scan results, `metadata --json` writes machine-readable output, and `metadata-tui` keeps the old interactive metadata exploration workflow explicit.
@@ -50,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Restructured the local web UI into explicit organize, rename, and Audiobookshelf workflow stages so configure, dry-run preview, run, and review states are separated.
 - Improved local web UI startup handling so config/options loading and fallback states are visible and Audiobookshelf metadata mode stays scoped to the ABS workflow.
 - Wired the local web UI organize workflow to real preview and run endpoints with review gating and backend result summaries.
-- Wired the local web UI rename workflow to real preview candidates while keeping rename execution explicitly deferred.
+- Wired the local web UI rename workflow to real preview candidates, reviewed execution, backend summaries, and undo-log guidance.
 - Wired local web UI Audiobookshelf setup controls to load libraries and validate path mappings with explicit credential input.
 - Improved the local web UI Audiobookshelf setup flow so users test the ABS URL/token first, then choose from discovered libraries instead of typing a library ID.
 - Wired local web UI Audiobookshelf operation controls to load item metadata, inspect missing/invalid library state, trigger scans, and clean missing items behind destructive-action gating.

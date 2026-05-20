@@ -75,8 +75,8 @@ If Playwright reports a missing executable such as `chromium_headless_shell-<rev
 The current suite covers:
 
 - REST tests for auth, config/options, static app serving, method validation,
-  malformed JSON, organize preview, rename preview, and no-Docker ABS path
-  mapping validation.
+  malformed JSON, organize preview/run, rename preview/run, and no-Docker ABS
+  path mapping validation.
 - The local Go web server starts with a generated session token and serves the
   embedded web app.
 - Authenticated API endpoints reject missing tokens and accept the generated
@@ -89,9 +89,9 @@ The current suite covers:
   including `metadata.json`, embedded EPUB metadata, numbered layout selection,
   remove-empty execution, dry-run immutability, undo-log creation, and backend
   path validation errors.
-- Real rename preview against temporary filesystem fixtures, including
-  conflicts, skipped files, extraction errors, and the current deferred
-  execution state.
+- Real rename preview and execution against temporary filesystem fixtures,
+  including conflicts, skipped files, extraction errors, filesystem mutations,
+  final summaries, and undo-log guidance.
 - Mocked browser contract checks for ABS setup and operations.
 - Real browser-driven ABS setup and operation coverage against the Docker ABS
   harness, including URL/token entry, library discovery, path mapping
@@ -105,7 +105,6 @@ The current suite covers:
 
 As the GUI moves from scaffold to real workflows, add tests in this order:
 
-1. Rename execution once the backend run endpoint exists.
-2. Browser-driven ABS organize/import flows after ABS metadata setup.
-3. Accessibility checks for keyboard navigation and visible focus states.
-4. Visual regression snapshots for the main desktop and mobile layouts.
+1. Browser-driven ABS organize/import flows after ABS metadata setup.
+2. Accessibility checks for keyboard navigation and visible focus states.
+3. Visual regression snapshots for the main desktop and mobile layouts.

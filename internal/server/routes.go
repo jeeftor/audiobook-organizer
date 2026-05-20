@@ -23,6 +23,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/organize/preview", s.withAuth(s.handleOrganizePreview))
 	mux.HandleFunc("/api/organize/run", s.withAuth(s.handleOrganizeRun))
 	mux.HandleFunc("/api/rename/preview", s.withAuth(s.handleRenamePreview))
+	mux.HandleFunc("/api/rename/run", s.withAuth(s.handleRenameRun))
 	mux.HandleFunc("/api/abs/libraries", s.withAuth(s.handleABSLibraries))
 	mux.HandleFunc("/api/abs/test-paths", s.withAuth(s.handleABSTestPaths))
 	mux.HandleFunc("/api/abs/items", s.withAuth(s.handleABSItems))
@@ -110,6 +111,23 @@ func (s *Server) handleRenamePreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp, err := s.app.PreviewRename(r.Context(), req)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (s *Server) handleRenameRun(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, errors.New("method not allowed"))
+		return
+	}
+	var req app.RenameRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	resp, err := s.app.RunRename(r.Context(), req)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return

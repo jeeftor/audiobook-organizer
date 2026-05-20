@@ -522,9 +522,9 @@ test('keeps organize run locked when preview fails', async ({ page }) => {
   expect(runRequested).toBe(false)
 })
 
-test('contracts rename preview UI state with mocked backend responses', async ({ page }) => {
+test('contracts rename preview and run UI state with mocked backend responses', async ({ page }) => {
   let previewBody: Record<string, any> | undefined
-  let renameRunRequested = false
+  let runBody: Record<string, any> | undefined
 
   await page.route('**/api/rename/preview', async (route) => {
     previewBody = route.request().postDataJSON()
@@ -561,8 +561,39 @@ test('contracts rename preview UI state with mocked backend responses', async ({
     })
   })
   await page.route('**/api/rename/run', async (route) => {
-    renameRunRequested = true
-    await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'not found' }) })
+    runBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        candidates: [
+          {
+            CurrentPath: '/library/source/book/audio.mp3',
+            ProposedPath: '/library/source/book/Rename Author - Rename Book.mp3',
+            Metadata: { title: 'Rename Book', authors: ['Rename Author'] },
+            IsNoOp: false,
+            IsConflict: false,
+            Error: '',
+          },
+          {
+            CurrentPath: '/library/source/book/duplicate.mp3',
+            ProposedPath: '/library/source/book/Rename Author - Rename Book (1).mp3',
+            Metadata: { title: 'Rename Book', authors: ['Rename Author'] },
+            IsNoOp: false,
+            IsConflict: true,
+            Error: '',
+          },
+        ],
+        summary: {
+          FilesScanned: 3,
+          FilesRenamed: 2,
+          FilesSkipped: 1,
+          ConflictsFound: 1,
+          Errors: ['missing metadata in skipped.mp3'],
+        },
+        log_path: '/library/source/.abook-rename.log',
+      }),
+    })
   })
 
   await loadApp(page)
@@ -590,10 +621,20 @@ test('contracts rename preview UI state with mocked backend responses', async ({
   )
 
   await page.getByRole('button', { name: 'Review Candidates & Continue' }).click()
-  await expect(page.getByRole('heading', { name: 'Rename Execution Deferred' })).toBeVisible()
-  await expect(page.getByText(/Rename execution is deferred/)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Rename Execution Deferred' })).toBeDisabled()
-  expect(renameRunRequested).toBe(false)
+  await expect(page.getByRole('heading', { name: 'Execute the reviewed plan' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Run Rename' })).toBeEnabled()
+
+  page.once('dialog', async (dialog) => {
+    expect(dialog.message()).toContain('Run Rename will change files')
+    await dialog.accept()
+  })
+  await page.getByRole('button', { name: 'Run Rename' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Rename Run Complete' })).toBeVisible()
+  await expect(
+    page.locator('.review-layout .result-grid strong').filter({ hasText: '/library/source/.abook-rename.log' }),
+  ).toBeVisible()
+  expect(runBody?.config).toEqual(expect.objectContaining({ dry_run: false }))
 })
 
 test('keeps rename run unavailable when preview fails', async ({ page }) => {

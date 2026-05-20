@@ -90,6 +90,12 @@ export type RenamePreviewResponse = {
   summary: RenameSummary
 }
 
+export type RenameRunResponse = {
+  candidates: RenameCandidate[]
+  summary: RenameSummary
+  log_path?: string
+}
+
 export type PathMapping = {
   abs_prefix: string
   local_prefix: string

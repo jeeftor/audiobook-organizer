@@ -441,16 +441,13 @@
           </template>
           <template v-else>
             <p v-if="activeWorkflow === 'organize' && organizeRunError" class="inline-alert">{{ organizeRunError }}</p>
-            <p v-if="activeWorkflow === 'rename'" class="inline-alert">
-              Rename execution is deferred until a backend run endpoint is implemented. This workflow can only preview
-              candidates right now.
-            </p>
+            <p v-if="activeWorkflow === 'rename' && renameRunError" class="inline-alert">{{ renameRunError }}</p>
             <button
               class="danger-action"
               :disabled="isRunActionDisabled"
-              @click="activeWorkflow === 'organize' ? runOrganize() : undefined"
+              @click="activeWorkflow === 'organize' ? runOrganize() : runRename()"
             >
-              <Play :size="18" /> {{ currentWorkflow.runAction }}
+              <Play :size="18" /> {{ runActionLabel }}
             </button>
           </template>
         </section>
@@ -490,15 +487,26 @@
         <section v-else-if="activeWorkflow === 'rename'" class="review-layout">
           <h3>{{ renameReviewHeading }}</h3>
           <p>{{ renameReviewCopy }}</p>
-          <div v-if="renamePreview" class="result-grid">
-            <span>Files scanned</span><strong>{{ renamePreview.summary.FilesScanned }}</strong>
-            <span>Candidates</span><strong>{{ renamePreview.candidates.length }}</strong>
-            <span>Conflicts</span><strong>{{ renamePreview.summary.ConflictsFound }}</strong>
-            <span>Skipped</span><strong>{{ renamePreview.summary.FilesSkipped }}</strong>
-            <span>Errors</span><strong>{{ renamePreview.summary.Errors.length }}</strong>
+          <div v-if="renameReviewSummary" class="result-grid">
+            <span>Job status</span><strong>{{ renameRun ? 'Complete' : 'Preview complete' }}</strong>
+            <span>Files scanned</span><strong>{{ renameReviewSummary.summary.FilesScanned }}</strong>
+            <span>{{ renameRun ? 'Files renamed' : 'Candidates' }}</span>
+            <strong>
+              {{ renameRun ? renameReviewSummary.summary.FilesRenamed : renameReviewSummary.candidates.length }}
+            </strong>
+            <span>Conflicts</span><strong>{{ renameReviewSummary.summary.ConflictsFound }}</strong>
+            <span>Skipped</span><strong>{{ renameReviewSummary.summary.FilesSkipped }}</strong>
+            <span>Errors</span><strong>{{ renameReviewSummary.summary.Errors.length }}</strong>
+            <template v-if="renameRun?.log_path">
+              <span>Undo log</span><strong>{{ renameRun.log_path }}</strong>
+            </template>
           </div>
+          <p v-else-if="renameRunError" class="inline-alert">{{ renameRunError }}</p>
           <p v-else-if="renamePreviewError" class="inline-alert">{{ renamePreviewError }}</p>
           <p v-else class="empty-note">No rename preview has completed.</p>
+          <div v-if="renameRun?.log_path" class="recovery-note">
+            Undo details are available in the backend log at {{ renameRun.log_path }}.
+          </div>
           <div v-if="renameReviewWarnings.length > 0" class="review-details">
             <h4>Warnings</h4>
             <ul class="warning-list">
@@ -591,6 +599,7 @@ import {
   type OptionsResponse,
   type RenameConfig,
   type RenamePreviewResponse,
+  type RenameRunResponse,
   type WebConfig,
 } from './api'
 
@@ -635,9 +644,9 @@ const workflows = [
     configureHint: 'Set the folder and filename template before creating rename candidates.',
     modeLabel: 'Metadata source',
     previewCopy: 'Create real rename candidates from the backend before considering any filesystem action.',
-    runTitle: 'Rename Execution Deferred',
-    runCopy: 'The web UI does not expose a rename execution endpoint yet. Candidate review stays available here.',
-    runAction: 'Rename Execution Deferred',
+    runTitle: 'Run Rename',
+    runCopy: 'This action renames files in place and stays locked until the candidate review stage is complete.',
+    runAction: 'Run Rename',
   },
   {
     id: 'abs' as const,
@@ -735,9 +744,11 @@ const absCleanResult = ref<ABSCleanMissingResponse | null>(null)
 const organizePreview = ref<OrganizePreviewResponse | null>(null)
 const organizeRun = ref<OrganizeRunResponse | null>(null)
 const renamePreview = ref<RenamePreviewResponse | null>(null)
+const renameRun = ref<RenameRunResponse | null>(null)
 const organizePreviewStatus = ref<RequestState>('idle')
 const organizeRunStatus = ref<RequestState>('idle')
 const renamePreviewStatus = ref<RequestState>('idle')
+const renameRunStatus = ref<RequestState>('idle')
 const absLibrariesStatus = ref<RequestState>('idle')
 const absPathStatus = ref<RequestState>('idle')
 const absItemsStatus = ref<RequestState>('idle')
@@ -747,6 +758,7 @@ const absCleanStatus = ref<RequestState>('idle')
 const organizePreviewError = ref('')
 const organizeRunError = ref('')
 const renamePreviewError = ref('')
+const renameRunError = ref('')
 const absLibrariesError = ref('')
 const absPathError = ref('')
 const absItemsError = ref('')
@@ -847,6 +859,15 @@ const absScanActionLabel = computed(() =>
 const absCleanActionLabel = computed(() =>
   absCleanStatus.value === 'loading' ? 'Cleaning Missing Items' : 'Clean Missing Items',
 )
+const runActionLabel = computed(() => {
+  if (activeWorkflow.value === 'rename' && renameRunStatus.value === 'loading') {
+    return 'Renaming Files'
+  }
+  if (activeWorkflow.value === 'organize' && organizeRunStatus.value === 'loading') {
+    return 'Running Organize'
+  }
+  return currentWorkflow.value.runAction
+})
 const absMissingCount = computed(() => absLibraryState.value?.items.filter((item) => item.is_missing).length ?? 0)
 const absInvalidCount = computed(() => absLibraryState.value?.items.filter((item) => item.is_invalid).length ?? 0)
 const organizeReviewSummary = computed(() => organizeRun.value ?? organizePreview.value)
@@ -885,15 +906,17 @@ const organizeReviewCopy = computed(() => {
   }
   return 'Completed organize runs will appear here after you run a reviewed preview.'
 })
+const renameReviewSummary = computed(() => renameRun.value ?? renamePreview.value)
 const renameReviewWarnings = computed(() => {
-  const warnings = renamePreview.value?.candidates
-    .filter((candidate) => candidate.IsConflict || candidate.IsNoOp)
-    .map((candidate) => {
-      if (candidate.IsConflict) {
-        return `Conflict: ${candidate.CurrentPath} -> ${candidate.ProposedPath}`
-      }
-      return `Skipped unchanged: ${candidate.CurrentPath}`
-    }) ?? []
+  const warnings =
+    renameReviewSummary.value?.candidates
+      .filter((candidate) => candidate.IsConflict || candidate.IsNoOp)
+      .map((candidate) => {
+        if (candidate.IsConflict) {
+          return `Conflict: ${candidate.CurrentPath} -> ${candidate.ProposedPath}`
+        }
+        return `Skipped unchanged: ${candidate.CurrentPath}`
+      }) ?? []
   return warnings
 })
 const renameReviewErrors = computed(() => {
@@ -901,10 +924,13 @@ const renameReviewErrors = computed(() => {
   if (renamePreviewStatus.value === 'error' && renamePreviewError.value) {
     errors.push(`Rename preview: ${renamePreviewError.value}`)
   }
-  if (renamePreview.value) {
-    errors.push(...renamePreview.value.summary.Errors)
+  if (renameRunStatus.value === 'error' && renameRunError.value) {
+    errors.push(`Rename run: ${renameRunError.value}`)
+  }
+  if (renameReviewSummary.value) {
+    errors.push(...renameReviewSummary.value.summary.Errors)
     errors.push(
-      ...renamePreview.value.candidates
+      ...renameReviewSummary.value.candidates
         .filter((candidate) => candidate.Error)
         .map((candidate) => `${candidate.CurrentPath}: ${candidate.Error}`),
     )
@@ -912,6 +938,9 @@ const renameReviewErrors = computed(() => {
   return errors
 })
 const renameReviewHeading = computed(() => {
+  if (renameRun.value) {
+    return 'Rename Run Complete'
+  }
   if (renamePreview.value) {
     return 'Rename Preview Results'
   }
@@ -921,8 +950,11 @@ const renameReviewHeading = computed(() => {
   return 'Rename Results'
 })
 const renameReviewCopy = computed(() => {
+  if (renameRun.value) {
+    return 'The reviewed rename plan finished with backend results.'
+  }
   if (renamePreview.value) {
-    return 'The latest backend rename preview is available for inspection. Rename execution is not exposed by the web UI yet.'
+    return 'The latest backend rename preview is available for inspection before execution.'
   }
   if (renameReviewErrors.value.length > 0) {
     return 'The backend reported an error. Details remain available here while you adjust inputs or retry.'
@@ -982,7 +1014,7 @@ const absReviewCopy = computed(() => {
 })
 const isRunActionDisabled = computed(() => {
   if (activeWorkflow.value === 'rename') {
-    return true
+    return !previewReady.value || renameRunStatus.value === 'loading'
   }
   if (activeWorkflow.value === 'abs') {
     return !absSetupReady.value
@@ -1193,6 +1225,9 @@ function reviewOrganizePreview() {
 async function createRenamePreview() {
   renamePreviewStatus.value = 'loading'
   renamePreviewError.value = ''
+  renameRun.value = null
+  renameRunStatus.value = 'idle'
+  renameRunError.value = ''
   previewReady.value = false
   let requestStarted = false
 
@@ -1207,7 +1242,7 @@ async function createRenamePreview() {
     requestStarted = true
     const response = normalizeRenameResponse(
       await apiPost<RenamePreviewResponse>('/api/rename/preview', {
-        config: buildRenameConfig(),
+        config: buildRenameConfig(true),
       }),
     )
     renamePreview.value = response
@@ -1234,7 +1269,7 @@ function reviewRenamePreview() {
     time: now(),
     level: 'info',
     event: 'Local review: Rename candidates accepted',
-    detail: 'Rename execution remains deferred until the backend supports it.',
+    detail: 'Run stage unlocked.',
   })
 }
 
@@ -1438,6 +1473,36 @@ async function runOrganize() {
   }
 }
 
+async function runRename() {
+  if (renamePreviewStatus.value !== 'success' || !previewReady.value || renameRunStatus.value === 'loading') {
+    return
+  }
+  if (!window.confirm('Run Rename will change files using the reviewed candidates. Continue?')) {
+    return
+  }
+
+  renameRunStatus.value = 'loading'
+  renameRunError.value = ''
+  let requestStarted = false
+  try {
+    addRequestStart('Rename run', 'POST /api/rename/run')
+    requestStarted = true
+    const response = normalizeRenameResponse(
+      await apiPost<RenameRunResponse>('/api/rename/run', {
+        config: buildRenameConfig(false),
+      }),
+    )
+    renameRun.value = response
+    renameRunStatus.value = 'success'
+    activeStage.value = 'review'
+    addRequestSuccess('Rename run', `${response.summary.FilesRenamed} file(s) renamed.`)
+  } catch (error) {
+    renameRunStatus.value = 'error'
+    renameRunError.value = error instanceof Error ? error.message : 'Rename run failed.'
+    addActionError('Rename run', renameRunError.value, requestStarted)
+  }
+}
+
 function buildOrganizerConfig(dryRun: boolean): OrganizerConfig {
   const defaults = organizerDefaults.value
   return {
@@ -1456,12 +1521,12 @@ function buildOrganizerConfig(dryRun: boolean): OrganizerConfig {
   }
 }
 
-function buildRenameConfig(): RenameConfig {
+function buildRenameConfig(dryRun: boolean): RenameConfig {
   const defaults = renameDefaults.value
   return {
     base_dir: sourceFolder.value.trim(),
     template: renameTemplate.value.trim(),
-    dry_run: true,
+    dry_run: dryRun,
     author_format: defaults?.author_format || 'first-last',
     recursive: renameRecursive.value,
     field_mapping: defaults?.field_mapping ?? defaultFieldMapping,
@@ -1521,8 +1586,11 @@ function resetOrganizeResults() {
 
 function resetRenameResults() {
   renamePreview.value = null
+  renameRun.value = null
   renamePreviewStatus.value = 'idle'
+  renameRunStatus.value = 'idle'
   renamePreviewError.value = ''
+  renameRunError.value = ''
 }
 
 function resetABSConnectionResults() {
@@ -1569,7 +1637,7 @@ function normalizeOrganizeResponse<T extends OrganizePreviewResponse | OrganizeR
   }
 }
 
-function normalizeRenameResponse(response: RenamePreviewResponse): RenamePreviewResponse {
+function normalizeRenameResponse<T extends RenamePreviewResponse | RenameRunResponse>(response: T): T {
   return {
     ...response,
     candidates: response.candidates ?? [],
