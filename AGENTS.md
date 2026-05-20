@@ -243,6 +243,7 @@ ABS feature validation:
 - For bug fixes, prefer first creating or identifying a failing check that demonstrates the problem, then make that check pass.
 - For refactors, verify behavior before and after when practical.
 - Match existing project style even when you would design it differently.
+- Add GoDoc comments for all exported Go functions.
 - Do not clean up unrelated dead code, comments, formatting, or adjacent abstractions. Mention unrelated issues instead.
 - Expect a dirty worktree. Do not revert unrelated changes.
 - Verify with the narrowest relevant repo-native command first, then widen if needed.
