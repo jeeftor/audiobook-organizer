@@ -15,10 +15,11 @@ Read `AGENTS.md` and `references/abo-assistant/common.md`.
 
 1. Identify the issue from the prompt, branch, PR body, or recent GitHub context.
 2. Inspect title, body, labels, state, assignees, comments, linked PRs, and references.
-3. Summarize acceptance criteria, current status, blockers, and next actions.
-4. If work is in progress, compare issue scope with the current branch diff.
-5. Add an issue comment only when the user asks or when repository workflow requires a meaningful update.
-6. Do not close the issue; route closeout through `$abo-issue-closeout`.
+3. Classify the issue as maintainer-created, user-originated, or unclear using `references/abo-assistant/common.md`; note whether external reporter confirmation or manual interaction is needed before closeout.
+4. Summarize acceptance criteria, current status, blockers, and next actions.
+5. If work is in progress, compare issue scope with the current branch diff.
+6. Add an issue comment only when the user asks or when repository workflow requires a meaningful update.
+7. Do not close the issue; route closeout through `$abo-issue-closeout`.
 
 ## Issue Comments
 

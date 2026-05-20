@@ -14,14 +14,16 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, and `references/abo-assi
 ## Workflow
 
 1. Identify the issue and read its body/comments.
-2. Extract acceptance criteria and any follow-up decisions recorded during implementation.
-3. Inspect the branch diff against `master`.
-4. Verify each criterion against code, tests, docs, and behavior.
-5. Check whether `CHANGELOG.md` is required and present.
-6. Check whether `test/abs/test-matrix.md` is required and present for ABS-facing changes.
-7. For user-facing workflow changes, verify that real E2E acceptance coverage exists and was run; classify mocked/stubbed UI or API tests as supplemental only.
-8. Run or confirm the narrowest relevant verification commands, widening when practical.
-9. Verify whether the work is only locally complete or fully closed out through a PR merge back into `master`.
-10. Report a checklist of pass/fail/blocked items and the exact remaining work.
+2. Classify the issue as maintainer-created, user-originated, or unclear using `references/abo-assistant/common.md`.
+3. Extract acceptance criteria and any follow-up decisions recorded during implementation.
+4. Inspect the branch diff against `master`.
+5. Verify each criterion against code, tests, docs, and behavior.
+6. Check whether `CHANGELOG.md` is required and present.
+7. Check whether `test/abs/test-matrix.md` is required and present for ABS-facing changes.
+8. For user-facing workflow changes, verify that real E2E acceptance coverage exists and was run; classify mocked/stubbed UI or API tests as supplemental only.
+9. For user-originated or unclear issues, determine whether repo-native verification fully proves the fix. If reporter confirmation or manual interaction is needed, mark closeout blocked until confirmation, maintainer approval, or documented obsolescence/duplication.
+10. Run or confirm the narrowest relevant verification commands, widening when practical.
+11. Verify whether the work is only locally complete or fully closed out through a PR merge back into `master`.
+12. Report a checklist of pass/fail/blocked items and the exact remaining work.
 
 Do not mark the issue done just because tests pass. Tie completion back to acceptance criteria and repo workflow obligations.

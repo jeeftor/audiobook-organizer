@@ -22,6 +22,16 @@ Use this shared reference for Audiobook Organizer repo-local skills.
 - Do not treat a local commit or draft PR as done. Finish the cycle by getting the PR ready, passing required checks, enabling or completing merge back into `master`, confirming the linked issue closed, and cleaning up the branch or worktree.
 - After tracked work is complete, suggest the next useful work item before ending the final response. Base the suggestion on current open issues, parent/child dependencies, recently completed workflow chains, and any follow-up issues created during the work. Do not start the next task unless the user asks.
 
+## Issue Origin
+
+Classify issue origin before verification and closeout:
+
+- **Maintainer-created issue**: opened by the repository maintainer or created by the agent on behalf of the maintainer in the current workflow. These may close automatically through a resolving PR when acceptance criteria, checks, docs, changelog, and branch hygiene are satisfied.
+- **User-originated issue**: opened by an external reporter, or materially updated by an external reporter with reproduction details, acceptance expectations, or manual validation needs. These need a documented reporter-confirmation path before closeout when the fix cannot be fully validated by repo-native automated or real E2E checks.
+- **Unclear origin**: if the author/context is ambiguous, treat it as user-originated for closeout and ask for maintainer guidance before closing.
+
+For user-originated issues that need reporter confirmation or manual interaction, do not auto-close solely because a PR merged. Leave a comment with the verification performed, the expected reporter validation, and the next action. Close only after reporter confirmation, maintainer approval to close without it, or a documented reason the report is obsolete or duplicate.
+
 ## Next Work Recommendation
 
 When a feature, fix, docs, test, or chore issue is finished through PR merge or explicit issue closeout:
