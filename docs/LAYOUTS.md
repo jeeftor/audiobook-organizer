@@ -20,6 +20,15 @@ Directory layouts control how audiobooks are organized into folder hierarchies. 
 
 ## Available Layouts
 
+| Layout | Folder pattern | Best fit |
+| --- | --- | --- |
+| `author-series-title` | `Author/Series/Title/` | Large libraries with many series |
+| `author-series-title-number` | `Author/Series/#N - Title/` | Series where reading order matters |
+| `author-series` | `Author/Series/` | Single-file books grouped by series |
+| `author-title` | `Author/Title/` | Standalones or mixed libraries without reliable series data |
+| `author-only` | `Author/` | Flat, single-file libraries with descriptive filenames |
+| `series-title` | `Series/Title/` | Series-first browsing |
+
 ### 1. `author-series-title` (Default)
 
 **Full hierarchy with all three levels.**
@@ -34,17 +43,18 @@ Author/
 
 **Example:**
 ```
-Brandon Sanderson/
-  Mistborn/
-    The Final Empire/
+L. Frank Baum/
+  Oz/
+    The Wonderful Wizard of Oz/
       chapter01.mp3
       chapter02.mp3
       metadata.json
-    The Well of Ascension/
+    The Marvelous Land of Oz/
       audiobook.m4b
       metadata.json
-  Stormlight Archive/
-    The Way of Kings/
+Arthur Conan Doyle/
+  Sherlock Holmes/
+    A Study in Scarlet/
       disc1-track01.mp3
       disc1-track02.mp3
 ```
@@ -65,7 +75,7 @@ Brandon Sanderson/
 - May be overkill for small libraries
 
 **Use when:**
-- You have authors with multiple series (e.g., Brandon Sanderson, Stephen King)
+- You have authors with multiple series (for example, L. Frank Baum or Arthur Conan Doyle)
 - Your audiobook player supports deep folder navigation
 - You prefer maximum organization
 
@@ -92,15 +102,15 @@ Template fields use the same renderer as rename templates. Both `{field}` and `$
 
 | Field | Example value |
 | --- | --- |
-| `{author}` | `N. K. Jemisin` |
-| `{title}` | `The Obelisk Gate` |
-| `{series}` | `The Broken Earth` |
-| `{series_full}` | `The Broken Earth #2` |
-| `{series_number}` or `{series-count}` | `2` |
-| `{album}` | `The Broken Earth` |
+| `{author}` | `L. Frank Baum` |
+| `{title}` | `Ozma of Oz` |
+| `{series}` | `Oz` |
+| `{series_full}` | `Oz #3` |
+| `{series_number}` or `{series-count}` | `3` |
+| `{album}` | `Oz` |
 | `{track}` | `01` |
-| `{narrator}` or `{narrators}` | `Robin Miles` |
-| `{year}` | `2016` |
+| `{narrator}` or `{narrators}` | `Volunteer Reader` |
+| `{year}` | `1907` |
 
 Templates can also reference raw metadata keys. Dashes are normalized to underscores, so `{publisher-name}` can read a raw `publisher_name` field.
 
@@ -122,18 +132,19 @@ Author/
 
 **Example:**
 ```
-Brandon Sanderson/
-  Mistborn/
-    #1 - The Final Empire/
+L. Frank Baum/
+  Oz/
+    #1 - The Wonderful Wizard of Oz/
       chapter01.mp3
-    #2 - The Well of Ascension/
+    #2 - The Marvelous Land of Oz/
       audiobook.m4b
-    #3 - The Hero of Ages/
+    #3 - Ozma of Oz/
       audiobook.m4b
-  Stormlight Archive/
-    #1 - The Way of Kings/
+Arthur Conan Doyle/
+  Sherlock Holmes/
+    #1 - A Study in Scarlet/
       disc1.mp3
-    #2 - Words of Radiance/
+    #2 - The Sign of the Four/
       disc1.mp3
 ```
 
@@ -171,16 +182,17 @@ Author/
 
 **Example:**
 ```
-Brandon Sanderson/
-  Mistborn/
-    01 - The Final Empire.m4b
-    02 - The Well of Ascension.m4b
-    03 - The Hero of Ages.m4b
+L. Frank Baum/
+  Oz/
+    01 - The Wonderful Wizard of Oz.m4b
+    02 - The Marvelous Land of Oz.m4b
+    03 - Ozma of Oz.m4b
     metadata.json
-  Stormlight Archive/
-    01 - The Way of Kings - disc1.mp3
-    01 - The Way of Kings - disc2.mp3
-    02 - Words of Radiance.m4b
+Arthur Conan Doyle/
+  Sherlock Holmes/
+    01 - A Study in Scarlet - disc1.mp3
+    01 - A Study in Scarlet - disc2.mp3
+    02 - The Sign of the Four.m4b
 ```
 
 **Best for:**
@@ -218,18 +230,18 @@ Author/
 
 **Example:**
 ```
-Brandon Sanderson/
-  The Final Empire/
+L. Frank Baum/
+  The Wonderful Wizard of Oz/
     chapter01.mp3
     chapter02.mp3
-  The Way of Kings/
+  The Marvelous Land of Oz/
     audiobook.m4b
-  Elantris/
+  American Fairy Tales/
     audiobook.m4b
-Stephen King/
-  The Shining/
+Jane Austen/
+  Pride and Prejudice/
     audiobook.m4b
-  It/
+  Sense and Sensibility/
     part1.mp3
     part2.mp3
 ```
@@ -270,15 +282,14 @@ Author/
 
 **Example:**
 ```
-Brandon Sanderson/
-  Mistborn 01 - The Final Empire.m4b
-  Mistborn 02 - The Well of Ascension.m4b
-  Stormlight 01 - The Way of Kings.m4b
-  Elantris.m4b
-Stephen King/
-  The Shining.m4b
-  It - Part 1.mp3
-  It - Part 2.mp3
+L. Frank Baum/
+  Oz 01 - The Wonderful Wizard of Oz.m4b
+  Oz 02 - The Marvelous Land of Oz.m4b
+  American Fairy Tales.m4b
+Jane Austen/
+  Pride and Prejudice.m4b
+  Sense and Sensibility - Part 1.mp3
+  Sense and Sensibility - Part 2.mp3
 ```
 
 **Best for:**
@@ -321,16 +332,16 @@ Series/
 
 **Example:**
 ```
-Mistborn/
-  The Final Empire/
+Oz/
+  The Wonderful Wizard of Oz/
     chapter01.mp3
     chapter02.mp3
-  The Well of Ascension/
+  The Marvelous Land of Oz/
     audiobook.m4b
-Stormlight Archive/
-  The Way of Kings/
+Sherlock Holmes/
+  A Study in Scarlet/
     audiobook.m4b
-  Words of Radiance/
+  The Sign of the Four/
     audiobook.m4b
 ```
 
@@ -365,22 +376,12 @@ Stormlight Archive/
 
 **Start here: How is your library organized?**
 
-1. **By series importance:**
-   - Series are critical → `author-series-title` or `author-series-title-number`
-   - Series not important → `author-title` or `author-only`
-
-2. **By file structure:**
-   - Multi-file books → Avoid `author-only`, prefer `author-series-title` or `author-title`
-   - Single-file books → Any layout works, `author-only` or `author-series` for simplicity
-
-3. **By depth preference:**
-   - Prefer deep organization → `author-series-title`
-   - Prefer shallow organization → `author-only`
-   - Balanced → `author-title`
-
-4. **By primary browse method:**
-   - Browse by author → Avoid `series-title`
-   - Browse by series → Consider `series-title` or `author-series-title`
+| Question | If yes | If no |
+| --- | --- | --- |
+| Are series critical to browsing? | Use `author-series-title` or `author-series-title-number`. | Use `author-title` or `author-only`. |
+| Do you organize multi-file books? | Avoid `author-only`; prefer `author-series-title` or `author-title`. | Any layout works; `author-only` or `author-series` keeps nesting low. |
+| Do you prefer deep organization? | Use `author-series-title`. | Use `author-title` for balance or `author-only` for the flattest structure. |
+| Do you browse primarily by series? | Consider `series-title` or `author-series-title`. | Avoid `series-title`; keep author folders. |
 
 ### Quick Recommendations
 
@@ -414,11 +415,11 @@ author-series-title → Author/Series/
 **Example:**
 ```bash
 # Without flag
-Brandon Sanderson/Mistborn/The Final Empire/
+L. Frank Baum/Oz/The Wonderful Wizard of Oz/
 
 # With flag
 audiobook-organizer --layout=author-series-title --use-series-as-title
-Brandon Sanderson/Mistborn/
+L. Frank Baum/Oz/
 ```
 
 **Use cases:**
@@ -428,52 +429,54 @@ Brandon Sanderson/Mistborn/
 
 ---
 
-## Layout Examples with Real Audiobooks
+## Layout Examples with Public-Domain Audiobooks
 
-### Example 1: Fantasy Series Collection
+### Example 1: Classic Series Collection
 
 **Source structure:**
 ```
 /downloads/
-  Mistborn_The_Final_Empire.m4b
-  Mistborn_The_Well_of_Ascension.m4b
-  Mistborn_The_Hero_of_Ages.m4b
-  The_Way_of_Kings.m4b
-  Words_of_Radiance.m4b
+  Oz_The_Wonderful_Wizard_of_Oz.m4b
+  Oz_The_Marvelous_Land_of_Oz.m4b
+  Oz_Ozma_of_Oz.m4b
+  A_Study_in_Scarlet.m4b
+  The_Sign_of_the_Four.m4b
 ```
 
 **After organizing with `author-series-title`:**
 ```
 /organized/
-  Brandon Sanderson/
-    Mistborn/
-      The Final Empire/
-        Mistborn_The_Final_Empire.m4b
-      The Well of Ascension/
-        Mistborn_The_Well_of_Ascension.m4b
-      The Hero of Ages/
-        Mistborn_The_Hero_of_Ages.m4b
-    Stormlight Archive/
-      The Way of Kings/
-        The_Way_of_Kings.m4b
-      Words of Radiance/
-        Words_of_Radiance.m4b
+  L. Frank Baum/
+    Oz/
+      The Wonderful Wizard of Oz/
+        Oz_The_Wonderful_Wizard_of_Oz.m4b
+      The Marvelous Land of Oz/
+        Oz_The_Marvelous_Land_of_Oz.m4b
+      Ozma of Oz/
+        Oz_Ozma_of_Oz.m4b
+  Arthur Conan Doyle/
+    Sherlock Holmes/
+      A Study in Scarlet/
+        A_Study_in_Scarlet.m4b
+      The Sign of the Four/
+        The_Sign_of_the_Four.m4b
 ```
 
 **After organizing with `author-title`:**
 ```
 /organized/
-  Brandon Sanderson/
-    The Final Empire/
-      Mistborn_The_Final_Empire.m4b
-    The Well of Ascension/
-      Mistborn_The_Well_of_Ascension.m4b
-    The Hero of Ages/
-      Mistborn_The_Hero_of_Ages.m4b
-    The Way of Kings/
-      The_Way_of_Kings.m4b
-    Words of Radiance/
-      Words_of_Radiance.m4b
+  L. Frank Baum/
+    The Wonderful Wizard of Oz/
+      Oz_The_Wonderful_Wizard_of_Oz.m4b
+    The Marvelous Land of Oz/
+      Oz_The_Marvelous_Land_of_Oz.m4b
+    Ozma of Oz/
+      Oz_Ozma_of_Oz.m4b
+  Arthur Conan Doyle/
+    A Study in Scarlet/
+      A_Study_in_Scarlet.m4b
+    The Sign of the Four/
+      The_Sign_of_the_Four.m4b
 ```
 
 ### Example 2: Mixed Collection (Series + Standalones)
@@ -481,50 +484,50 @@ Brandon Sanderson/Mistborn/
 **Source structure:**
 ```
 /audiobooks/
-  Harry Potter 1/
+  Anne of Green Gables/
     chapter01.mp3
     chapter02.mp3
-  Harry Potter 2/
+  Anne of Avonlea/
     chapter01.mp3
-  Enders_Game.m4b
-  Ready_Player_One.m4b
+  Frankenstein.m4b
+  Dracula.m4b
 ```
 
 **After organizing with `author-series-title`:**
 ```
 /organized/
-  J.K. Rowling/
-    Harry Potter/
-      Harry Potter and the Philosopher's Stone/
+  L. M. Montgomery/
+    Anne of Green Gables/
+      Anne of Green Gables/
         chapter01.mp3
         chapter02.mp3
-      Harry Potter and the Chamber of Secrets/
+      Anne of Avonlea/
         chapter01.mp3
-  Orson Scott Card/
+  Mary Shelley/
     __STANDALONE__/
-      Ender's Game/
-        Enders_Game.m4b
-  Ernest Cline/
+      Frankenstein/
+        Frankenstein.m4b
+  Bram Stoker/
     __STANDALONE__/
-      Ready Player One/
-        Ready_Player_One.m4b
+      Dracula/
+        Dracula.m4b
 ```
 
 **After organizing with `author-title`:**
 ```
 /organized/
-  J.K. Rowling/
-    Harry Potter and the Philosopher's Stone/
+  L. M. Montgomery/
+    Anne of Green Gables/
       chapter01.mp3
       chapter02.mp3
-    Harry Potter and the Chamber of Secrets/
+    Anne of Avonlea/
       chapter01.mp3
-  Orson Scott Card/
-    Ender's Game/
-      Enders_Game.m4b
-  Ernest Cline/
-    Ready Player One/
-      Ready_Player_One.m4b
+  Mary Shelley/
+    Frankenstein/
+      Frankenstein.m4b
+  Bram Stoker/
+    Dracula/
+      Dracula.m4b
 ```
 
 ---

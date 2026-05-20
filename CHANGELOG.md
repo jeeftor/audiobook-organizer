@@ -62,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wired local web UI Audiobookshelf operation controls to load item metadata, inspect missing/invalid library state, trigger scans, and clean missing items behind destructive-action gating.
 - Made the local web UI responsive on narrow browser widths, keeping workflow controls, details, and activity visible without document-level horizontal overflow.
 - Added local web UI folder picker and drag-and-drop affordances for source and output path fields, with clear fallback messaging when the browser cannot expose a local path.
+- Updated the layout guide and docs workflow to use public-domain book examples and added more table-based layout guidance.
 
 ---
 
