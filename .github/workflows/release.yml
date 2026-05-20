@@ -157,14 +157,16 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Run GoReleaser to create archives and release (skip build since we have pre-built binaries)
+      # Run GoReleaser to create archives, packages, checksums, and the GitHub release.
+      # The platform build jobs above validate each target first; this final job
+      # performs the publishing release build from the tag commit.
       - name: GoReleaser
         uses: goreleaser/goreleaser-action@v7
         timeout-minutes: 10
         with:
           distribution: goreleaser
           version: latest
-          args: continue --merge
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
 
