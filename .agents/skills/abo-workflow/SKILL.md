@@ -20,6 +20,18 @@ When the user asks to start, pick, or work through repository issues but does no
 
 If they choose existing issues, inspect open issues first and help pick one before creating a branch or worktree. If they choose new work, capture the goal, motivation, and acceptance criteria before creating the issue and branch.
 
+## Closeout Approval Mode
+
+At the start of tracked feature, fix, docs, chore, or test work, ask the user which closeout mode they want for that issue:
+
+- **Autonomous closeout**: after implementation and verification, the agent may post issue updates, draft PR body files, push the issue branch, open the PR, and enable auto-merge when checks are green.
+- **Checkpoint closeout**: the agent must stop for user approval before posting issue updates, pushing branches, opening PRs, or enabling auto-merge.
+- **Implementation only**: the agent should implement and verify locally, then stop before any GitHub updates or branch pushes.
+
+Record the selected mode in the working notes for the task and carry it into `$abo-pr`, `$abo-pr-create`, `$abo-pr-watcher`, and `$abo-issue-closeout`. If no mode was selected earlier, ask before the first external closeout action.
+
+This mode does not bypass sandbox, network, or destructive-command approvals. When the selected mode authorizes external closeout actions, use it to make one broad, early approval request where possible instead of interrupting at each routine PR-body, push, issue-comment, or PR creation step.
+
 ## Route
 
 - New tracked work or branch setup: `$abo-issue-create`.
