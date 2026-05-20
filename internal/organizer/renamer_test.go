@@ -205,6 +205,96 @@ func TestRenamer_GenerateNewFilename(t *testing.T) {
 	}
 }
 
+func TestRenamer_GenerateNewPathTemplateCompatibility(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	tests := []struct {
+		name         string
+		template     string
+		metadata     Metadata
+		originalPath string
+		replaceSpace string
+		wantFilename string
+	}{
+		{
+			name:     "dollar brace syntax with series count and narrators",
+			template: "${author} - ${series-count} - ${title} (${narrators})",
+			metadata: Metadata{
+				Title:   "Template Book",
+				Authors: []string{"Template Author"},
+				Series:  []string{"Template Series #7"},
+				RawData: map[string]interface{}{
+					"narrators": []interface{}{"Narrator One", "Narrator Two"},
+				},
+			},
+			originalPath: filepath.Join(tmpDir, "original.mp3"),
+			wantFilename: "Template Author - 7 - Template Book (Narrator One, Narrator Two).mp3",
+		},
+		{
+			name:     "missing optional fields use fallback values",
+			template: "{author} - {series|Standalone} - {title} ({narrator|Unknown Narrator})",
+			metadata: Metadata{
+				Title:   "Standalone Book",
+				Authors: []string{"Standalone Author"},
+				RawData: map[string]interface{}{},
+			},
+			originalPath: filepath.Join(tmpDir, "original.m4b"),
+			wantFilename: "Standalone Author - Standalone - Standalone Book (Unknown Narrator).m4b",
+		},
+		{
+			name:     "path separators render as safe filename characters",
+			template: "{author}/{title}",
+			metadata: Metadata{
+				Title:   "Nested Title",
+				Authors: []string{"Nested Author"},
+			},
+			originalPath: filepath.Join(tmpDir, "original.mp3"),
+			wantFilename: "Nested Author_Nested Title.mp3",
+		},
+		{
+			name:     "raw field aliases and space replacement are applied",
+			template: "{publisher-name} - {title}",
+			metadata: Metadata{
+				Title:   "Raw Alias Book",
+				Authors: []string{"Raw Author"},
+				RawData: map[string]interface{}{
+					"publisher_name": "Raw Publisher",
+				},
+			},
+			originalPath: filepath.Join(tmpDir, "original.mp3"),
+			replaceSpace: "_",
+			wantFilename: "Raw_Publisher_-_Raw_Alias_Book.mp3",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			renamer, err := NewRenamer(&RenamerConfig{
+				BaseDir:      tmpDir,
+				Template:     tt.template,
+				AuthorFormat: AuthorFormatFirstLast,
+				PreservePath: true,
+				ReplaceSpace: tt.replaceSpace,
+			})
+			if err != nil {
+				t.Fatalf("NewRenamer() error: %v", err)
+			}
+
+			newPath, err := renamer.GenerateNewPath(tt.originalPath, tt.metadata)
+			if err != nil {
+				t.Fatalf("GenerateNewPath() error: %v", err)
+			}
+
+			if got := filepath.Base(newPath); got != tt.wantFilename {
+				t.Fatalf("GenerateNewPath() filename = %q, want %q", got, tt.wantFilename)
+			}
+			if gotDir := filepath.Dir(newPath); gotDir != tmpDir {
+				t.Fatalf("GenerateNewPath() dir = %q, want %q", gotDir, tmpDir)
+			}
+		})
+	}
+}
+
 func TestRenamer_Execute_DryRun(t *testing.T) {
 	tmpDir := t.TempDir()
 
