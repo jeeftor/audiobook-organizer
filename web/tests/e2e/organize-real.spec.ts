@@ -21,13 +21,7 @@ test('runs organize preview and execution against real filesystem fixtures', asy
 
   const fixture = await createOrganizeFixture()
   try {
-    const organizeRequests: string[] = []
-    page.on('request', (request) => {
-      const url = new URL(request.url())
-      if (url.pathname.startsWith('/api/organize/')) {
-        organizeRequests.push(url.pathname)
-      }
-    })
+    const organizeRequests = collectOrganizeRequests(page)
 
     await loadApp(page)
     await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
@@ -50,6 +44,16 @@ test('runs organize preview and execution against real filesystem fixtures', asy
     await page.getByRole('button', { name: 'Review Preview & Continue' }).click()
     await expect(page.getByRole('heading', { name: 'Execute the reviewed plan' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Run Organize' })).toBeEnabled()
+
+    page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toContain('Run Organize will change files')
+      await dialog.dismiss()
+    })
+    await page.getByRole('button', { name: 'Run Organize' }).click()
+    await expect(page.getByRole('heading', { name: 'Execute the reviewed plan' })).toBeVisible()
+    await expect.poll(() => pathExists(fixture.expectedFile)).toBe(false)
+    await expect(page.locator('.event-row').filter({ hasText: 'Request started: Organize run' })).toHaveCount(0)
+    expect(organizeRequests).not.toContain('/api/organize/run')
 
     page.once('dialog', async (dialog) => {
       expect(dialog.message()).toContain('Run Organize will change files')
@@ -181,7 +185,17 @@ test('reports real backend path validation errors for organize preview', async (
 
     await expect(page.locator('.inline-alert').filter({ hasText: 'error resolving output directory path' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
-    expect(organizeRequests.filter((path) => path === '/api/organize/preview')).toHaveLength(2)
+
+    await page.getByRole('button', { name: 'Configure & Scan Choose workflow inputs' }).click()
+    await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
+    await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
+    await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
+    await expect(page.locator('.inline-alert')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
+    await expect.poll(() => pathExists(fixture.expectedFile)).toBe(false)
+    expect(organizeRequests.filter((path) => path === '/api/organize/preview')).toHaveLength(3)
   } finally {
     await fixture.cleanup()
   }
@@ -208,6 +222,7 @@ type NumberedLayoutFixture = OrganizeFixture & {
 type PathErrorFixture = {
   sourceDir: string
   outputDir: string
+  expectedFile: string
   missingSourceDir: string
   missingOutputDir: string
   cleanup: () => Promise<void>
@@ -328,6 +343,7 @@ async function createPathErrorFixture(): Promise<PathErrorFixture> {
   return {
     sourceDir,
     outputDir,
+    expectedFile: join(outputDir, 'Valid Author', 'Valid Book', 'audio.mp3'),
     missingSourceDir: join(root, 'missing-source'),
     missingOutputDir: join(root, 'missing-output'),
     cleanup: () => rm(root, { recursive: true, force: true }),
