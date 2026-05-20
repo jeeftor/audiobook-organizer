@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { access, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { startTestServer, type TestServer } from './server'
@@ -14,7 +14,7 @@ test.afterAll(async () => {
   await server?.stop()
 })
 
-test('creates real rename preview candidates while execution stays deferred', async ({ page }) => {
+test('previews and executes real rename candidates through the web UI', async ({ page }) => {
   test.setTimeout(60_000)
 
   const fixture = await createRenameFixture()
@@ -48,16 +48,31 @@ test('creates real rename preview candidates while execution stays deferred', as
     await expect(page.locator('.move-list em').filter({ hasText: 'Skipped: unchanged' })).toBeVisible()
     await expect(page.locator('.warning-list li').filter({ hasText: /Failed to extract metadata/ })).toBeVisible()
     expect(renameRequests).toContain('/api/rename/preview')
+    await expectPathExists(fixture.firstOriginalPath)
+    await expectPathExists(fixture.conflictOriginalPath)
+    await expectPathMissing(fixture.firstProposedPath)
+    await expectPathMissing(fixture.conflictProposedPath)
 
     await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
     await page.getByRole('button', { name: 'Review Candidates & Continue' }).click()
-    await expect(page.getByRole('heading', { name: 'Rename Execution Deferred' })).toBeVisible()
-    await expect(page.getByText(/Rename execution is deferred/)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Rename Execution Deferred' })).toBeDisabled()
-    await page.getByRole('button', { name: 'Review Inspect backend results' }).click()
-    await expect(page.getByRole('heading', { name: 'Rename Preview Results' })).toBeVisible()
-    await expect(page.locator('.review-layout .result-grid')).toContainText('Files scanned')
-    await expect(page.locator('.review-layout .result-grid')).toContainText('4')
+    await expect(page.getByRole('heading', { name: 'Execute the reviewed plan' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Run Rename' })).toBeEnabled()
+
+    page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toContain('Run Rename will change files')
+      await dialog.accept()
+    })
+    await page.getByRole('button', { name: 'Run Rename' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Rename Run Complete' })).toBeVisible()
+    await expectReviewSummaryValue(page, 'Job status', 'Complete')
+    await expectReviewSummaryValue(page, 'Files scanned', '4')
+    await expectReviewSummaryValue(page, 'Files renamed', '2')
+    await expectReviewSummaryValue(page, 'Conflicts', '1')
+    await expectReviewSummaryValue(page, 'Skipped', '2')
+    await expectReviewSummaryValue(page, 'Errors', '1')
+    await expectReviewSummaryValue(page, 'Undo log', fixture.logPath)
+    await expect(page.locator('.review-layout .recovery-note')).toContainText(fixture.logPath)
     await expect(page.locator('.review-layout .warning-list').getByText(/Conflict:/)).toBeVisible()
     await expect(
       page.locator('.review-layout .error-list li').filter({ hasText: /Failed to extract metadata/ }).first(),
@@ -65,7 +80,18 @@ test('creates real rename preview candidates while execution stays deferred', as
     await expect(page.locator('.event-row').filter({ hasText: 'Request started: Rename preview' })).toHaveCount(1)
     await expect(page.locator('.event-row').filter({ hasText: 'Request succeeded: Rename preview' })).toHaveCount(1)
     await expect(page.locator('.event-row').filter({ hasText: 'Local review: Rename candidates accepted' })).toHaveCount(1)
-    expect(renameRequests).not.toContain('/api/rename/run')
+    await expect(page.locator('.event-row').filter({ hasText: 'Request started: Rename run' })).toHaveCount(1)
+    await expect(page.locator('.event-row').filter({ hasText: 'Request succeeded: Rename run' })).toHaveCount(1)
+    expect(renameRequests).toContain('/api/rename/run')
+    await expectPathMissing(fixture.firstOriginalPath)
+    await expectPathMissing(fixture.conflictOriginalPath)
+    await expectPathExists(fixture.firstProposedPath)
+    await expectPathExists(fixture.conflictProposedPath)
+    await expectPathExists(fixture.noopPath)
+    await expectPathExists(fixture.brokenPath)
+    const log = await readFile(fixture.logPath, 'utf8')
+    expect(log).toContain(fixture.firstOriginalPath)
+    expect(log).toContain(fixture.conflictProposedPath)
   } finally {
     await fixture.cleanup()
   }
@@ -73,8 +99,13 @@ test('creates real rename preview candidates while execution stays deferred', as
 
 type RenameFixture = {
   sourceDir: string
+  firstOriginalPath: string
+  conflictOriginalPath: string
   firstProposedPath: string
   conflictProposedPath: string
+  noopPath: string
+  brokenPath: string
+  logPath: string
   cleanup: () => Promise<void>
 }
 
@@ -83,6 +114,8 @@ async function createRenameFixture(): Promise<RenameFixture> {
   const sourceAudio = join(repoRoot(), 'testdata', 'mp3flat', 'charlesdexterward_01_lovecraft_64kb.mp3')
   const conflictADir = join(root, '01-conflict-a')
   const conflictBDir = join(root, '02-conflict-b')
+  const noopDir = join(root, '03-noop')
+  const brokenDir = join(root, '04-broken')
 
   await createRenameBook(root, '01-conflict-a', 'original-a.mp3', sourceAudio, {
     title: 'Conflict Book',
@@ -99,14 +132,18 @@ async function createRenameFixture(): Promise<RenameFixture> {
     authors: ['Noop Author'],
   })
 
-  const brokenDir = join(root, '04-broken')
   await mkdir(brokenDir, { recursive: true })
   await writeFile(join(brokenDir, 'broken.mp3'), 'not audio')
 
   return {
     sourceDir: root,
+    firstOriginalPath: join(conflictADir, 'original-a.mp3'),
+    conflictOriginalPath: join(conflictBDir, 'original-b.mp3'),
     firstProposedPath: join(conflictADir, 'Conflict Author - Conflict Book.mp3'),
     conflictProposedPath: join(conflictBDir, 'Conflict Author - Conflict Book (2).mp3'),
+    noopPath: join(noopDir, 'Noop Author - Noop Book.mp3'),
+    brokenPath: join(brokenDir, 'broken.mp3'),
+    logPath: join(root, '.abook-rename.log'),
     cleanup: () => rm(root, { recursive: true, force: true }),
   }
 }
@@ -148,4 +185,25 @@ async function expectSummaryValue(page: Page, label: string, value: string): Pro
       `.result-grid.compact >> xpath=./span[normalize-space(.)="${label}"]/following-sibling::strong[1]`,
     ),
   ).toHaveText(value)
+}
+
+async function expectReviewSummaryValue(page: Page, label: string, value: string): Promise<void> {
+  await expect(
+    page.locator(`.review-layout .result-grid >> xpath=./span[normalize-space(.)="${label}"]/following-sibling::strong[1]`),
+  ).toHaveText(value)
+}
+
+async function expectPathExists(path: string): Promise<void> {
+  expect(await pathExists(path)).toBe(true)
+}
+
+async function expectPathMissing(path: string): Promise<void> {
+  expect(await pathExists(path)).toBe(false)
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  return access(path).then(
+    () => true,
+    () => false,
+  )
 }
