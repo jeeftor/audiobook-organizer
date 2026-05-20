@@ -75,6 +75,12 @@ Brandon Sanderson/
 
 Use `--layout-template` when the fixed layout names do not describe the folder structure you want. A custom template overrides `--layout`.
 
+For an in-terminal reference of fields, fallback syntax, examples, and path safety rules, run:
+
+```bash
+audiobook-organizer layout-template
+```
+
 ```bash
 audiobook-organizer \
   --dir=/books \
@@ -89,9 +95,14 @@ Template fields use the same renderer as rename templates. Both `{field}` and `$
 | `{author}` | `N. K. Jemisin` |
 | `{title}` | `The Obelisk Gate` |
 | `{series}` | `The Broken Earth` |
+| `{series_full}` | `The Broken Earth #2` |
 | `{series_number}` or `{series-count}` | `2` |
+| `{album}` | `The Broken Earth` |
+| `{track}` | `01` |
 | `{narrator}` or `{narrators}` | `Robin Miles` |
 | `{year}` | `2016` |
+
+Templates can also reference raw metadata keys. Dashes are normalized to underscores, so `{publisher-name}` can read a raw `publisher_name` field.
 
 Each path segment is rendered and sanitized independently, so slashes or other unsafe characters in metadata values cannot create extra directories. Absolute templates and `.` or `..` path segments are rejected.
 

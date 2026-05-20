@@ -206,7 +206,7 @@ func Execute() error {
 
 func shouldPrintStartupBanner(args []string) bool {
 	for _, arg := range args {
-		if arg == "metadata" {
+		if arg == "metadata" || arg == "layout-template" {
 			return false
 		}
 	}
@@ -278,7 +278,7 @@ func init() {
 	rootCmd.Flags().
 		StringVarP(&layout, "layout", "l", "author-series-title", "Directory structure layout:\n  - author-series-title:        Author/Series/Title/ (default)\n  - author-series-title-number: Author/Series/#1 - Title/ (include series number in title)\n  - author-title:               Author/Title/ (ignore series)\n  - author-only:                Author/ (flatten all books)")
 	rootCmd.Flags().
-		StringVar(&layoutTemplate, "layout-template", "", "Custom directory layout template overriding --layout (e.g. \"{author}/{series}/{series-count} - {title}\")")
+		StringVar(&layoutTemplate, "layout-template", "", "Custom directory layout template overriding --layout; see \"audiobook-organizer layout-template\"")
 
 	// Field mapping flags (persistent for all commands)
 	rootCmd.PersistentFlags().
