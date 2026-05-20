@@ -17,6 +17,7 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, `references/abo-assistan
 - Do not create PRs from branches without an appropriate work-type prefix: `feature/`, `fix/`, `docs/`, or `chore/`.
 - Do not include unrelated dirty worktree changes.
 - Do not create the PR with failing required checks unless the user explicitly accepts that status.
+- Honor the closeout approval mode selected during `$abo-workflow`. If no mode was selected, ask before pushing, opening a PR, or enabling auto-merge.
 
 ## Workflow
 
@@ -28,9 +29,10 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, `references/abo-assistan
 6. Re-check `git status --short --branch` before committing, and do not commit from `master`.
 7. Commit with a concise message tied to the issue.
 8. Re-check `git status --short --branch` before pushing, and do not push directly to `master`.
-9. Push the branch and set upstream.
-10. Create a PR with `gh pr create --base master --head <branch> --body-file <file>`.
-11. Verify the PR URL, target branch, and initial check/review state before reporting success.
-12. If the PR is intentionally ready for merge, do not leave it as a draft. Protected `master` requires passing checks before merge; enable auto-merge when the PR is otherwise ready.
+9. If closeout approval was not already granted, ask before external closeout actions.
+10. Push the branch and set upstream.
+11. Create a PR with `gh pr create --base master --head <branch> --body-file <file>`.
+12. Verify the PR URL, target branch, and initial check/review state before reporting success.
+13. If the PR is intentionally ready for merge, do not leave it as a draft. Protected `master` requires passing checks before merge; enable auto-merge when the PR is otherwise ready and the selected closeout approval mode allows it.
 
 End with the PR URL, tests run, and any checks still pending.
