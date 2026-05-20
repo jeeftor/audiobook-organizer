@@ -363,6 +363,74 @@ func TestCopyAndDeleteFile(t *testing.T) {
 	}
 }
 
+func TestCustomLayoutTemplateSingleFileTargetPath(t *testing.T) {
+	tempDir := t.TempDir()
+	outputDir := filepath.Join(tempDir, "output")
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		t.Fatalf("Failed to create output directory: %v", err)
+	}
+
+	config := OrganizerConfig{
+		BaseDir:        tempDir,
+		OutputDir:      outputDir,
+		LayoutTemplate: "{author}/{series|Standalone}/{series-count} - {title} ({narrator})",
+		FieldMapping:   DefaultFieldMapping(),
+	}
+	org, err := NewOrganizer(&config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
+
+	metadata := Metadata{
+		Title:       "Single File Book",
+		Authors:     []string{"Template Author"},
+		Series:      []string{"Template Series"},
+		TrackNumber: 3,
+		RawData: map[string]interface{}{
+			"narrator":     "Template Narrator",
+			"series_index": 2.0,
+		},
+	}
+	filePath := filepath.Join(tempDir, "source", "chapter.mp3")
+
+	targetPath, err := org.calculateSingleFileTargetPathE(filePath, metadata)
+	if err != nil {
+		t.Fatalf("calculateSingleFileTargetPathE() error = %v", err)
+	}
+
+	expected := filepath.Join(
+		outputDir,
+		"Template Author",
+		"Template Series",
+		"2 - Single File Book (Template Narrator)",
+		"03 - chapter.mp3",
+	)
+	if targetPath != expected {
+		t.Fatalf("calculateSingleFileTargetPathE() = %q, want %q", targetPath, expected)
+	}
+}
+
+func TestCustomLayoutTemplateSingleFileRejectsTraversalSegment(t *testing.T) {
+	tempDir := t.TempDir()
+	config := OrganizerConfig{
+		BaseDir:        tempDir,
+		LayoutTemplate: "{author}/../{title}",
+		FieldMapping:   DefaultFieldMapping(),
+	}
+	org, err := NewOrganizer(&config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
+
+	_, err = org.calculateSingleFileTargetPathE(filepath.Join(tempDir, "book.mp3"), Metadata{
+		Title:   "Unsafe Book",
+		Authors: []string{"Template Author"},
+	})
+	if err == nil {
+		t.Fatal("calculateSingleFileTargetPathE() expected traversal error, got nil")
+	}
+}
+
 func TestRemoveEmptyDirs(t *testing.T) {
 	tests := []struct {
 		name         string
