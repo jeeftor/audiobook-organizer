@@ -20,7 +20,10 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, `references/abo-assistan
 5. Before applying fixes, confirm `git status --short --branch` shows the PR branch and not `master`.
 6. Apply mechanical or clearly requested fixes; ask before behavior changes or risky rebases.
 7. Run the narrowest relevant checks after fixes.
-8. When checks and review are clean, report whether the PR is ready to merge back into `master` and whether the linked issue will close.
-9. Summarize what changed, what remains blocked, and what should rerun.
+8. When checks are green, inspect `mergeStateStatus` and `reviewDecision`.
+9. If required checks are green and repository auto-merge is available, run `gh pr merge <number> --auto --squash --delete-branch`. If GitHub reports `REVIEW_REQUIRED`, report that branch protection is out of sync with the single-maintainer workflow.
+10. When checks and merge state are clean, report whether the PR is merging or ready to merge back into `master` and whether the linked issue will close.
+11. Summarize what changed, what remains blocked, and what should rerun.
 
 Do not dismiss failures as flaky without evidence.
+Do not bypass protected `master` or admin enforcement for normal work.

@@ -10,6 +10,7 @@ Use this shared reference for Audiobook Organizer repo-local skills.
 - Work on a dedicated branch from `origin/master` before editing; do not push directly to `master`.
 - Use branch prefixes by work type: `feature/<short-name>`, `fix/<short-name>`, `docs/<short-name>`, or `chore/<short-name>`.
 - Verify `git status --short --branch` before editing, committing, or pushing.
+- `master` is protected with required checks. Repository auto-merge is enabled for the single-maintainer workflow, so a separate approving review is not required unless branch protection is intentionally changed. Admin enforcement is enabled; do not bypass protection for normal work.
 - If a separate Git worktree is created and hook config exists, run `prek install --hook-type pre-commit --hook-type commit-msg` inside that worktree.
 - Preserve unrelated dirty worktree changes.
 - Keep edits focused on the issue.
@@ -17,7 +18,21 @@ Use this shared reference for Audiobook Organizer repo-local skills.
 - User-visible features, fixes, behavior changes, Docker/runtime changes, and documentation changes need a `CHANGELOG.md` entry under `Unreleased`.
 - ABS-facing behavior changes must update `test/abs/test-matrix.md` unless explicitly not applicable.
 - PRs target `master`; prefer Squash and merge; issues normally close through PR merge.
-- Do not treat a local commit or draft PR as done. Finish the cycle by getting the PR ready, passing required checks, merging back into `master`, confirming the linked issue closed, and cleaning up the branch or worktree.
+- Repository auto-merge and delete-branch-on-merge are enabled. When required checks are green and the PR is otherwise mergeable, enable auto-merge. If GitHub reports `REVIEW_REQUIRED`, report the branch protection mismatch instead of trying to self-approve.
+- Do not treat a local commit or draft PR as done. Finish the cycle by getting the PR ready, passing required checks, enabling or completing merge back into `master`, confirming the linked issue closed, and cleaning up the branch or worktree.
+- After tracked work is complete, suggest the next useful work item before ending the final response. Base the suggestion on current open issues, parent/child dependencies, recently completed workflow chains, and any follow-up issues created during the work. Do not start the next task unless the user asks.
+
+## Next Work Recommendation
+
+When a feature, fix, docs, test, or chore issue is finished through PR merge or explicit issue closeout:
+
+1. Inspect the remaining open issues with `gh issue list --state open --limit 30 --json number,title,updatedAt,url`.
+2. Check parent and sibling issues that were affected by the completed work, especially audit, umbrella, and matrix issues.
+3. Prefer recommendations that unblock closeout or continue the same workflow chain before switching domains.
+4. Identify parallel candidates only when their likely files and services do not overlap heavily.
+5. End with one concise recommendation and, when useful, one or two alternatives. Do not automatically create branches, issues, worktrees, or subagents for the next item without user direction.
+
+For web UI audit work, parent closeout usually comes before new implementation: close or update completed umbrella/symptom issues, then pick the next still-open child issue.
 
 ## Architecture Map
 

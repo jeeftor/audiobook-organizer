@@ -81,7 +81,7 @@ audiobook-organizer rename-tui --dir=/path/to/audiobooks
 
 ### Web UI Rename
 
-Browser-based interface for exploring metadata and renaming files with real-time preview.
+Browser-based interface for reviewing rename candidates and applying the reviewed plan through the same renamer engine used by the CLI and TUI.
 
 ```bash
 # Launch Web UI
@@ -90,22 +90,11 @@ audiobook-organizer web
 
 #### Features
 
-1. **Directory Picker** - Native file dialogs for selecting audiobook directory
-2. **Book List Screen** - Visual metadata preview with:
-   - Live path preview with color-coded components
-   - Three metadata scanning modes (metadata.json, embedded directory, embedded file)
-   - Interactive field mapping dialog for custom metadata structures
-3. **Preview Screen** - File renaming options:
-   - **"Keep Original Names"** toggle - Preserves current filenames
-   - **"Rename Files"** toggle - Enables custom templates
-   - **Template Builder Dialog** - Visual interface for building filename templates:
-     - 4 template slots for field assignment
-     - Field assignment buttons (author, series, track, title)
-     - Separator selection (-, /, space, ., _)
-     - Live preview showing template format
-   - Before/After preview with color-coded paths
-   - Conflict detection with visual highlighting
-4. **Execution** - Process files with progress tracking
+1. **Configure** - Choose the source folder, metadata mode, template, recursive scanning, and preserve-path behavior.
+2. **Preview** - Generate real backend rename candidates in dry-run mode before any filesystem mutation is available.
+3. **Review Gate** - Inspect conflicts, unchanged files, skipped files, and extraction errors before unlocking execution.
+4. **Execution** - Confirm the mutating action and apply rename candidates in place.
+5. **Review Results** - Inspect final summaries and the `.abook-rename.log` undo-log path when files were renamed.
 
 #### Mouse Controls
 

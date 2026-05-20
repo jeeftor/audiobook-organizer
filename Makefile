@@ -14,10 +14,10 @@ LDFLAGS := -ldflags "-s -w $(VERSION_FLAGS)"
 # Test packages
 UNIT_TEST_PKGS = ./...
 INTEGRATION_TEST_PKGS = $(shell go list ./... | grep -v '/integration$$')
-ABS_TEST_RUN ?= Test(ABSHarnessSmokeResetContract|MetadataJSONMode|EmbeddedAlreadyIndexed|EmbeddedMetadataImport|FlatModeImport|RESTHarness_(MetadataJSONMode|EmbeddedMetadataImport|FlatModeImport)Lifecycle)
-ABS_REST_TEST_RUN ?= TestRESTHarness_(MetadataJSONMode|EmbeddedMetadataImport|FlatModeImport)Lifecycle
+ABS_TEST_RUN ?= Test(ABSHarnessSmokeResetContract|MetadataJSONMode|EmbeddedAlreadyIndexed|EmbeddedMetadataImport|FlatMode(Mechanics|Import)|RESTHarness_((MetadataJSONMode|EmbeddedMetadataImport|FlatModeImport)Lifecycle|ABS(Setup|Operation)Endpoints)|ABSMetadataMode)
+ABS_REST_TEST_RUN ?= TestRESTHarness_((MetadataJSONMode|EmbeddedMetadataImport|FlatModeImport)Lifecycle|ABS(Setup|Operation)Endpoints)
 
-.PHONY: all build clean dev dev-linux-amd64 web-install web-build web-dev gui-rest-test gui-test gui-test-headed gui-test-ui abs-dev-seed abs-dev-init abs-dev-configure abs-dev-up abs-dev-down abs-dev-reset abs-dev-reset-all abs-dev-scan abs-dev-reset-scan abs-ci-smoke abs-test-metadata abs-test-rest abs-test-matrix abs-test-e2e abs-dev-capture-baseline abs-dev-restore-baseline abs-dev-wait release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help scp-dev
+.PHONY: all build clean dev dev-linux-amd64 web-install web-build web-dev gui-rest-test gui-test gui-test-abs gui-test-headed gui-test-ui abs-dev-seed abs-dev-init abs-dev-configure abs-dev-up abs-dev-down abs-dev-reset abs-dev-reset-all abs-dev-scan abs-dev-reset-scan abs-ci-smoke abs-test-metadata abs-test-rest abs-test-matrix abs-test-e2e abs-dev-capture-baseline abs-dev-restore-baseline abs-dev-wait release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help scp-dev
 
 # Default target - show help
 all: help
@@ -34,6 +34,7 @@ help:
 	@printf "    %-26s %s\n" "web-dev" "Run the web frontend dev server"
 	@printf "    %-26s %s\n" "gui-rest-test" "Run local web UI REST endpoint tests"
 	@printf "    %-26s %s\n" "gui-test" "Run local web UI Playwright tests"
+	@printf "    %-26s %s\n" "gui-test-abs" "Run Docker-backed ABS web UI Playwright test"
 	@printf "    %-26s %s\n" "gui-test-headed" "Run local web UI Playwright tests headed"
 	@printf "    %-26s %s\n" "gui-test-ui" "Open Playwright UI runner for local web UI tests"
 	@printf "    %-26s %s\n" "scp-dev" "Copy linux-amd64 binary to remote server"
@@ -106,6 +107,11 @@ gui-rest-test:
 # Run local web UI Playwright tests
 gui-test:
 	cd web && npm run test:e2e
+
+# Run Docker-backed local web UI Playwright ABS test
+gui-test-abs:
+	@test/abs/scripts/seed-public-domain.sh
+	cd web && ABO_ABS_PLAYWRIGHT=1 npm run test:e2e -- --project=chromium-desktop tests/e2e/abs-real.spec.ts
 
 # Run local web UI Playwright tests in headed mode
 gui-test-headed:

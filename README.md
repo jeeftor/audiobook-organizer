@@ -1,11 +1,20 @@
 # Audiobook Organizer
 
+Audiobook Organizer is a Go-based audiobook library organizer and renamer for Audiobookshelf users and local audiobook collections.
+It cleans up audiobook folders, previews file moves before they happen, renames files from metadata templates, and reads metadata from `metadata.json`, EPUB, MP3 ID3 tags, M4B files, and Audiobookshelf.
+
 [![codecov](https://codecov.io/gh/jeeftor/audiobook-organizer/branch/master/graph/badge.svg)](https://codecov.io/gh/jeeftor/audiobook-organizer)
 [![Coverage Status](https://coveralls.io/repos/github/jeeftor/audiobook-organizer/badge.svg?branch=master)](https://coveralls.io/github/jeeftor/audiobook-organizer?branch=master)
 
 ![Audiobook Organizer logo](docs/logo.png)
 
-Audiobook Organizer is a single-binary tool for cleaning up audiobook libraries. It can preview and organize folders, rename files from metadata templates, inspect metadata, and connect to Audiobookshelf for library metadata and scan workflows.
+Use Audiobook Organizer when you want to:
+
+- turn messy audiobook folders into predictable layouts such as `Author/Series/Title`;
+- preview moves, copies, and renames with dry-run output before changing files;
+- standardize audiobook filenames from title, author, series, track, and disc metadata;
+- inspect or map metadata from `metadata.json`, embedded EPUB/MP3/M4B tags, and Audiobookshelf;
+- trigger Audiobookshelf scans after filesystem changes so the server can reconcile moved items.
 
 The project now ships one `audiobook-organizer` binary with:
 
@@ -15,16 +24,24 @@ The project now ships one `audiobook-organizer` binary with:
 
 `audiobook-organizer gui` remains as a compatibility alias for `audiobook-organizer web`.
 
-## What It Does
+Common audiobook workflows:
 
-- Organizes audiobooks into predictable directory layouts such as `Author/Series/Title`.
-- Reads metadata from `metadata.json`, EPUB, MP3, M4B, and Audiobookshelf.
-- Renames files with templates such as `{author} - {series} {series_number} - {title}`.
-- Supports dry-run previews before filesystem changes.
-- Logs organization and rename operations for undo.
-- Handles field mapping for non-standard metadata tags.
-- Provides local browser, terminal, and command-line interfaces.
-- Includes Audiobookshelf commands for library discovery, path mapping checks, item previews, scan triggers, and WebSocket scan event testing.
+- [Organize audiobook libraries](docs/CLI.md) into layouts such as `Author/Series/Title`.
+- [Rename audiobook files](docs/RENAME_FEATURE.md) with metadata templates and dry-run previews.
+- [Use Audiobookshelf metadata and scan workflows](#audiobookshelf-workflows).
+- [Read metadata from metadata.json, EPUB, MP3, and M4B files](docs/METADATA.md).
+- [Install with Homebrew, Go, Docker, or release packages](docs/INSTALLATION.md).
+
+## Audiobook Library Workflows
+
+- **Organize audiobook folders** into predictable directory layouts such as `Author/Series/Title`.
+- **Rename audiobook files** with templates such as `{author} - {series} {series_number} - {title}`.
+- **Preview filesystem changes** with dry-run output before moving, copying, or renaming files.
+- **Read audiobook metadata** from `metadata.json`, EPUB, MP3, M4B, and Audiobookshelf sources.
+- **Map non-standard metadata fields** so custom tags can still provide author, title, series, track, and disc values.
+- **Recover from changes** with organization and rename logs that support undo.
+- **Work from your preferred interface** with local browser, terminal, and command-line workflows.
+- **Coordinate with Audiobookshelf** through library discovery, path mapping checks, item previews, scan triggers, and WebSocket scan event testing.
 
 ## Current Interfaces
 
@@ -38,7 +55,7 @@ The project now ships one `audiobook-organizer` binary with:
 | Rename TUI | `audiobook-organizer rename-tui --dir=/books` | Interactive rename previews | Stable |
 | Metadata CLI | `audiobook-organizer metadata --dir=/books` | Text-only metadata inspection | Stable |
 | Metadata TUI | `audiobook-organizer metadata-tui --dir=/books` | Metadata inspection and template exploration | Stable |
-| Audiobookshelf CLI | `audiobook-organizer abs ...` | ABS discovery, path mapping, metadata previews, and scan triggers | Active development |
+| Audiobookshelf CLI | `audiobook-organizer abs ...` | ABS discovery, path mapping, metadata previews, ABS metadata organization, and scan triggers | Active development |
 
 ## Quick Start
 
@@ -198,6 +215,15 @@ audiobook-organizer abs scan \
   --dir=/mnt/media/audiobooks \
   --check-files
 
+# Organize already-indexed items using ABS metadata as the source of truth
+audiobook-organizer abs organize \
+  --abs-url=http://localhost:13378 \
+  --abs-token="$ABS_TOKEN" \
+  --abs-library=Audiobooks \
+  --abs-path-map="/audiobooks:/mnt/media/audiobooks" \
+  --dir=/mnt/media/audiobooks \
+  --layout=author-title
+
 # Test SQLite-backed path mapping discovery
 audiobook-organizer abs test-paths \
   --abs-sqlite=/path/to/absdatabase.sqlite \
@@ -215,7 +241,7 @@ audiobook-organizer abs websocket-test \
   --abs-token="$ABS_TOKEN"
 ```
 
-ABS metadata-driven organization is still being built out and validated through `test/abs/test-matrix.md`. For already indexed ABS libraries, prefer previewing path mappings and metadata first, then trigger an ABS scan after any filesystem move so ABS can reconcile missing and moved items.
+`abs organize` uses Audiobookshelf API metadata for already-indexed files and then sends the mapped local paths through the same organizer core used by the normal CLI. Preview with `abs scan` first when setting up path mappings. After non-dry-run moves, trigger an ABS scan so Audiobookshelf can reconcile old missing paths and newly organized paths.
 
 ## Metadata Sources
 

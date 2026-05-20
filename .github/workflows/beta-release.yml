@@ -93,18 +93,12 @@ jobs:
       - name: List dist contents
         run: ls -R dist/
 
-      # Generate version for pre-release
+      # Generate version for pre-release.
+      # Beta tags are based on the latest stable vMAJOR.MINOR.PATCH tag;
+      # existing prerelease tags are ignored to avoid nested beta suffixes.
       - name: Generate version info
         id: version
-        run: |
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
-          VERSION="${LAST_TAG}-beta.${SHORT_SHA}"
-          RELEASE_NAME="${LAST_TAG}-beta (${BRANCH_NAME})"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "release_name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
-          echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+        run: sh scripts/beta-version.sh
 
       # Create archives manually (since we're not using goreleaser release)
       - name: Create archives

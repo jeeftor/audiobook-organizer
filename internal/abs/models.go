@@ -33,22 +33,24 @@ type LibraryItemsResponse struct {
 
 // LibraryItem represents an audiobook/podcast in ABS
 type LibraryItem struct {
-	ID           string        `json:"id"`
-	LibraryID    string        `json:"libraryId"`
-	FolderID     string        `json:"folderId"`
-	Path         string        `json:"path"` // Full path to the audiobook folder
-	RelPath      string        `json:"relPath"`
-	IsFile       bool          `json:"isFile"`
-	MtimeMs      int64         `json:"mtimeMs"`
-	CTimeMs      int64         `json:"ctimeMs"`
-	BirthtimeMs  int64         `json:"birthtimeMs"`
-	AddedAt      int64         `json:"addedAt"`
-	UpdatedAt    int64         `json:"updatedAt"`
-	IsMissing    bool          `json:"isMissing"`
-	IsInvalid    bool          `json:"isInvalid"`
-	MediaType    string        `json:"mediaType"`
-	Media        Media         `json:"media"`
-	LibraryFiles []LibraryFile `json:"libraryFiles,omitempty"`
+	ID                   string        `json:"id"`
+	LibraryID            string        `json:"libraryId"`
+	FolderID             string        `json:"folderId"`
+	Path                 string        `json:"path"` // Full path to the audiobook folder
+	RelPath              string        `json:"relPath"`
+	IsFile               bool          `json:"isFile"`
+	MtimeMs              int64         `json:"mtimeMs"`
+	CTimeMs              int64         `json:"ctimeMs"`
+	BirthtimeMs          int64         `json:"birthtimeMs"`
+	AddedAt              int64         `json:"addedAt"`
+	UpdatedAt            int64         `json:"updatedAt"`
+	IsMissing            bool          `json:"isMissing"`
+	IsInvalid            bool          `json:"isInvalid"`
+	MediaType            string        `json:"mediaType"`
+	Media                Media         `json:"media"`
+	AuthorNamesFirstLast string        `json:"authorNamesFirstLast,omitempty"`
+	AuthorNamesLastFirst string        `json:"authorNamesLastFirst,omitempty"`
+	LibraryFiles         []LibraryFile `json:"libraryFiles,omitempty"`
 }
 
 // Media contains the book/podcast metadata

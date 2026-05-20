@@ -14,11 +14,13 @@ type OrganizeRequest struct {
 // OrganizePreviewResponse contains a dry-run organization summary.
 type OrganizePreviewResponse struct {
 	Summary organizer.Summary `json:"summary"`
+	LogPath string            `json:"log_path,omitempty"`
 }
 
 // OrganizeRunResponse contains an executed organization summary.
 type OrganizeRunResponse struct {
 	Summary organizer.Summary `json:"summary"`
+	LogPath string            `json:"log_path,omitempty"`
 }
 
 // PreviewOrganize runs the organizer in dry-run mode.
@@ -64,5 +66,5 @@ func (s *Service) RunOrganize(
 	if err := org.Execute(); err != nil {
 		return nil, err
 	}
-	return &OrganizeRunResponse{Summary: org.GetSummary()}, nil
+	return &OrganizeRunResponse{Summary: org.GetSummary(), LogPath: org.GetLogPath()}, nil
 }

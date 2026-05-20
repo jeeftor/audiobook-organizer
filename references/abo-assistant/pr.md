@@ -9,9 +9,11 @@ Use this shared reference for PR writing, creation, watching, and closeout.
 - Branch is tied to a GitHub issue.
 - Unrelated dirty worktree changes are not included.
 - Relevant tests, lint, and builds have been run or explicitly documented as blocked.
+- User-facing workflow changes have real E2E acceptance evidence; mocked UI/API tests are supplemental only unless the maintainer explicitly accepted the documented gap.
 - Pre-commit hooks have been run with `prek run --all-files` when hook config exists, or their absence is documented.
 - User-visible changes have a `CHANGELOG.md` entry under `Unreleased`.
 - ABS-facing changes update `test/abs/test-matrix.md` when relevant.
+- `master` branch protection requires all configured checks to pass before merge. Repository auto-merge is enabled for the single-maintainer workflow, so a separate approving review is not required unless branch protection is intentionally changed.
 
 ## PR Body Shape
 
@@ -20,6 +22,7 @@ Include:
 - `Resolves #<issue>`
 - Summary.
 - Tests run, with exact commands.
+- Real E2E evidence for user-facing workflow changes, or the maintainer-accepted reason it is blocked.
 - Docs/changelog status.
 - Follow-up issues or known gaps, if any.
 
@@ -30,18 +33,22 @@ Prefer concise reviewer-oriented text. Do not hide unrun tests.
 - `gh pr view --json number,title,state,url,baseRefName,headRefName,isDraft,mergeStateStatus,statusCheckRollup`
 - `gh pr checks <number>`
 - `gh pr diff <number>`
-- `gh pr create --base master --head <branch> --draft --title "<title>" --body-file <file>`
+- `gh pr create --base master --head <branch> --title "<title>" --body-file <file>`
+- `gh pr merge <number> --auto --squash --delete-branch`
 
 Prefer `--body-file` over `--fill` so issue links, test notes, and changelog status are preserved.
 Prefer Squash and merge when the PR is ready unless the maintainer asks for another merge strategy.
+Prefer enabling auto-merge once checks are green. If GitHub reports `REVIEW_REQUIRED`, report that branch protection is out of sync with the single-maintainer workflow; do not bypass branch protection.
 
 ## Closeout Rules
 
 - Issues normally close through PR merge back into `master`.
-- A branch is not done when implementation is committed, pushed, or opened as a draft PR. Closeout means the PR is ready, required checks and review are satisfied, the PR is merged, the linked issue closes, and stale branches or worktrees are cleaned up.
+- A branch is not done when implementation is committed, pushed, or opened as a PR. Closeout means the PR is ready, required checks pass, auto-merge is enabled or the PR merges, the linked issue closes, and stale branches or worktrees are cleaned up.
 - Use closing keywords in the PR body when the PR fully resolves the issue.
 - Directly close an issue only when the user explicitly asks, the issue is obsolete/duplicate, or the work intentionally completed outside PR merge.
 - Before closeout, verify acceptance criteria against code, tests, docs, changelog, and PR state.
+- Do not close a user-facing workflow issue based only on mocked/stubbed tests. Confirm real E2E evidence or documented maintainer acceptance of the gap.
+- After closeout, use the next-work recommendation guidance in `references/abo-assistant/common.md` before ending the user-facing response. Suggest what to do next, but do not start it without user direction.
 
 ## Watcher Duties
 
@@ -49,4 +56,5 @@ Prefer Squash and merge when the PR is ready unless the maintainer asks for anot
 2. Classify findings as CI failure, requested change, maintainer question, docs/changelog gap, stale branch, or follow-up.
 3. Apply mechanical or clearly requested fixes.
 4. Ask before risky rebases, behavior changes, or ambiguous maintainer feedback.
-5. Summarize what changed, what remains blocked, and which checks should rerun.
+5. If required checks are green and the PR is otherwise mergeable, enable auto-merge with squash/delete-branch when available.
+6. Summarize what changed, what remains blocked, which checks should rerun, and the next recommended work item when the PR closes an issue.

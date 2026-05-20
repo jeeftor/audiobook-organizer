@@ -19,7 +19,13 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, and `references/abo-assi
 4. For bug fixes, create or identify a failing check first when practical.
 5. Prefer focused package tests, then widen to repo-native checks.
 6. Run `prek run --all-files` when pre-commit hooks are configured.
-7. Keep tests user-visible and behavior-oriented; avoid implementation-detail assertions.
-8. Report exact commands, status, and blockers.
+7. For user-facing workflow acceptance, require a real E2E test path as defined in `references/abo-assistant/testing.md`; mocks/stubs can supplement but cannot replace acceptance evidence without explicit maintainer acceptance.
+8. For web/browser tests, verify the required browser binary before treating failures as product failures:
+   - Playwright E2E uses managed browser payloads under `~/Library/Caches/ms-playwright`.
+   - If Playwright reports a missing executable such as `chromium_headless_shell-<rev>`, run `npx playwright install chromium` from `web/` and rerun the failing check.
+   - A separate cached Chrome Headless Shell may exist under `~/.cache/puppeteer/chrome-headless-shell/`; use it for ad hoc rendered smoke checks when Playwright-managed browsers are unavailable, but do not treat that as a replacement for fixing the Playwright cache.
+   - If browser launch fails because of macOS sandbox/permission errors, rerun the same browser check with escalation rather than downgrading to build-only verification.
+9. Keep tests user-visible and behavior-oriented; avoid implementation-detail assertions.
+10. Report exact commands, status, browser binary path used, and blockers.
 
 Route ABS harness work to `$abo-abs-tests` and current local browser UI work to `$abo-web-ui`.

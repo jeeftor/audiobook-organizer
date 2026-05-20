@@ -256,31 +256,6 @@ func TestRenamer_Execute_DryRun(t *testing.T) {
 func TestRenamer_ConflictDetection(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create two files that would generate the same target name
-	file1 := filepath.Join(tmpDir, "file1.m4b")
-	file2 := filepath.Join(tmpDir, "file2.m4b")
-
-	if err := os.WriteFile(file1, []byte("content1"), 0o644); err != nil {
-		t.Fatalf("Failed to create file1: %v", err)
-	}
-	if err := os.WriteFile(file2, []byte("content2"), 0o644); err != nil {
-		t.Fatalf("Failed to create file2: %v", err)
-	}
-
-	// Create metadata for both (same title/author = conflict)
-	metadataContent := `{
-		"title": "Same Title",
-		"authors": ["Same Author"]
-	}`
-
-	for _, file := range []string{file1, file2} {
-		dir := filepath.Dir(file)
-		metadataPath := filepath.Join(dir, "metadata.json")
-		if err := os.WriteFile(metadataPath, []byte(metadataContent), 0o644); err != nil {
-			t.Fatalf("Failed to write metadata.json: %v", err)
-		}
-	}
-
 	config := &RenamerConfig{
 		BaseDir:      tmpDir,
 		Template:     "{author} - {title}",
@@ -293,15 +268,77 @@ func TestRenamer_ConflictDetection(t *testing.T) {
 		t.Fatalf("NewRenamer() error: %v", err)
 	}
 
-	candidates, err := renamer.ScanFiles()
+	candidates := []RenameCandidate{
+		{
+			CurrentPath:  filepath.Join(tmpDir, "file1.m4b"),
+			ProposedPath: filepath.Join(tmpDir, "Same Author - Same Title.m4b"),
+		},
+		{
+			CurrentPath:  filepath.Join(tmpDir, "file2.m4b"),
+			ProposedPath: filepath.Join(tmpDir, "Same Author - Same Title.m4b"),
+		},
+	}
+	renamer.finalizePreviewSummary(candidates)
+
+	if !candidates[1].IsConflict {
+		t.Fatal("second duplicate candidate should be marked as a conflict")
+	}
+	if got := filepath.Base(candidates[1].ProposedPath); got != "Same Author - Same Title (2).m4b" {
+		t.Fatalf(
+			"resolved conflict filename = %q, want %q",
+			got,
+			"Same Author - Same Title (2).m4b",
+		)
+	}
+	if got := renamer.GetSummary().ConflictsFound; got != 1 {
+		t.Fatalf("ConflictsFound = %d, want 1", got)
+	}
+}
+
+func TestRenamer_PreviewSummaryCountsSkippedErrorsAndConflicts(t *testing.T) {
+	tmpDir := t.TempDir()
+	renamer, err := NewRenamer(&RenamerConfig{
+		BaseDir:      tmpDir,
+		Template:     "{author} - {title}",
+		AuthorFormat: AuthorFormatFirstLast,
+	})
 	if err != nil {
-		t.Fatalf("ScanFiles() error: %v", err)
+		t.Fatalf("NewRenamer() error: %v", err)
 	}
 
-	// Check for conflicts
-	conflicts := detectConflicts(candidates)
-	if len(conflicts) == 0 {
-		t.Error("detectConflicts() should detect conflict for duplicate target names")
+	candidates := []RenameCandidate{
+		{
+			CurrentPath:  filepath.Join(tmpDir, "source-one.mp3"),
+			ProposedPath: filepath.Join(tmpDir, "Preview Author - Preview Book.mp3"),
+		},
+		{
+			CurrentPath:  filepath.Join(tmpDir, "source-two.mp3"),
+			ProposedPath: filepath.Join(tmpDir, "Preview Author - Preview Book.mp3"),
+		},
+		{
+			CurrentPath:  filepath.Join(tmpDir, "Noop Author - Noop Book.mp3"),
+			ProposedPath: filepath.Join(tmpDir, "Noop Author - Noop Book.mp3"),
+			IsNoOp:       true,
+		},
+		{
+			CurrentPath: filepath.Join(tmpDir, "broken.mp3"),
+			Error:       "Failed to extract metadata: test error",
+		},
+	}
+	renamer.finalizePreviewSummary(candidates)
+
+	summary := renamer.GetSummary()
+	if summary.FilesScanned != 4 {
+		t.Fatalf("FilesScanned = %d, want 4", summary.FilesScanned)
+	}
+	if summary.FilesSkipped != 2 {
+		t.Fatalf("FilesSkipped = %d, want 2", summary.FilesSkipped)
+	}
+	if summary.ConflictsFound != 1 {
+		t.Fatalf("ConflictsFound = %d, want 1", summary.ConflictsFound)
+	}
+	if len(summary.Errors) != 1 {
+		t.Fatalf("Errors length = %d, want 1", len(summary.Errors))
 	}
 }
 

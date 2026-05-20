@@ -126,22 +126,25 @@ specifically about series layout. It gives stable, easy-to-assert paths:
 | M1C | `metadata.json` negative control | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestMetadataJSONMode_AudiobooksLifecycle -count=1 -v` | Implemented as a table-driven lifecycle row. No `metadata.json` exists, so no files move. Old messy paths remain; ABS scan leaves 2 active original items and 0 missing items. |
 | M1D | `metadata.json` negative control | plain | Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestMetadataJSONMode_BooksLifecycle -count=1 -v` | Implemented as a table-driven lifecycle row. No `metadata.json` exists, so no files move. Old messy paths remain; ABS scan leaves 3 active original items and 0 missing items. |
 | M2A | Embedded metadata, already indexed | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestEmbeddedAlreadyIndexed_AudiobooksCurrentBehavior -count=1 -v` | Implemented as current-code coverage only. The already-indexed nested audiobook library has no `metadata.json` sidecars, and embedded mode currently finds `0` metadata rows and performs `0` moves. The test verifies the original messy paths stay active and ABS remains clean after rescan. Longer term, this workflow should use ABS metadata instead. |
-| M2B | Embedded metadata, already indexed | plain | Ebooks | `go run . --dir test/abs/runtime/plain/books --use-embedded-metadata --layout author-title` | Current-code coverage only. Moves already-indexed EPUB directories using embedded EPUB metadata. Longer term, this workflow should use ABS metadata instead. |
+| M2B | Embedded metadata, already indexed | plain | Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestEmbeddedAlreadyIndexed_BooksCurrentBehavior -count=1 -v` | Implemented as current-code coverage only. Moves already-indexed EPUB directories using embedded EPUB metadata; verifies old files are gone and organized author/title paths exist; scans ABS; verifies old ABS rows are missing and new organized rows are active; cleans missing rows; rescans; verifies final ABS state has 3 active organized items and 0 missing items. Longer term, this workflow should use ABS metadata instead. |
 | M2C | Embedded import, hierarchical | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestEmbeddedMetadataImport_AudiobooksLifecycle -count=1 -v` | Implemented. Imports hierarchical M4B directories from `runtime/import-input/audiobooks` into the ABS-mounted audiobook library; verifies source files moved, organized author/title folders exist, ABS scan adds the imported items, and missing count remains `0`. |
 | M2D | Embedded import, hierarchical | plain | Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestEmbeddedMetadataImport_BooksLifecycle -count=1 -v` | Implemented. Imports hierarchical EPUB directories from `runtime/import-input/books` into the ABS-mounted ebook library; verifies source files moved, organized author/title folders exist, ABS scan adds the imported items, and missing count remains `0`. |
-| M3A | Flat mechanics, non-ABS output | plain source | Audiobooks | `go run . --dir test/abs/runtime/plain/audiobooks --out <tmp>/flat-audiobooks --flat --layout author-title` | Processes supported files individually across nested messy folders and writes organized files to a temporary output directory. This proves flat mechanics, but does not test ABS path updates because output is outside the mounted ABS library. |
-| M3B | Flat mechanics, non-ABS output | plain source | Ebooks | `go run . --dir test/abs/runtime/plain/books --out <tmp>/flat-books --flat --layout author-title` | Processes loose EPUB files individually across nested messy folders and writes organized files to a temporary output directory. This proves flat mechanics, but does not test ABS path updates. |
+| M3A | Flat mechanics, non-ABS output | flat input | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestFlatModeMechanics_NonABSOutput -count=1 -v` | Implemented as a table-driven mechanics row. Resets the ABS runtime fixture, processes loose MP3 flat-input files outside the mounted ABS libraries to a temporary non-ABS output directory, verifies source files moved out, verifies author/title output paths and `.abook-org.log`, and deliberately avoids ABS path assertions because output is outside the mounted library. |
+| M3B | Flat mechanics, non-ABS output | plain source | Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestFlatModeMechanics_NonABSOutput -count=1 -v` | Implemented as a table-driven mechanics row. Resets the ABS runtime fixture, processes already-mounted EPUB files in flat mode to a temporary non-ABS output directory, verifies source files moved out, verifies author/title output paths and `.abook-org.log`, and deliberately avoids ABS path assertions because output is outside the mounted library. |
 | M3C | Flat import into ABS | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestFlatModeImport_AudiobooksLifecycle -count=1 -v` | Implemented. Imports loose MP3 files from `runtime/flat-input/audiobooks` into the ABS-mounted audiobook library; verifies per-file author/title folders, ABS scan adds the imported items, and missing count remains `0`. |
-| M3D | Flat import into ABS | plain | Ebooks | `go run . --dir test/abs/runtime/flat-input/books --out test/abs/runtime/plain/books --flat --layout author-title` | New fixture needed. Imports loose EPUB files from outside ABS into the ABS-mounted ebook library. ABS scan should add imported items. |
+| M3D | Flat import into ABS | plain | Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestFlatModeImport_BooksLifecycle -count=1 -v` | Implemented. Reset now creates loose EPUB flat-input fixtures outside the mounted ABS libraries. The lifecycle imports them into the mounted ebook library, verifies per-file author/title folders, triggers an ABS scan, and verifies the imported paths are active with zero missing rows. |
 | R1 | REST harness, `metadata.json` lifecycle | both | both | `go test -tags=abs_e2e ./test/abs/e2e -run TestRESTHarness_MetadataJSONModeLifecycle -count=1 -v` | Implemented. Runs the real Docker-backed ABS reset, scan, organizer move, missing detection, cleanup, rescan, and final-state checks from the `metadata.json` matrix rows, but drives organizer and ABS operations through the local web REST API. |
 | R2 | REST harness, embedded import | plain | Audiobooks, Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestRESTHarness_EmbeddedMetadataImportLifecycle -count=1 -v` | Implemented. Imports hierarchical M4B and EPUB fixtures from outside ABS into mounted ABS libraries through `/api/organize/run`, scans through REST, and verifies imported paths are active with zero missing rows. |
-| R3 | REST harness, flat import | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestRESTHarness_FlatModeImportLifecycle -count=1 -v` | Implemented. Imports loose MP3 fixtures from outside ABS into the mounted audiobook library through `/api/organize/run`, scans through REST, and verifies imported flat-mode paths are active with zero missing rows. |
-| A1 | ABS discovery | plain | both | `go run . abs scan --abs-url http://localhost:13378 --abs-token <token>` | Works today. Lists both libraries and item counts. Does not move files. |
-| A2 | ABS manual path mapping | plain | Audiobooks | `go run . abs scan --abs-url http://localhost:13378 --abs-token <token> --abs-library Audiobooks --abs-path-map "/audiobooks:<abs>/test/abs/runtime/plain/audiobooks" --dir <abs>/test/abs/runtime/plain/audiobooks --check-files` | Works today as preview/connectivity coverage. It fetches ABS metadata, maps ABS paths to host paths, checks files, and calculates target paths. It does not perform organization. |
-| A3 | ABS all-libraries preview | plain | both | `go run . abs scan --abs-url http://localhost:13378 --abs-token <token> --abs-all-libraries --abs-path-map "/audiobooks:<abs>/test/abs/runtime/plain/audiobooks" --abs-path-map "/books:<abs>/test/abs/runtime/plain/books" --dir <abs>/test/abs/runtime/plain --check-files` | Works today if all-libraries mode handles both mappings. Confirms ABS metadata can be loaded across both libraries. Does not move files. |
-| A4 | ABS scan trigger | plain | Audiobooks | `go run . abs scan-trigger --abs-url http://localhost:13378 --abs-token <token> --abs-library <id>` | Works today. Confirms organizer CLI can trigger ABS scan; detailed scan completion can still use `scan-libraries.sh` polling. |
-| A5 | ABS organize, already indexed | plain | Audiobooks | Future: `go run . abs organize --abs-url http://localhost:13378 --abs-token <token> --abs-library Audiobooks --abs-path-map "/audiobooks:<abs>/test/abs/runtime/plain/audiobooks" --dir <abs>/test/abs/runtime/plain/audiobooks --layout author-title` | Future behavior. Uses ABS metadata as the source of truth to move already-indexed files even when no `metadata.json` sidecars exist and embedded metadata is absent, sparse, or wrong. |
-| A6 | ABS organize, already indexed | plain | Ebooks | Future: same as A5 for `Ebooks` and `/books` | Future behavior. Confirms ABS metadata can drive organization of an already-indexed ebook library. |
+| R3 | REST harness, flat import | plain | Audiobooks, Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestRESTHarness_FlatModeImportLifecycle -count=1 -v` | Implemented. Imports loose MP3 and EPUB fixtures from outside ABS into mounted ABS libraries through `/api/organize/run`, scans through REST, and verifies imported flat-mode paths are active with zero missing rows. |
+| R4 | REST harness, web ABS setup endpoints | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestRESTHarness_ABSSetupEndpoints -count=1 -v` | Implemented. Runs the real Docker-backed ABS reset, loads libraries through `/api/abs/libraries`, and validates the manual `/audiobooks` to host path mapping through `/api/abs/test-paths`. This covers the real API boundary used by the web ABS setup controls; browser UI contract coverage in `web/tests/e2e/gui-smoke.spec.ts` verifies URL/token testing unlocks the discovered-library selector before path validation. |
+| R5 | REST harness, web ABS operation endpoints | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestRESTHarness_ABSOperationEndpoints -count=1 -v` | Implemented. Runs the real Docker-backed ABS reset, loads mapped ABS metadata through `/api/abs/items`, reads active/missing state through `/api/abs/library-state`, triggers scans through `/api/abs/scan-trigger`, moves a fixture folder out of the mounted library, and removes the resulting missing row through `/api/abs/clean-missing`. This covers the real API boundary used by the web ABS operation controls; browser UI contract coverage remains in `web/tests/e2e/gui-smoke.spec.ts`. |
+| W1 | Browser UI, ABS setup and operations | plain | Audiobooks | `make gui-test-abs` | Implemented. Runs the real Docker-backed ABS reset, starts the real Go web UI, drives Playwright through ABS URL/token entry, library discovery, path mapping validation, ABS item loading, library-state loading, scan triggering, missing-row detection after moving a mounted folder, destructive cleanup gating, cleanup, rescan, and final clean rendered state. |
+| A1 | ABS discovery | plain | both | `go test -tags=abs_e2e ./test/abs/e2e -run TestABSMetadataMode_PreviewAndScanTrigger -count=1 -v` | Implemented. Lists both libraries and exercises discovery without moving files. |
+| A2 | ABS manual path mapping | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestABSMetadataMode_PreviewAndScanTrigger -count=1 -v` | Implemented. Fetches ABS metadata, maps ABS paths to host paths, checks files, and verifies audiobook authors/titles appear in preview output. |
+| A3 | ABS all-libraries preview | plain | both | `go test -tags=abs_e2e ./test/abs/e2e -run TestABSMetadataMode_PreviewAndScanTrigger -count=1 -v` | Implemented. Confirms all-libraries mode loads both `/audiobooks` and `/books` with explicit path mappings. |
+| A4 | ABS scan trigger | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestABSMetadataMode_PreviewAndScanTrigger -count=1 -v` | Implemented. Triggers a scan through the CLI and verifies the ABS API state remains clean. |
+| A5 | ABS organize, already indexed | plain | Audiobooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestABSMetadataMode_OrganizeAudiobooksLifecycle -count=1 -v` | Implemented. Uses ABS metadata as the source of truth to move already-indexed audiobook folders when no `metadata.json` sidecars are present; verifies filesystem moves, organizer log, ABS missing/new rows after scan, missing cleanup, and final clean ABS state. |
+| A6 | ABS organize, already indexed | plain | Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestABSMetadataMode_OrganizeBooksLifecycle -count=1 -v` | Implemented. Seeds explicit ABS author metadata through the ABS media-update API, then organizes already-indexed EPUB folders using ABS metadata and verifies the same filesystem, scan, cleanup, and final-state lifecycle as A5. |
 
 ## Per-Test Verification
 
@@ -182,10 +185,18 @@ cycle, so the fixed ABS ports do not conflict:
 | `metadata-json` | `TestMetadataJSONMode` |
 | `embedded-already-indexed` | `TestEmbeddedAlreadyIndexed` |
 | `embedded-import` | `TestEmbeddedMetadataImport` |
+| `flat-mechanics` | `TestFlatModeMechanics` |
 | `flat-import` | `TestFlatModeImport` |
 | `rest-metadata-json` | `TestRESTHarness_MetadataJSONModeLifecycle` |
 | `rest-embedded-import` | `TestRESTHarness_EmbeddedMetadataImportLifecycle` |
 | `rest-flat-import` | `TestRESTHarness_FlatModeImportLifecycle` |
+| `rest-abs-setup` | `TestRESTHarness_ABSSetupEndpoints` |
+| `rest-abs-operations` | `TestRESTHarness_ABSOperationEndpoints` |
+| `abs-metadata-mode` | `TestABSMetadataMode` |
+
+The browser-backed ABS row `W1` runs in its own GitHub Actions job with
+`make gui-test-abs` because it requires both Playwright-managed Chromium and the
+Docker ABS harness.
 
 Local `make abs-test-matrix` still runs all implemented rows serially. To run
 one row locally, pass the same regex:
@@ -283,13 +294,13 @@ Flat import tests use `--out` to place organized files into `/audiobooks` or
 were outside ABS before the organizer run, these tests should not create missing
 ABS rows.
 
-## ABS Mode Gaps
+## ABS Metadata Organization
 
-The current `audiobook-organizer abs scan` command is preview/connectivity-only.
-It fetches ABS metadata, maps paths, and prints proposed target paths, but it
-does not yet move files through the organizer core.
+`audiobook-organizer abs scan` is the preview/connectivity command. It fetches
+ABS metadata, maps paths, and prints proposed target paths.
 
-The desired ABS mode is a new execution path for files already indexed by ABS:
+`audiobook-organizer abs organize` is the execution path for files already
+indexed by ABS:
 
 ```text
 ABS API item metadata + ABS path mapping -> organizer target path -> filesystem move -> ABS scan
@@ -299,26 +310,10 @@ This mode is especially useful for the plain ABS instance, where no
 `metadata.json` sidecars are stored with items. It should also work when embedded
 metadata is missing, incomplete, or lower quality than ABS metadata.
 
-Until ABS organization is implemented, ABS-mode tests should cover:
-
-- authentication and discovery,
-- manual path mapping,
-- library item fetch and file existence checks,
-- scan trigger.
-
 SQLite path discovery is a separate implementation gap. The current committed
 ABS baseline schema has `libraryFolders(path)`, while `internal/abs/path_mapper.go`
 expects a newer or different `folders` table with `fullPath`. Until that code is
 updated, use explicit `--abs-path-map` in harness tests.
-
-Once ABS mode can perform organization, add tests mirroring M1/M2:
-
-- ABS metadata as source of truth,
-- move files in the mounted runtime library,
-- trigger ABS scan,
-- assert ABS item paths changed to the organizer target paths.
-It should be tested against the plain instance first because that instance does
-not write `metadata.json` sidecars, forcing the command to use ABS metadata.
 
 ## Initial Implementation Order
 
@@ -327,10 +322,10 @@ not write `metadata.json` sidecars, forcing the command to use ABS metadata.
 2. Add a post-move scan helper that waits for expected count and zero missing
    items, and can optionally retry one forced scan.
 3. Add metadata.json tests M1A-M1D.
-4. Add embedded already-indexed coverage M2A-M2B only as current-code coverage. M2A is implemented.
+4. Add embedded already-indexed coverage M2A-M2B only as current-code coverage. Implemented.
 5. Add import fixtures and embedded hierarchical import tests M2C-M2D.
-6. Add flat mechanics tests M3A-M3B with temporary non-ABS output.
-7. Add flat import fixtures and tests M3C-M3D.
-8. Add ABS preview tests A1-A4.
-9. Stub or implement ABS organize mode A5-A6.
+6. Add flat mechanics tests M3A-M3B with temporary non-ABS output. Implemented.
+7. Add flat import fixtures and tests M3C-M3D. Implemented.
+8. Add ABS preview tests A1-A4. Implemented.
+9. Implement ABS organize mode A5-A6. Implemented.
 10. Fix or replace SQLite path discovery for this ABS schema.

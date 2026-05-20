@@ -171,6 +171,7 @@ func TestPostEndpointsRejectWrongMethodAndInvalidJSON(t *testing.T) {
 		"/api/organize/preview",
 		"/api/organize/run",
 		"/api/rename/preview",
+		"/api/rename/run",
 		"/api/abs/libraries",
 		"/api/abs/test-paths",
 		"/api/abs/items",
@@ -246,6 +247,11 @@ func TestOrganizeRunEndpointMovesFiles(t *testing.T) {
 	assertStatus(t, rec, http.StatusOK)
 	assertJSONArrayLength(t, rec, "summary.MetadataFound", 1)
 	assertJSONArrayLength(t, rec, "summary.Moves", 1)
+	resolvedOutputDir, err := filepath.EvalSymlinks(outputDir)
+	if err != nil {
+		t.Fatalf("resolve output dir: %v", err)
+	}
+	assertJSONField(t, rec, "log_path", filepath.Join(resolvedOutputDir, ".abook-org.log"))
 	assertFileExists(
 		t,
 		filepath.Join(outputDir, "REST Author", "REST Test Book", "audio.mp3"),
@@ -278,6 +284,42 @@ func TestRenamePreviewEndpointReturnsCandidates(t *testing.T) {
 	assertStatus(t, rec, http.StatusOK)
 	assertJSONField(t, rec, "summary.FilesScanned", float64(1))
 	assertJSONArrayLength(t, rec, "candidates", 1)
+}
+
+func TestRenameRunEndpointRenamesFiles(t *testing.T) {
+	handler := newTestHandler(t)
+	inputDir := createRenameFixture(t)
+
+	body := map[string]any{
+		"config": map[string]any{
+			"base_dir":              inputDir,
+			"template":              "{author} - {title}",
+			"dry_run":               true,
+			"author_format":         "first-last",
+			"recursive":             true,
+			"preserve_path":         true,
+			"use_embedded_metadata": false,
+			"field_mapping": map[string]any{
+				"title_field":   "title",
+				"series_field":  "series",
+				"author_fields": []string{"authors"},
+			},
+		},
+	}
+
+	rec := performRequest(handler, http.MethodPost, "/api/rename/run", body, testToken)
+
+	assertStatus(t, rec, http.StatusOK)
+	assertJSONField(t, rec, "summary.FilesScanned", float64(1))
+	assertJSONField(t, rec, "summary.FilesRenamed", float64(1))
+	assertJSONArrayLength(t, rec, "candidates", 1)
+	assertJSONField(t, rec, "log_path", filepath.Join(inputDir, ".abook-rename.log"))
+	assertFileExists(t, filepath.Join(inputDir, ".abook-rename.log"))
+	assertFileExists(
+		t,
+		filepath.Join(inputDir, "rename_book", "Rename Author - Rename REST Book.mp3"),
+	)
+	assertFileMissing(t, filepath.Join(inputDir, "rename_book", "audio.mp3"))
 }
 
 func TestABSTestPathsEndpointWorksWithoutDocker(t *testing.T) {
@@ -443,7 +485,11 @@ func createRenameFixture(t *testing.T) string {
 		filepath.Join(bookDir, "metadata.json"),
 		`{"title":"Rename REST Book","authors":["Rename Author"]}`,
 	)
-	writeFile(t, filepath.Join(bookDir, "audio.mp3"), "fake audio")
+	copyFile(
+		t,
+		filepath.Join("..", "..", "testdata", "mp3flat", "charlesdexterward_01_lovecraft_64kb.mp3"),
+		filepath.Join(bookDir, "audio.mp3"),
+	)
 
 	return root
 }
@@ -455,10 +501,28 @@ func writeFile(t *testing.T, path, content string) {
 	}
 }
 
+func copyFile(t *testing.T, source, target string) {
+	t.Helper()
+	data, err := os.ReadFile(source)
+	if err != nil {
+		t.Fatalf("read %s: %v", source, err)
+	}
+	if err := os.WriteFile(target, data, 0o644); err != nil {
+		t.Fatalf("write %s: %v", target, err)
+	}
+}
+
 func assertFileExists(t *testing.T, path string) {
 	t.Helper()
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("expected file to exist: %s\nstat error: %v", path, err)
+	}
+}
+
+func assertFileMissing(t *testing.T, path string) {
+	t.Helper()
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("expected file to be missing: %s\nstat error: %v", path, err)
 	}
 }
 

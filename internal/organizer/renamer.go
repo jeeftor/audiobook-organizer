@@ -192,11 +192,7 @@ func (r *Renamer) Execute() error {
 	// 2. Filter out no-ops
 	toRename := filterRenameableCandidates(candidates)
 
-	// 3. Detect conflicts
-	conflicts := detectConflicts(toRename)
-	r.summary.ConflictsFound = len(conflicts)
-
-	// 4. Execute renames
+	// 3. Execute renames
 	for _, candidate := range toRename {
 		// Skip if prompt is enabled and user declines
 		if r.config.PromptEnabled {
@@ -213,7 +209,7 @@ func (r *Renamer) Execute() error {
 		r.summary.FilesRenamed++
 	}
 
-	// 5. Save log
+	// 4. Save log
 	if !r.config.DryRun && len(r.logEntries) > 0 {
 		if err := r.SaveLog(); err != nil {
 			return err
@@ -297,8 +293,46 @@ func (r *Renamer) ScanFiles() ([]RenameCandidate, error) {
 
 		return nil
 	})
+	if err != nil {
+		return candidates, err
+	}
 
-	return candidates, err
+	r.finalizePreviewSummary(candidates)
+	return candidates, nil
+}
+
+func (r *Renamer) finalizePreviewSummary(candidates []RenameCandidate) {
+	summary := RenameSummary{
+		FilesScanned: len(candidates),
+	}
+	resolver := NewConflictResolver()
+
+	for i := range candidates {
+		if candidates[i].Error != "" {
+			summary.FilesSkipped++
+			summary.Errors = append(summary.Errors, candidates[i].Error)
+			continue
+		}
+		if candidates[i].IsNoOp {
+			summary.FilesSkipped++
+			continue
+		}
+
+		filename := filepath.Base(candidates[i].ProposedPath)
+		resolvedName, isConflict := resolver.CheckConflict(filename)
+		if !isConflict {
+			continue
+		}
+
+		candidates[i].IsConflict = true
+		candidates[i].ProposedPath = filepath.Join(
+			filepath.Dir(candidates[i].ProposedPath),
+			resolvedName,
+		)
+		summary.ConflictsFound++
+	}
+
+	r.summary = summary
 }
 
 // GenerateNewPath generates the new path for a file based on metadata
@@ -376,17 +410,16 @@ func (r *Renamer) RenameFile(oldPath, newPath string) error {
 
 // SaveLog saves rename operations to log file
 func (r *Renamer) SaveLog() error {
-	logPath := filepath.Join(r.config.BaseDir, ".abook-rename.log")
 	data, err := json.MarshalIndent(r.logEntries, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(logPath, data, 0o644)
+	return os.WriteFile(r.GetLogPath(), data, 0o644)
 }
 
 // UndoRenames reverses rename operations from log
 func (r *Renamer) UndoRenames() error {
-	logPath := filepath.Join(r.config.BaseDir, ".abook-rename.log")
+	logPath := r.GetLogPath()
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		return fmt.Errorf("no rename log found at %s", logPath)
@@ -426,6 +459,11 @@ func (r *Renamer) UndoRenames() error {
 // GetSummary returns the rename summary
 func (r *Renamer) GetSummary() RenameSummary {
 	return r.summary
+}
+
+// GetLogPath returns the path where rename operation logs are stored.
+func (r *Renamer) GetLogPath() string {
+	return filepath.Join(r.config.BaseDir, ".abook-rename.log")
 }
 
 // promptForRename prompts user for confirmation before renaming
