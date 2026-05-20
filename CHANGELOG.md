@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Docker image publishing now builds with Go 1.25 so release tags match the toolchain required by `go.mod`.
 - Beta release tags now derive from the latest stable SemVer tag instead of stacking beta suffixes from prior prereleases.
 - Frontend embed path is now stable for goreleaser by building into `internal/server/static`.
 - Release workflows build the web frontend before packaging the single binary.
