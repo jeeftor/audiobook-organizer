@@ -277,58 +277,23 @@
           </div>
 
           <div class="setup-preview-column">
-            <div class="preview-empty setup-preview-panel" :class="{ stale: activePreviewStale }">
-              <Eye :size="30" />
-              <h3>{{ previewHeading }}</h3>
-              <p>{{ setupPreviewCopy }}</p>
-              <template v-if="activeWorkflow === 'organize'">
-                <button
-                  class="primary-action"
-                  :disabled="isConfigureActionDisabled"
-                  @click="runConfigureAction"
-                >
-                  <Play :size="18" /> {{ organizePreviewActionLabel }}
-                </button>
+            <div v-if="activeWorkflow === 'organize'" class="preview-checklist setup-preview-window" :class="{ stale: activePreviewStale }">
+              <div class="preview-window-header">
+                <div>
+                  <h3>{{ previewHeading }}</h3>
+                  <p>{{ setupPreviewCopy }}</p>
+                </div>
                 <button
                   v-if="organizePreviewStatus === 'success'"
-                  class="secondary-action"
+                  class="primary-action compact-action"
+                  type="button"
                   :disabled="!canOpenOrganizeReview"
                   @click="openOrganizeReview"
                 >
-                  Review Planned Changes
+                  Review & Run
                 </button>
-                <p v-if="organizePreviewStale" class="stale-note">Preview is stale. Refresh before reviewing or running.</p>
-                <p v-if="organizePreviewError" class="inline-alert">{{ organizePreviewError }}</p>
-              </template>
-              <template v-else-if="activeWorkflow === 'rename'">
-                <button class="primary-action" :disabled="isConfigureActionDisabled" @click="runConfigureAction">
-                  <Play :size="18" /> {{ renamePreviewActionLabel }}
-                </button>
-                <button
-                  v-if="renamePreviewStatus === 'success'"
-                  class="secondary-action"
-                  :disabled="!canOpenRenameReview"
-                  @click="openRenameReview"
-                >
-                  Review Candidates
-                </button>
-                <p v-if="renamePreviewStale" class="stale-note">Preview is stale. Refresh before reviewing or running.</p>
-                <p v-if="renamePreviewError" class="inline-alert">{{ renamePreviewError }}</p>
-              </template>
-              <template v-else>
-                <button
-                  class="primary-action"
-                  type="button"
-                  :disabled="isConfigureActionDisabled"
-                  @click="runConfigureAction"
-                >
-                  <Server :size="18" /> {{ configureActionLabel }}
-                </button>
-              </template>
-            </div>
-
-            <div v-if="activeWorkflow === 'organize'" class="preview-checklist">
-              <h3>Preview Summary</h3>
+              </div>
+              <p v-if="organizePreviewError" class="inline-alert">{{ organizePreviewError }}</p>
               <p v-if="!organizePreview">No organize preview has run.</p>
               <template v-else>
                 <div class="result-grid compact">
@@ -354,8 +319,23 @@
                 </div>
               </template>
             </div>
-            <div v-else-if="activeWorkflow === 'rename'" class="preview-checklist">
-              <h3>Rename Preview Summary</h3>
+            <div v-else-if="activeWorkflow === 'rename'" class="preview-checklist setup-preview-window" :class="{ stale: activePreviewStale }">
+              <div class="preview-window-header">
+                <div>
+                  <h3>{{ previewHeading }}</h3>
+                  <p>{{ setupPreviewCopy }}</p>
+                </div>
+                <button
+                  v-if="renamePreviewStatus === 'success'"
+                  class="primary-action compact-action"
+                  type="button"
+                  :disabled="!canOpenRenameReview"
+                  @click="openRenameReview"
+                >
+                  Review & Run
+                </button>
+              </div>
+              <p v-if="renamePreviewError" class="inline-alert">{{ renamePreviewError }}</p>
               <p v-if="!renamePreview">No rename preview has run.</p>
               <template v-else>
                 <div class="result-grid compact">
@@ -395,187 +375,6 @@
           </div>
         </section>
 
-        <section v-else-if="activeStage === 'preview'" class="review-plan-layout">
-          <template v-if="activeWorkflow === 'organize'">
-            <div v-if="!canOpenOrganizeReview" class="review-layout">
-              <h3>Preview needs attention</h3>
-              <p>Refresh the dry-run preview from setup before reviewing planned changes.</p>
-              <p v-if="organizePreviewError" class="inline-alert">{{ organizePreviewError }}</p>
-              <button class="secondary-action" type="button" @click="editSetup">
-                <FilePenLine :size="16" /> Edit Setup
-              </button>
-            </div>
-            <div v-else class="preview-checklist reviewed-plan">
-              <h3>Planned Organize Changes</h3>
-              <div class="result-grid compact">
-                <span>Metadata found</span><strong>{{ organizePreview?.summary.MetadataFound.length ?? 0 }}</strong>
-                <span>Planned moves</span><strong>{{ organizePreview?.summary.Moves.length ?? 0 }}</strong>
-                <span>Selected moves</span><strong>{{ selectedOrganizeMoveCount }}</strong>
-                <span>Warnings</span><strong>{{ organizePreview?.summary.MetadataMissing.length ?? 0 }}</strong>
-              </div>
-              <ul v-if="organizePreview && organizePreview.summary.MetadataMissing.length > 0" class="warning-list">
-                <li v-for="missing in organizePreview.summary.MetadataMissing" :key="missing">{{ missing }}</li>
-              </ul>
-              <div v-if="organizePreview && organizePreview.summary.Moves.length > 0" class="selection-toolbar">
-                <button class="secondary-action compact-action" type="button" @click="selectAllOrganizeMoves">
-                  Select All
-                </button>
-                <button class="secondary-action compact-action" type="button" @click="clearOrganizeMoveSelection">
-                  Select None
-                </button>
-              </div>
-              <div v-if="organizePreview && organizePreview.summary.Moves.length > 0" class="move-list selectable-list">
-                <label
-                  v-for="move in organizePreview.summary.Moves"
-                  :key="move.from + move.to"
-                  class="selection-row"
-                >
-                  <input
-                    type="checkbox"
-                    :checked="isOrganizeMoveSelected(move.from)"
-                    :aria-label="`Select move ${move.from}`"
-                    @change="toggleOrganizeMove(move.from)"
-                  />
-                  <span>
-                    <span>{{ move.from }}</span>
-                    <strong>{{ move.to }}</strong>
-                  </span>
-                </label>
-              </div>
-              <div class="review-actions">
-                <button class="secondary-action" type="button" @click="editSetup">
-                  <FilePenLine :size="16" /> Edit Setup
-                </button>
-                <button class="primary-action" type="button" :disabled="selectedOrganizeMoveCount === 0" @click="reviewOrganizePreview">
-                  Continue to Run
-                </button>
-              </div>
-            </div>
-          </template>
-          <template v-else-if="activeWorkflow === 'rename'">
-            <div v-if="!canOpenRenameReview" class="review-layout">
-              <h3>Preview needs attention</h3>
-              <p>Refresh the rename preview from setup before reviewing candidates.</p>
-              <p v-if="renamePreviewError" class="inline-alert">{{ renamePreviewError }}</p>
-              <button class="secondary-action" type="button" @click="editSetup">
-                <FilePenLine :size="16" /> Edit Setup
-              </button>
-            </div>
-            <div v-else class="preview-checklist reviewed-plan">
-              <h3>Planned Rename Changes</h3>
-              <div class="result-grid compact">
-                <span>Files scanned</span><strong>{{ renamePreview?.summary.FilesScanned ?? 0 }}</strong>
-                <span>Candidates</span><strong>{{ renamePreview?.candidates.length ?? 0 }}</strong>
-                <span>Selected files</span><strong>{{ selectedRenameCandidateCount }}</strong>
-                <span>Conflicts</span><strong>{{ renamePreview?.summary.ConflictsFound ?? 0 }}</strong>
-                <span>Skipped</span><strong>{{ renamePreview?.summary.FilesSkipped ?? 0 }}</strong>
-                <span>Errors</span><strong>{{ renamePreview?.summary.Errors.length ?? 0 }}</strong>
-              </div>
-              <ul v-if="renamePreview && renamePreview.summary.Errors.length > 0" class="warning-list">
-                <li v-for="error in renamePreview.summary.Errors" :key="error">{{ error }}</li>
-              </ul>
-              <div v-if="renamePreview && renamePreview.candidates.length > 0" class="selection-toolbar">
-                <button class="secondary-action compact-action" type="button" @click="selectAllRenameCandidates">
-                  Select Actionable
-                </button>
-                <button class="secondary-action compact-action" type="button" @click="clearRenameCandidateSelection">
-                  Select None
-                </button>
-              </div>
-              <div v-if="renamePreview && renamePreview.candidates.length > 0" class="move-list selectable-list">
-                <label
-                  v-for="candidate in renamePreview.candidates"
-                  :key="candidate.CurrentPath + candidate.ProposedPath"
-                  class="selection-row"
-                  :class="{ warning: candidate.IsConflict || candidate.IsNoOp || !!candidate.Error }"
-                >
-                  <input
-                    type="checkbox"
-                    :checked="isRenameCandidateSelected(candidate.CurrentPath)"
-                    :disabled="!isRenameCandidateSelectable(candidate)"
-                    :aria-label="`Select rename candidate ${candidate.CurrentPath}`"
-                    @change="toggleRenameCandidate(candidate.CurrentPath)"
-                  />
-                  <span>
-                    <span>{{ candidate.CurrentPath }}</span>
-                    <strong>{{ candidate.ProposedPath }}</strong>
-                    <em v-if="candidate.IsConflict">Conflict</em>
-                    <em v-else-if="candidate.IsNoOp">Skipped: unchanged</em>
-                    <em v-else-if="candidate.Error">{{ candidate.Error }}</em>
-                  </span>
-                </label>
-              </div>
-              <div class="review-actions">
-                <button class="secondary-action" type="button" @click="editSetup">
-                  <FilePenLine :size="16" /> Edit Setup
-                </button>
-                <button class="primary-action" type="button" :disabled="selectedRenameCandidateCount === 0" @click="reviewRenamePreview">
-                  Continue to Run
-                </button>
-              </div>
-            </div>
-          </template>
-          <template v-else>
-            <div class="preview-empty">
-              <Eye :size="30" />
-              <h3>{{ previewHeading }}</h3>
-              <p>{{ currentWorkflow.previewCopy }}</p>
-              <div class="operation-actions">
-                <button
-                  class="primary-action"
-                  :disabled="!absSetupReady || absItemsStatus === 'loading'"
-                  @click="loadABSItems"
-                >
-                  <Server :size="18" /> {{ absItemsActionLabel }}
-                </button>
-                <button
-                  class="secondary-action"
-                  :disabled="!absSetupReady || absLibraryStateStatus === 'loading'"
-                  @click="loadABSLibraryState"
-                >
-                  <Eye :size="18" /> {{ absLibraryStateActionLabel }}
-                </button>
-              </div>
-              <p v-if="!absSetupReady" class="inline-alert">ABS setup must load libraries and validate paths first.</p>
-              <p v-if="absItemsError" class="inline-alert">{{ absItemsError }}</p>
-              <p v-if="absLibraryStateError" class="inline-alert">{{ absLibraryStateError }}</p>
-            </div>
-            <div class="preview-checklist">
-              <h3>ABS Operation Summary</h3>
-              <div class="result-grid compact">
-                <span>Libraries</span><strong>{{ absLibraries.length }}</strong>
-                <span>Mappings</span><strong>{{ absResolvedMappings.length }}</strong>
-                <span>Status</span><strong>{{ absSetupReady ? 'Ready for ABS operations' : 'Setup incomplete' }}</strong>
-                <span>Metadata items</span><strong>{{ absItems?.items.length ?? 0 }}</strong>
-                <span>Library items</span><strong>{{ absLibraryState?.items.length ?? 0 }}</strong>
-                <span>Missing / invalid</span><strong>{{ absMissingCount }} / {{ absInvalidCount }}</strong>
-              </div>
-              <div v-if="absItemsStatus === 'loading' || absLibraryStateStatus === 'loading'" class="deferred-state">
-                <Server :size="18" />
-                <span>Loading ABS operation data.</span>
-              </div>
-              <div v-if="absItems" class="move-list operation-list">
-                <div v-for="item in absItems.items.slice(0, 5)" :key="item.source_path + item.title">
-                  <span>{{ item.title || 'Untitled ABS item' }}</span>
-                  <strong>{{ item.source_path }}</strong>
-                </div>
-              </div>
-              <div v-if="absLibraryState" class="move-list operation-list">
-                <div
-                  v-for="item in absLibraryState.items.slice(0, 5)"
-                  :key="item.id"
-                  :class="{ warning: item.is_missing || item.is_invalid }"
-                >
-                  <span>{{ item.title || item.id }}</span>
-                  <strong>{{ item.path }}</strong>
-                  <em v-if="item.is_missing">Missing</em>
-                  <em v-else-if="item.is_invalid">Invalid</em>
-                </div>
-              </div>
-            </div>
-          </template>
-        </section>
-
         <section v-else-if="activeStage === 'run'" class="run-layout">
           <div class="warning-panel">
             <AlertTriangle :size="28" />
@@ -586,6 +385,33 @@
           </div>
           <template v-if="activeWorkflow === 'abs'">
             <div class="operation-grid">
+              <div class="operation-card">
+                <h3>Review ABS Data</h3>
+                <p>Load real metadata and library state before maintenance actions.</p>
+                <div class="operation-actions">
+                  <button
+                    class="primary-action"
+                    :disabled="!absSetupReady || absItemsStatus === 'loading'"
+                    @click="loadABSItems"
+                  >
+                    <Server :size="18" /> {{ absItemsActionLabel }}
+                  </button>
+                  <button
+                    class="secondary-action"
+                    :disabled="!absSetupReady || absLibraryStateStatus === 'loading'"
+                    @click="loadABSLibraryState"
+                  >
+                    <Eye :size="18" /> {{ absLibraryStateActionLabel }}
+                  </button>
+                </div>
+                <div class="deferred-state" :class="{ ready: absSetupReady }">
+                  <Server :size="18" />
+                  <span>{{ absSetupReady ? 'Ready for ABS operations' : 'ABS setup incomplete' }}</span>
+                </div>
+                <p v-if="!absSetupReady" class="inline-alert">ABS setup must load libraries and validate paths first.</p>
+                <p v-if="absItemsError" class="inline-alert">{{ absItemsError }}</p>
+                <p v-if="absLibraryStateError" class="inline-alert">{{ absLibraryStateError }}</p>
+              </div>
               <div class="operation-card">
                 <h3>Library Scan</h3>
                 <p>Trigger a real Audiobookshelf scan for the configured library.</p>
@@ -634,6 +460,24 @@
                 <template v-if="absCleanResult">
                   <span>Last cleanup</span><strong>{{ absCleanResult.cleaned ? absCleanResult.library_id : 'Not cleaned' }}</strong>
                 </template>
+              </div>
+              <div v-if="absItems" class="move-list operation-list">
+                <div v-for="item in absItems.items.slice(0, 5)" :key="item.source_path + item.title">
+                  <span>{{ item.title || 'Untitled ABS item' }}</span>
+                  <strong>{{ item.source_path }}</strong>
+                </div>
+              </div>
+              <div v-if="absLibraryState" class="move-list operation-list">
+                <div
+                  v-for="item in absLibraryState.items.slice(0, 5)"
+                  :key="item.id"
+                  :class="{ warning: item.is_missing || item.is_invalid }"
+                >
+                  <span>{{ item.title || item.id }}</span>
+                  <strong>{{ item.path }}</strong>
+                  <em v-if="item.is_missing">Missing</em>
+                  <em v-else-if="item.is_invalid">Invalid</em>
+                </div>
               </div>
               <div v-if="absReviewWarnings.length > 0" class="review-details">
                 <h4>Warnings</h4>
@@ -864,7 +708,7 @@ import {
 } from './api'
 
 type WorkflowId = 'organize' | 'rename' | 'abs'
-type StageId = 'configure' | 'preview' | 'run'
+type StageId = 'configure' | 'run'
 type PathFieldId = 'source' | 'output'
 type LoadState = 'loading' | 'ready' | 'fallback'
 type CredentialState = 'empty' | 'redacted'
@@ -892,7 +736,7 @@ const workflows = [
     modeLabel: 'Metadata source',
     previewCopy: 'Create a backend dry-run preview before the organize run stage can unlock.',
     runTitle: 'Run Organize',
-    runCopy: 'This action changes files and stays locked until the preview stage has been reviewed.',
+    runCopy: 'This action changes files and stays locked until a current preview is available.',
     runAction: 'Run Organize',
   },
   {
@@ -905,7 +749,7 @@ const workflows = [
     modeLabel: 'Metadata source',
     previewCopy: 'Create real rename candidates from the backend before considering any filesystem action.',
     runTitle: 'Run Rename',
-    runCopy: 'This action renames files in place and stays locked until the candidate review stage is complete.',
+    runCopy: 'This action renames files in place and stays locked until current candidates are available.',
     runAction: 'Run Rename',
   },
   {
@@ -925,22 +769,17 @@ const workflows = [
 
 const stages = [
   { id: 'configure' as const, index: '1', label: 'Setup & Preview', description: 'Tweak inputs and preview' },
-  { id: 'preview' as const, index: '2', label: 'Review Plan', description: 'Select planned changes' },
-  { id: 'run' as const, index: '3', label: 'Run & Results', description: 'Execute and inspect results' },
+  { id: 'run' as const, index: '2', label: 'Review & Run', description: 'Select, execute, inspect' },
 ]
 
 const stageText: Record<StageId, { heading: string; copy: string }> = {
   configure: {
     heading: 'Setup and preview',
-    copy: 'Adjust workflow inputs and refresh the dry-run preview from the same screen.',
-  },
-  preview: {
-    heading: 'Review planned changes',
-    copy: 'Select the books or files that should be included before the run stage unlocks.',
+    copy: 'Adjust workflow inputs and watch the dry-run preview refresh automatically.',
   },
   run: {
-    heading: 'Run and results',
-    copy: 'Confirm the reviewed selection, execute the filesystem action, and inspect backend results.',
+    heading: 'Review and run',
+    copy: 'Select planned changes, execute the filesystem action, and inspect backend results.',
   },
 }
 
@@ -963,7 +802,7 @@ const configState = ref<LoadState>('loading')
 const optionsState = ref<LoadState>('loading')
 const activeWorkflow = ref<WorkflowId>('organize')
 const activeStage = ref<StageId>('configure')
-const previewReady = ref(false)
+const bootstrapComplete = ref(false)
 const sourceFolder = ref('')
 const outputFolder = ref('')
 const sourceFolderPicker = ref<HTMLInputElement | null>(null)
@@ -1030,6 +869,7 @@ const absCleanConfirmed = ref(false)
 const events = ref<ActivityEvent[]>([
   { time: now(), level: 'info', event: 'Local UI ready', detail: 'No workflow request has run yet.' },
 ])
+let autoPreviewTimer: ReturnType<typeof window.setTimeout> | null = null
 
 const currentWorkflow = computed(() => workflows.find((workflow) => workflow.id === activeWorkflow.value) ?? workflows[0])
 const currentStage = computed(() => stageText[activeStage.value])
@@ -1104,7 +944,7 @@ const previewHeading = computed(() => {
     if (renamePreviewStatus.value === 'error') {
       return 'Rename preview needs attention'
     }
-    return 'Create a rename preview'
+    return 'Waiting for rename inputs'
   }
   if (activeWorkflow.value === 'organize' && organizePreviewStale.value) {
     return 'Organize preview stale'
@@ -1127,28 +967,20 @@ const previewHeading = computed(() => {
     }
     return 'Load ABS operation data'
   }
-  return activeWorkflow.value === 'organize' ? 'Create an organize preview' : 'Dry-run preview first'
+  return activeWorkflow.value === 'organize' ? 'Waiting for organize inputs' : 'Dry-run preview first'
 })
-const organizePreviewActionLabel = computed(() =>
-  organizePreviewStatus.value === 'loading'
-    ? 'Creating Preview'
-    : organizePreview.value
-      ? 'Refresh Preview'
-      : 'Create Dry-run Preview',
-)
-const renamePreviewActionLabel = computed(() =>
-  renamePreviewStatus.value === 'loading'
-    ? 'Creating Preview'
-    : renamePreview.value
-      ? 'Refresh Rename Preview'
-      : 'Create Rename Preview',
-)
 const setupPreviewCopy = computed(() => {
   if (activeWorkflow.value === 'abs') {
     return 'Complete ABS setup, then review operation data before maintenance actions.'
   }
   if (activePreviewStale.value) {
-    return 'Inputs changed after the last backend preview. Refresh to make the plan current again.'
+    return 'Inputs changed after the last backend preview. The plan will refresh automatically.'
+  }
+  if (activeWorkflow.value === 'organize' && organizePreviewStatus.value === 'idle') {
+    return 'Enter a valid source and output folder to create the first dry-run preview.'
+  }
+  if (activeWorkflow.value === 'rename' && renamePreviewStatus.value === 'idle') {
+    return 'Enter a valid source folder and template to create rename candidates.'
   }
   return currentWorkflow.value.previewCopy
 })
@@ -1184,37 +1016,6 @@ const runActionLabel = computed(() => {
     return selectedOrganizeMoveCount.value === 1 ? 'Run 1 Selected Move' : `Run ${selectedOrganizeMoveCount.value} Selected Moves`
   }
   return currentWorkflow.value.runAction
-})
-const configureActionLabel = computed(() => {
-  if (pathValidationStatus.value === 'loading') {
-    return 'Validating Paths'
-  }
-  if (activeWorkflow.value === 'rename') {
-    return renamePreviewActionLabel.value
-  }
-  if (activeWorkflow.value === 'abs') {
-    return 'Review ABS Operations'
-  }
-  return organizePreviewActionLabel.value
-})
-const isConfigureActionDisabled = computed(() => {
-  if (activeWorkflow.value === 'rename') {
-    return (
-      !sourceFolder.value.trim() ||
-      !renameTemplate.value.trim() ||
-      renamePreviewStatus.value === 'loading' ||
-      pathValidationStatus.value === 'loading'
-    )
-  }
-  if (activeWorkflow.value === 'abs') {
-    return !absSetupReady.value || pathValidationStatus.value === 'loading'
-  }
-  return (
-    !sourceFolder.value.trim() ||
-    !outputFolder.value.trim() ||
-    organizePreviewStatus.value === 'loading' ||
-    pathValidationStatus.value === 'loading'
-  )
 })
 const absMissingCount = computed(() => absLibraryState.value?.items.filter((item) => item.is_missing).length ?? 0)
 const absInvalidCount = computed(() => absLibraryState.value?.items.filter((item) => item.is_invalid).length ?? 0)
@@ -1368,19 +1169,19 @@ const absReviewCopy = computed(() => {
 })
 const isRunActionDisabled = computed(() => {
   if (activeWorkflow.value === 'rename') {
-    return !previewReady.value || renameRunStatus.value === 'loading' || selectedRenameCandidateCount.value === 0
+    return !canOpenRenameReview.value || renameRunStatus.value === 'loading' || selectedRenameCandidateCount.value === 0
   }
   if (activeWorkflow.value === 'abs') {
     return !absSetupReady.value
   }
-  return !previewReady.value || organizeRunStatus.value === 'loading' || selectedOrganizeMoveCount.value === 0
+  return !canOpenOrganizeReview.value || organizeRunStatus.value === 'loading' || selectedOrganizeMoveCount.value === 0
 })
 
 function selectWorkflow(workflow: WorkflowId) {
   activeWorkflow.value = workflow
   activeStage.value = 'configure'
-  previewReady.value = false
   ensureScanModeFitsWorkflow()
+  scheduleActivePreviewRefresh()
   addEvent({
     time: now(),
     level: 'info',
@@ -1393,49 +1194,27 @@ function isStageLocked(stage: StageId) {
   if (stage === 'configure') {
     return false
   }
-  if (stage === 'preview') {
-    if (activeWorkflow.value === 'organize') {
-      return !canOpenOrganizeReview.value
-    }
-    if (activeWorkflow.value === 'rename') {
-      return !canOpenRenameReview.value
-    }
-    return !absSetupReady.value
-  }
   if (activeWorkflow.value === 'organize') {
-    return !previewReady.value || organizeRunStatus.value === 'loading'
+    return !canOpenOrganizeReview.value || organizeRunStatus.value === 'loading'
   }
   if (activeWorkflow.value === 'abs') {
     return !absSetupReady.value || absScanStatus.value === 'loading' || absCleanStatus.value === 'loading'
   }
-  return !previewReady.value
-}
-
-function editSetup() {
-  previewReady.value = false
-  activeStage.value = 'configure'
-  addEvent({
-    time: now(),
-    level: 'info',
-    event: 'Local navigation: Setup editing',
-    detail: 'Preview review reset until inputs are checked again.',
-  })
+  return !canOpenRenameReview.value || renameRunStatus.value === 'loading'
 }
 
 function openOrganizeReview() {
   if (!canOpenOrganizeReview.value) {
     return
   }
-  previewReady.value = false
-  activeStage.value = 'preview'
+  activeStage.value = 'run'
 }
 
 function openRenameReview() {
   if (!canOpenRenameReview.value) {
     return
   }
-  previewReady.value = false
-  activeStage.value = 'preview'
+  activeStage.value = 'run'
 }
 
 function isOrganizeMoveSelected(sourcePath: string) {
@@ -1483,24 +1262,6 @@ function selectAllRenameCandidates() {
 
 function clearRenameCandidateSelection() {
   selectedRenamePaths.value = []
-}
-
-async function runConfigureAction() {
-  if (isConfigureActionDisabled.value) {
-    return
-  }
-  if (!(await validateConfigurePaths())) {
-    return
-  }
-  if (activeWorkflow.value === 'rename') {
-    await createRenamePreview()
-    return
-  }
-  if (activeWorkflow.value === 'organize') {
-    await createOrganizePreview()
-    return
-  }
-  activeStage.value = 'preview'
 }
 
 function stateLabel(name: string, state: LoadState) {
@@ -1696,7 +1457,6 @@ async function createOrganizePreview() {
   organizeRun.value = null
   organizeRunStatus.value = 'idle'
   organizeRunError.value = ''
-  previewReady.value = false
   organizePreviewStale.value = false
   let requestStarted = false
 
@@ -1729,22 +1489,12 @@ async function createOrganizePreview() {
   }
 }
 
-function reviewOrganizePreview() {
-  if (!canOpenOrganizeReview.value || selectedOrganizeMoveCount.value === 0) {
-    return
-  }
-  previewReady.value = true
-  activeStage.value = 'run'
-  addEvent({ time: now(), level: 'info', event: 'Local review: Organize preview accepted', detail: 'Run stage unlocked.' })
-}
-
 async function createRenamePreview() {
   renamePreviewStatus.value = 'loading'
   renamePreviewError.value = ''
   renameRun.value = null
   renameRunStatus.value = 'idle'
   renameRunError.value = ''
-  previewReady.value = false
   renamePreviewStale.value = false
   let requestStarted = false
 
@@ -1782,25 +1532,10 @@ async function createRenamePreview() {
   }
 }
 
-function reviewRenamePreview() {
-  if (!canOpenRenameReview.value || selectedRenameCandidateCount.value === 0) {
-    return
-  }
-  previewReady.value = true
-  activeStage.value = 'run'
-  addEvent({
-    time: now(),
-    level: 'info',
-    event: 'Local review: Rename candidates accepted',
-    detail: 'Run stage unlocked.',
-  })
-}
-
 async function loadABSLibraries() {
   absLibrariesStatus.value = 'loading'
   absLibrariesError.value = ''
   absLibraries.value = []
-  previewReady.value = false
   let requestStarted = false
 
   try {
@@ -1825,7 +1560,6 @@ async function testABSPathMappings() {
   absPathStatus.value = 'loading'
   absPathError.value = ''
   absResolvedMappings.value = []
-  previewReady.value = false
   let requestStarted = false
 
   try {
@@ -1967,7 +1701,7 @@ function removeABSPathMapping(index: number) {
 }
 
 async function runOrganize() {
-  if (organizePreviewStatus.value !== 'success' || !previewReady.value || organizeRunStatus.value === 'loading') {
+  if (!canOpenOrganizeReview.value || organizeRunStatus.value === 'loading') {
     return
   }
   if (selectedOrganizeMoveCount.value === 0) {
@@ -2006,7 +1740,7 @@ async function runOrganize() {
 }
 
 async function runRename() {
-  if (renamePreviewStatus.value !== 'success' || !previewReady.value || renameRunStatus.value === 'loading') {
+  if (!canOpenRenameReview.value || renameRunStatus.value === 'loading') {
     return
   }
   if (selectedRenameCandidateCount.value === 0) {
@@ -2140,8 +1874,61 @@ function resetRenameResults() {
   renameRunError.value = ''
 }
 
+function scheduleActivePreviewRefresh() {
+  if (!bootstrapComplete.value) {
+    return
+  }
+  if (autoPreviewTimer) {
+    window.clearTimeout(autoPreviewTimer)
+    autoPreviewTimer = null
+  }
+  if (!canAutoPreviewActiveWorkflow()) {
+    return
+  }
+  autoPreviewTimer = window.setTimeout(() => {
+    autoPreviewTimer = null
+    void refreshActivePreview()
+  }, 550)
+}
+
+function canAutoPreviewActiveWorkflow() {
+  if (pathValidationStatus.value === 'loading') {
+    return false
+  }
+  if (activeWorkflow.value === 'organize') {
+    return (
+      !!sourceFolder.value.trim() &&
+      !!outputFolder.value.trim() &&
+      organizePreviewStatus.value !== 'loading'
+    )
+  }
+  if (activeWorkflow.value === 'rename') {
+    return (
+      !!sourceFolder.value.trim() &&
+      !!renameTemplate.value.trim() &&
+      renamePreviewStatus.value !== 'loading'
+    )
+  }
+  return false
+}
+
+async function refreshActivePreview() {
+  if (!canAutoPreviewActiveWorkflow()) {
+    return
+  }
+  if (!(await validateConfigurePaths())) {
+    return
+  }
+  if (activeWorkflow.value === 'rename') {
+    await createRenamePreview()
+    return
+  }
+  if (activeWorkflow.value === 'organize') {
+    await createOrganizePreview()
+  }
+}
+
 function markOrganizePreviewStale() {
-  previewReady.value = false
   organizeRun.value = null
   organizeRunStatus.value = 'idle'
   organizeRunError.value = ''
@@ -2153,7 +1940,6 @@ function markOrganizePreviewStale() {
 }
 
 function markRenamePreviewStale() {
-  previewReady.value = false
   renameRun.value = null
   renameRunStatus.value = 'idle'
   renameRunError.value = ''
@@ -2301,6 +2087,8 @@ onMounted(async () => {
     ensureScanModeFitsWorkflow()
     addRequestError('Config options', 'Options unavailable. Using built-in option labels.')
   }
+  bootstrapComplete.value = true
+  scheduleActivePreviewRefresh()
 })
 
 watch([sourceFolder, outputFolder, scanMode, layout, layoutTemplate, removeEmpty], () => {
@@ -2308,6 +2096,7 @@ watch([sourceFolder, outputFolder, scanMode, layout, layoutTemplate, removeEmpty
     return
   }
   markOrganizePreviewStale()
+  scheduleActivePreviewRefresh()
 })
 
 watch([sourceFolder, scanMode, renameTemplate, renameRecursive, preservePath], () => {
@@ -2315,13 +2104,13 @@ watch([sourceFolder, scanMode, renameTemplate, renameRecursive, preservePath], (
     return
   }
   markRenamePreviewStale()
+  scheduleActivePreviewRefresh()
 })
 
 watch([absUrl, absToken, absHeaderName, absHeaderValue], () => {
   if (activeWorkflow.value !== 'abs') {
     return
   }
-  previewReady.value = false
   resetABSConnectionResults()
 })
 
@@ -2329,7 +2118,6 @@ watch([absLibrary], () => {
   if (activeWorkflow.value !== 'abs') {
     return
   }
-  previewReady.value = false
   resetABSOperationResults()
 })
 
@@ -2337,7 +2125,6 @@ watch([sourceFolder, absSQLitePath, absPathMappings], () => {
   if (activeWorkflow.value !== 'abs') {
     return
   }
-  previewReady.value = false
   resetABSPathResults()
 }, { deep: true })
 </script>

@@ -32,9 +32,6 @@ test('previews and executes real rename candidates through the web UI', async ({
     await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
     await page.getByRole('textbox', { name: 'Rename template' }).fill('{author} - {title}')
 
-    await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
-    await page.getByRole('button', { name: 'Create Rename Preview' }).click()
-
     await expect(page.getByRole('heading', { name: 'Rename preview ready' })).toBeVisible()
     await expectSummaryValue(page, 'Files scanned', '4')
     await expectSummaryValue(page, 'Candidates', '4')
@@ -52,15 +49,13 @@ test('previews and executes real rename candidates through the web UI', async ({
     await expectPathMissing(fixture.firstProposedPath)
     await expectPathMissing(fixture.conflictProposedPath)
 
-    await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
-    await page.getByRole('button', { name: 'Review Candidates' }).click()
-    await expect(page.getByRole('heading', { name: 'Review planned changes' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Planned Rename Changes' })).toBeVisible()
+    await page.getByRole('button', { name: 'Review & Run', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Review and run' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Reviewed Rename Plan' })).toBeVisible()
     await expect(page.locator('.reviewed-plan').getByText(fixture.firstProposedPath)).toBeVisible()
     await page.getByRole('checkbox', { name: `Select rename candidate ${fixture.conflictOriginalPath}` }).uncheck()
     await expectSummaryValue(page, 'Selected files', '1')
-    await page.getByRole('button', { name: 'Continue to Run' }).click()
-    await expect(page.getByRole('heading', { name: 'Run and results' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Review and run' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Run 1 Selected File' })).toBeEnabled()
 
     page.once('dialog', async (dialog) => {
@@ -80,7 +75,6 @@ test('previews and executes real rename candidates through the web UI', async ({
     await expect(page.locator('.review-layout .recovery-note')).toContainText(fixture.logPath)
     await expect(page.locator('.event-row').filter({ hasText: 'Request started: Rename preview' })).toHaveCount(1)
     await expect(page.locator('.event-row').filter({ hasText: 'Request succeeded: Rename preview' })).toHaveCount(1)
-    await expect(page.locator('.event-row').filter({ hasText: 'Local review: Rename candidates accepted' })).toHaveCount(1)
     await expect(page.locator('.event-row').filter({ hasText: 'Request started: Rename run' })).toHaveCount(1)
     await expect(page.locator('.event-row').filter({ hasText: 'Request succeeded: Rename run' })).toHaveCount(1)
     expect(renameRequests).toContain('/api/rename/run')

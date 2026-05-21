@@ -48,13 +48,13 @@ test('drives ABS setup and operations against the real ABS harness', async ({ pa
   await expect(page.getByText('ABS libraries loaded and path mappings validated.')).toBeVisible()
   await expect(page.getByText(audiobookRoot).first()).toBeVisible()
 
-  await page.getByRole('button', { name: 'Review Plan Select planned changes' }).click()
+  await page.getByRole('button', { name: 'Review & Run Select, execute, inspect' }).click()
   await expect(page.getByRole('button', { name: 'Load ABS Items' })).toBeEnabled()
   await expect(page.getByRole('button', { name: 'Check Library State' })).toBeEnabled()
   await page.getByRole('button', { name: 'Load ABS Items' }).click()
   await page.getByRole('button', { name: 'Check Library State' }).click()
 
-  await expect(page.getByRole('heading', { name: 'ABS operation data ready' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'ABS Operation Results' })).toBeVisible()
   await expectSummaryValue(page, 'Metadata items', '2')
   await expectSummaryValue(page, 'Library items', '2')
   await expectSummaryValue(page, 'Missing / invalid', '0 / 0')
@@ -64,15 +64,15 @@ test('drives ABS setup and operations against the real ABS harness', async ({ pa
   const missingTarget = join(await mkdtemp(join(tmpdir(), 'abo-web-abs-missing-')), 'loose')
   await rename(missingSource, missingTarget)
 
-  await page.getByRole('button', { name: 'Run & Results Execute and inspect results' }).click()
+  await page.getByRole('button', { name: 'Review & Run Select, execute, inspect' }).click()
   await page.getByRole('button', { name: 'Trigger Scan' }).click()
   await expect(page.getByText(/Scan triggered for/)).toBeVisible()
 
-  await page.getByRole('button', { name: 'Review Plan Select planned changes' }).click()
+  await page.getByRole('button', { name: 'Review & Run Select, execute, inspect' }).click()
   await waitForMissingState(page)
   await expect(page.locator('.move-list em').filter({ hasText: 'Missing' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Run & Results Execute and inspect results' }).click()
+  await page.getByRole('button', { name: 'Review & Run Select, execute, inspect' }).click()
   await expect(page.getByRole('button', { name: 'Clean Missing Items' })).toBeDisabled()
 
   await page.getByLabel('I understand this removes ABS missing item records').check()
@@ -85,12 +85,12 @@ test('drives ABS setup and operations against the real ABS harness', async ({ pa
 
   await page.getByRole('button', { name: 'Trigger Scan' }).click()
   await expect(page.getByText(/Scan triggered for/)).toBeVisible()
-  await page.getByRole('button', { name: 'Review Plan Select planned changes' }).click()
+  await page.getByRole('button', { name: 'Review & Run Select, execute, inspect' }).click()
   await waitForCleanState(page)
   await expectSummaryValue(page, 'Library items', '1')
   await expectSummaryValue(page, 'Missing / invalid', '0 / 0')
 
-  await page.getByRole('button', { name: 'Run & Results Execute and inspect results' }).click()
+  await page.getByRole('button', { name: 'Review & Run Select, execute, inspect' }).click()
   await expect(page.getByRole('heading', { name: 'ABS Operation Results' })).toBeVisible()
   await expect(page.locator('.review-layout .result-grid')).toContainText('Library state items')
   await expect(page.locator('.review-layout .result-grid')).toContainText('Last cleanup')
@@ -119,7 +119,7 @@ async function waitForLibraryState(page: Page, done: () => Promise<boolean>): Pr
     const checkState = page.getByRole('button', { name: 'Check Library State' })
     await expect(checkState).toBeEnabled()
     await checkState.click()
-    await expect(page.getByRole('heading', { name: /ABS operation/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /ABS Operation/ })).toBeVisible()
     lastSummary = await summaryValue(page, 'Missing / invalid')
     if (await done()) {
       return

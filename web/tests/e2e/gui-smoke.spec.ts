@@ -87,8 +87,6 @@ test('creates organize previews from configure and derives embedded mode from me
     await page.getByRole('textbox', { name: 'Source folder' }).fill(sourceDir)
     await page.getByRole('textbox', { name: 'Output folder' }).fill(outputDir)
     await page.getByRole('radio', { name: 'Embedded metadata by file' }).click()
-    await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
-
     await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
     expect(previewBody).toEqual(
       expect.objectContaining({
@@ -124,8 +122,6 @@ test('keeps invalid configure paths on the first step before preview requests ru
     await loadApp(page)
     await page.getByRole('textbox', { name: 'Source folder' }).fill(filePath)
     await page.getByRole('textbox', { name: 'Output folder' }).fill(join(tempDir, 'output'))
-    await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
-
     await expect(page.getByRole('heading', { name: 'Setup and preview' })).toBeVisible()
     await expect(page.locator('.configure-path-alert').filter({ hasText: 'Path is not a directory' })).toBeVisible()
     await expect(page.locator('.path-message').filter({ hasText: 'Path is not a directory' })).toBeVisible()
@@ -175,16 +171,13 @@ test('keeps staged workflows usable without document overflow on narrow viewport
 
   await expectNoDocumentOverflow(page)
   await expect(page.getByRole('button', { name: /Organize/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Review Plan Select planned changes' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Review & Run Select, execute, inspect' })).toBeVisible()
   await expect(page.getByRole('textbox', { name: 'Source folder' })).toBeVisible()
   await expect(page.getByRole('textbox', { name: 'Output folder' })).toBeVisible()
-
-  await expect(page.getByRole('button', { name: 'Create Dry-run Preview' })).toBeVisible()
   await expectNoDocumentOverflow(page)
 
   await page.getByRole('button', { name: /Rename/ }).click()
   await expect(page.getByRole('textbox', { name: 'Rename template' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Create Rename Preview' })).toBeVisible()
   await expectNoDocumentOverflow(page)
 
   await page.getByRole('button', { name: /Audiobookshelf/ }).click()
@@ -193,7 +186,7 @@ test('keeps staged workflows usable without document overflow on narrow viewport
   await expect(page.getByText('Setup incomplete')).toBeVisible()
   await expectNoDocumentOverflow(page)
 
-  await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Review & Run Select, execute, inspect' })).toBeDisabled()
   await expectNoDocumentOverflow(page)
 })
 
@@ -314,10 +307,10 @@ test('contracts ABS setup controls with mocked backend responses', async ({ page
     }),
   )
 
-  await page.getByRole('button', { name: 'Review Plan Select planned changes' }).click()
-  await expect(page.getByRole('heading', { name: 'ABS Operation Summary' })).toBeVisible()
+  await page.getByRole('button', { name: 'Review & Run Select, execute, inspect' }).click()
+  await expect(page.getByRole('heading', { name: 'Review ABS Data' })).toBeVisible()
   await expect(page.getByText('Ready for ABS operations')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Review & Run Select, execute, inspect' })).toBeEnabled()
 })
 
 test('contracts ABS operation controls with mocked backend responses', async ({ page }) => {
@@ -433,19 +426,19 @@ test('contracts ABS operation controls with mocked backend responses', async ({ 
   await expect(page.getByLabel('ABS library')).toHaveValue('lib-audio')
   await page.getByRole('button', { name: 'Validate Paths' }).click()
 
-  await page.getByRole('button', { name: 'Review Plan Select planned changes' }).click()
+  await page.getByRole('button', { name: 'Review & Run Select, execute, inspect' }).click()
   await expect(page.getByRole('button', { name: 'Load ABS Items' })).toBeEnabled()
   await expect(page.getByRole('button', { name: 'Check Library State' })).toBeEnabled()
   await page.getByRole('button', { name: 'Load ABS Items' }).click()
   await page.getByRole('button', { name: 'Check Library State' }).click()
 
-  await expect(page.getByRole('heading', { name: 'ABS operation data ready' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'ABS Operation Results' })).toBeVisible()
   await expect(page.getByText('/host/audiobooks/Mapped Book')).toBeVisible()
   await expect(page.locator('.move-list em').filter({ hasText: 'Missing' })).toBeVisible()
   expect(itemsBody?.config).toEqual(expect.objectContaining({ library_id: 'lib-audio' }))
   expect(libraryStateBody?.config).toEqual(expect.objectContaining({ library_id: 'lib-audio' }))
 
-  await page.getByRole('button', { name: 'Run & Results Execute and inspect results' }).click()
+  await page.getByRole('button', { name: 'Review & Run Select, execute, inspect' }).click()
   await expect(page.getByText('Scan triggered for lib-audio.')).toHaveCount(0)
   await page.getByRole('button', { name: 'Trigger Scan' }).click()
   await expect(page.getByText('Scan triggered for lib-audio.')).toBeVisible()
@@ -462,7 +455,7 @@ test('contracts ABS operation controls with mocked backend responses', async ({ 
   await expect(page.getByText('Cleanup completed for lib-audio.')).toBeVisible()
   expect(cleanBody?.config).toEqual(expect.objectContaining({ library_id: 'lib-audio' }))
 
-  await page.getByRole('button', { name: 'Run & Results Execute and inspect results' }).click()
+  await page.getByRole('button', { name: 'Review & Run Select, execute, inspect' }).click()
   await expect(page.getByRole('heading', { name: 'ABS Operation Results' })).toBeVisible()
   await expect(page.locator('.review-layout .result-grid strong').filter({ hasText: 'lib-audio' })).toHaveCount(2)
 })
@@ -485,9 +478,9 @@ test('keeps ABS later stages locked when setup requests fail', async ({ page }) 
   await expect(page.locator('.inline-alert').filter({ hasText: 'abs connection failed' })).toBeVisible()
   await expect(page.getByLabel('ABS library')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Validate Paths' })).toBeDisabled()
-  await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Review & Run Select, execute, inspect' })).toBeDisabled()
   await expect(page.locator('.inline-alert').filter({ hasText: 'abs connection failed' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Review & Run Select, execute, inspect' })).toBeDisabled()
 })
 
 test('contracts organize preview and run UI state with mocked backend responses', async ({ page }) => {
@@ -531,9 +524,6 @@ test('contracts organize preview and run UI state with mocked backend responses'
   await page.getByRole('textbox', { name: 'Source folder' }).fill('/library/source')
   await page.getByRole('textbox', { name: 'Output folder' }).fill('/library/output')
 
-  await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
-  await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
-
   await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
   await expect(page.getByText('/library/source/missing')).toBeVisible()
   await expect(page.getByText('/library/output/Author/Book/audio.mp3')).toBeVisible()
@@ -547,19 +537,14 @@ test('contracts organize preview and run UI state with mocked backend responses'
   )
 
   await page.getByRole('textbox', { name: 'Custom layout template' }).fill('{author}/{title}')
-  await expect(page.getByRole('heading', { name: 'Organize preview stale' })).toBeVisible()
-  await expect(page.getByText('Preview is stale. Refresh before reviewing or running.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Review Planned Changes' })).toBeDisabled()
-  await page.getByRole('button', { name: 'Refresh Preview' }).click()
   await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
   expect(previewBody?.config).toEqual(expect.objectContaining({ layout_template: '{author}/{title}' }))
 
-  await page.getByRole('button', { name: 'Review Planned Changes' }).click()
-  await expect(page.getByRole('heading', { name: 'Review planned changes' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Planned Organize Changes' })).toBeVisible()
+  await page.getByRole('button', { name: 'Review & Run', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Review and run' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Reviewed Organize Plan' })).toBeVisible()
   await expect(page.locator('.reviewed-plan').getByText('/library/output/Author/Book/audio.mp3')).toBeVisible()
-  await page.getByRole('button', { name: 'Continue to Run' }).click()
-  await expect(page.getByRole('heading', { name: 'Run and results' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Review and run' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Reviewed Organize Plan' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Run 1 Selected Move' })).toBeEnabled()
 
@@ -600,10 +585,8 @@ test('keeps organize run locked when preview fails', async ({ page }) => {
   await loadApp(page)
   await page.getByRole('textbox', { name: 'Source folder' }).fill('/library/source')
   await page.getByRole('textbox', { name: 'Output folder' }).fill('/library/output')
-  await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
-
   await expect(page.locator('.inline-alert').filter({ hasText: 'preview exploded' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Review & Run Select, execute, inspect' })).toBeDisabled()
   expect(runRequested).toBe(false)
 })
 
@@ -687,9 +670,6 @@ test('contracts rename preview and run UI state with mocked backend responses', 
   await page.getByRole('textbox', { name: 'Source folder' }).fill('/library/source')
   await page.getByRole('textbox', { name: 'Rename template' }).fill('{author} - {title}')
 
-  await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
-  await page.getByRole('button', { name: 'Create Rename Preview' }).click()
-
   await expect(page.getByRole('heading', { name: 'Rename preview ready' })).toBeVisible()
   await expect(page.getByText('/library/source/book/Rename Author - Rename Book.mp3')).toBeVisible()
   await expect(page.locator('.move-list em').filter({ hasText: /^Conflict$/ })).toBeVisible()
@@ -705,12 +685,11 @@ test('contracts rename preview and run UI state with mocked backend responses', 
     }),
   )
 
-  await page.getByRole('button', { name: 'Review Candidates' }).click()
-  await expect(page.getByRole('heading', { name: 'Review planned changes' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Planned Rename Changes' })).toBeVisible()
+  await page.getByRole('button', { name: 'Review & Run', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Review and run' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Reviewed Rename Plan' })).toBeVisible()
   await expect(page.locator('.reviewed-plan').getByText('/library/source/book/Rename Author - Rename Book.mp3')).toBeVisible()
-  await page.getByRole('button', { name: 'Continue to Run' }).click()
-  await expect(page.getByRole('heading', { name: 'Run and results' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Review and run' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Reviewed Rename Plan' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Run 2 Selected Files' })).toBeEnabled()
 
@@ -751,10 +730,8 @@ test('keeps rename run unavailable when preview fails', async ({ page }) => {
   await loadApp(page)
   await page.getByRole('button', { name: /Rename/ }).click()
   await page.getByRole('textbox', { name: 'Source folder' }).fill('/library/source')
-  await page.getByRole('button', { name: 'Create Rename Preview' }).click()
-
   await expect(page.locator('.inline-alert').filter({ hasText: 'rename preview exploded' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Review & Run Select, execute, inspect' })).toBeDisabled()
   expect(runRequested).toBe(false)
 })
 
@@ -766,9 +743,8 @@ test('separates workflow modes and gates run behind preview review', async ({ pa
   await expect(page.getByRole('heading', { name: 'Rename Template' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Organization Rules' })).toHaveCount(0)
 
-  await expect(page.getByRole('heading', { name: 'Create a rename preview' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Create Rename Preview' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
+  await expect(page.getByRole('heading', { name: 'Waiting for rename inputs' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Review & Run Select, execute, inspect' })).toBeDisabled()
 })
 
 async function loadApp(page: Page, options: { allowFailedResourceMessages?: boolean } = {}): Promise<void> {

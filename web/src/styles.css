@@ -596,6 +596,31 @@ select:focus {
   background: var(--warning-soft);
 }
 
+.setup-preview-window.stale {
+  border-color: rgba(243, 170, 60, 0.42);
+  background: var(--warning-soft);
+}
+
+.preview-window-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.preview-window-header h3 {
+  margin-bottom: 6px;
+}
+
+.preview-window-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .preview-empty svg {
   color: var(--accent);
 }
