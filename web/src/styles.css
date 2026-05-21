@@ -311,7 +311,15 @@ button:disabled {
 .configure-actions {
   grid-column: 1 / -1;
   display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   justify-content: flex-start;
+  align-items: center;
+}
+
+.configure-path-alert {
+  flex: 1 1 280px;
+  margin: 0;
 }
 
 .panel-section,

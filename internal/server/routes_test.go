@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -33,6 +34,7 @@ func TestProtectedEndpointsRequireSessionToken(t *testing.T) {
 	}{
 		{name: "initial config", path: "/api/config/initial"},
 		{name: "options", path: "/api/config/options"},
+		{name: "path validation", path: "/api/paths/validate"},
 	}
 
 	for _, tt := range tests {
@@ -170,6 +172,7 @@ func TestPostEndpointsRejectWrongMethodAndInvalidJSON(t *testing.T) {
 	tests := []string{
 		"/api/organize/preview",
 		"/api/organize/run",
+		"/api/paths/validate",
 		"/api/rename/preview",
 		"/api/rename/run",
 		"/api/abs/libraries",
@@ -197,6 +200,40 @@ func TestPostEndpointsRejectWrongMethodAndInvalidJSON(t *testing.T) {
 			assertStatus(t, rec, http.StatusBadRequest)
 		})
 	}
+}
+
+func TestValidatePathsEndpointChecksDirectoriesWithoutCreatingOutput(t *testing.T) {
+	handler := newTestHandler(t)
+	tempDir := t.TempDir()
+	sourceDir := filepath.Join(tempDir, "source")
+	outputDir := filepath.Join(tempDir, "output")
+	filePath := filepath.Join(tempDir, "not-a-directory")
+	missingNestedOutput := filepath.Join(tempDir, "missing-parent", "output")
+
+	if err := os.Mkdir(sourceDir, 0o755); err != nil {
+		t.Fatalf("create source dir: %v", err)
+	}
+	if err := os.WriteFile(filePath, []byte("file"), 0o644); err != nil {
+		t.Fatalf("create file path: %v", err)
+	}
+
+	body := map[string]any{
+		"paths": []map[string]any{
+			{"id": "source", "path": sourceDir, "kind": "existing-directory"},
+			{"id": "output", "path": outputDir, "kind": "output-directory"},
+			{"id": "file", "path": filePath, "kind": "existing-directory"},
+			{"id": "nested", "path": missingNestedOutput, "kind": "output-directory"},
+		},
+	}
+
+	rec := performRequest(handler, http.MethodPost, "/api/paths/validate", body, testToken)
+
+	assertStatus(t, rec, http.StatusOK)
+	assertJSONField(t, rec, "results.0.valid", true)
+	assertJSONField(t, rec, "results.1.valid", true)
+	assertJSONField(t, rec, "results.2.valid", false)
+	assertJSONField(t, rec, "results.3.valid", false)
+	assertFileMissing(t, outputDir)
 }
 
 func TestOrganizePreviewEndpointReturnsDryRunSummary(t *testing.T) {
@@ -615,13 +652,14 @@ func jsonField(t *testing.T, rec *httptest.ResponseRecorder, path string) any {
 		case map[string]any:
 			current = typed[segment]
 		case []any:
-			if segment != "0" {
+			index, err := strconv.Atoi(segment)
+			if err != nil {
 				t.Fatalf("unsupported array path segment %q in %q", segment, path)
 			}
-			if len(typed) == 0 {
-				t.Fatalf("empty array while resolving %q", path)
+			if index < 0 || index >= len(typed) {
+				t.Fatalf("array index %d out of range while resolving %q", index, path)
 			}
-			current = typed[0]
+			current = typed[index]
 		default:
 			t.Fatalf("cannot resolve %q through %#v", segment, current)
 		}
