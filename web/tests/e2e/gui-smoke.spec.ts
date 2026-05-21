@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
@@ -60,6 +60,9 @@ test('uses backend bootstrap options and scopes ABS scan mode to ABS workflow', 
 
 test('creates organize previews from configure and derives embedded mode from metadata source', async ({ page }) => {
   let previewBody: Record<string, any> | undefined
+  const tempDir = await mkdtemp(join(tmpdir(), 'abo-config-preview-'))
+  const sourceDir = join(tempDir, 'source')
+  const outputDir = join(tempDir, 'output')
 
   await page.route('**/api/organize/preview', async (route) => {
     previewBody = route.request().postDataJSON()
@@ -77,23 +80,59 @@ test('creates organize previews from configure and derives embedded mode from me
     })
   })
 
-  await loadApp(page)
-  await page.getByRole('textbox', { name: 'Source folder' }).fill('/manual/source')
-  await page.getByRole('textbox', { name: 'Output folder' }).fill('/manual/output')
-  await page.getByLabel('Metadata source').selectOption('embedded-file')
-  await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
+  try {
+    await mkdir(sourceDir)
 
-  await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
-  expect(previewBody).toEqual(
-    expect.objectContaining({
-      config: expect.objectContaining({
-        base_dir: '/manual/source',
-        output_dir: '/manual/output',
-        use_embedded_metadata: true,
-        flat: true,
+    await loadApp(page)
+    await page.getByRole('textbox', { name: 'Source folder' }).fill(sourceDir)
+    await page.getByRole('textbox', { name: 'Output folder' }).fill(outputDir)
+    await page.getByLabel('Metadata source').selectOption('embedded-file')
+    await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
+    expect(previewBody).toEqual(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          base_dir: sourceDir,
+          output_dir: outputDir,
+          use_embedded_metadata: true,
+          flat: true,
+        }),
       }),
-    }),
-  )
+    )
+  } finally {
+    await rm(tempDir, { recursive: true, force: true })
+  }
+})
+
+test('keeps invalid configure paths on the first step before preview requests run', async ({ page }) => {
+  const tempDir = await mkdtemp(join(tmpdir(), 'abo-config-invalid-'))
+  const filePath = join(tempDir, 'not-a-directory')
+  let previewRequested = false
+
+  await page.route('**/api/organize/preview', async (route) => {
+    previewRequested = true
+    await route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'preview should not run' }),
+    })
+  })
+
+  try {
+    await writeFile(filePath, 'not a directory')
+    await loadApp(page)
+    await page.getByRole('textbox', { name: 'Source folder' }).fill(filePath)
+    await page.getByRole('textbox', { name: 'Output folder' }).fill(join(tempDir, 'output'))
+    await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Configure and scan setup' })).toBeVisible()
+    await expect(page.locator('.configure-path-alert').filter({ hasText: 'Path is not a directory' })).toBeVisible()
+    await expect(page.locator('.path-message').filter({ hasText: 'Path is not a directory' })).toBeVisible()
+    expect(previewRequested).toBe(false)
+  } finally {
+    await rm(tempDir, { recursive: true, force: true })
+  }
 })
 
 test('supports folder picker and drop affordances while preserving manual path entry', async ({ page }) => {

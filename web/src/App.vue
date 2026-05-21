@@ -266,6 +266,7 @@
             >
               <Play :size="18" /> {{ configureActionLabel }}
             </button>
+            <p v-if="pathValidationError" class="inline-alert configure-path-alert">{{ pathValidationError }}</p>
           </div>
         </section>
 
@@ -613,6 +614,8 @@ import {
   type OrganizePreviewResponse,
   type OrganizeRunResponse,
   type OptionsResponse,
+  type PathValidationItem,
+  type PathValidationResponse,
   type RenameConfig,
   type RenamePreviewResponse,
   type RenameRunResponse,
@@ -765,6 +768,7 @@ const organizePreviewStatus = ref<RequestState>('idle')
 const organizeRunStatus = ref<RequestState>('idle')
 const renamePreviewStatus = ref<RequestState>('idle')
 const renameRunStatus = ref<RequestState>('idle')
+const pathValidationStatus = ref<RequestState>('idle')
 const absLibrariesStatus = ref<RequestState>('idle')
 const absPathStatus = ref<RequestState>('idle')
 const absItemsStatus = ref<RequestState>('idle')
@@ -775,6 +779,7 @@ const organizePreviewError = ref('')
 const organizeRunError = ref('')
 const renamePreviewError = ref('')
 const renameRunError = ref('')
+const pathValidationError = ref('')
 const absLibrariesError = ref('')
 const absPathError = ref('')
 const absItemsError = ref('')
@@ -885,6 +890,9 @@ const runActionLabel = computed(() => {
   return currentWorkflow.value.runAction
 })
 const configureActionLabel = computed(() => {
+  if (pathValidationStatus.value === 'loading') {
+    return 'Validating Paths'
+  }
   if (activeWorkflow.value === 'rename') {
     return renamePreviewActionLabel.value
   }
@@ -895,12 +903,22 @@ const configureActionLabel = computed(() => {
 })
 const isConfigureActionDisabled = computed(() => {
   if (activeWorkflow.value === 'rename') {
-    return !sourceFolder.value.trim() || !renameTemplate.value.trim() || renamePreviewStatus.value === 'loading'
+    return (
+      !sourceFolder.value.trim() ||
+      !renameTemplate.value.trim() ||
+      renamePreviewStatus.value === 'loading' ||
+      pathValidationStatus.value === 'loading'
+    )
   }
   if (activeWorkflow.value === 'abs') {
-    return !absSetupReady.value
+    return !absSetupReady.value || pathValidationStatus.value === 'loading'
   }
-  return !sourceFolder.value.trim() || !outputFolder.value.trim() || organizePreviewStatus.value === 'loading'
+  return (
+    !sourceFolder.value.trim() ||
+    !outputFolder.value.trim() ||
+    organizePreviewStatus.value === 'loading' ||
+    pathValidationStatus.value === 'loading'
+  )
 })
 const absMissingCount = computed(() => absLibraryState.value?.items.filter((item) => item.is_missing).length ?? 0)
 const absInvalidCount = computed(() => absLibraryState.value?.items.filter((item) => item.is_invalid).length ?? 0)
@@ -1086,14 +1104,20 @@ async function runConfigureAction() {
   if (isConfigureActionDisabled.value) {
     return
   }
-  activeStage.value = 'preview'
+  if (!(await validateConfigurePaths())) {
+    return
+  }
   if (activeWorkflow.value === 'rename') {
+    activeStage.value = 'preview'
     await createRenamePreview()
     return
   }
   if (activeWorkflow.value === 'organize') {
+    activeStage.value = 'preview'
     await createOrganizePreview()
+    return
   }
+  activeStage.value = 'preview'
 }
 
 function stateLabel(name: string, state: LoadState) {
@@ -1214,6 +1238,10 @@ function setPathValue(field: PathFieldId, value: string) {
 
 function clearPathMessage(field: PathFieldId) {
   setPathMessage(field, '')
+  pathValidationError.value = ''
+  if (pathValidationStatus.value !== 'loading') {
+    pathValidationStatus.value = 'idle'
+  }
 }
 
 function setPathMessage(field: PathFieldId, message: string) {
@@ -1226,6 +1254,57 @@ function setPathMessage(field: PathFieldId, message: string) {
 
 function pathLabel(field: PathFieldId): string {
   return field === 'source' ? 'Source folder' : 'Output folder'
+}
+
+async function validateConfigurePaths(): Promise<boolean> {
+  pathValidationStatus.value = 'loading'
+  pathValidationError.value = ''
+  clearPathMessage('source')
+  clearPathMessage('output')
+
+  try {
+    addRequestStart('Path validation', 'POST /api/paths/validate')
+    const response = await apiPost<PathValidationResponse>('/api/paths/validate', {
+      paths: buildPathValidationItems(),
+    })
+    const invalid = response.results.filter((result) => !result.valid)
+    for (const result of response.results) {
+      if (result.id === 'source') {
+        sourcePathMessage.value = result.valid ? 'Source folder is ready.' : result.error || 'Source folder is invalid.'
+      }
+      if (result.id === 'output') {
+        outputPathMessage.value = result.valid ? 'Output folder is ready.' : result.error || 'Output folder is invalid.'
+      }
+    }
+    if (invalid.length > 0) {
+      pathValidationStatus.value = 'error'
+      pathValidationError.value = invalid.map((result) => result.error || `${result.id} path is invalid.`).join(' ')
+      addActionError('Path validation', pathValidationError.value, false)
+      return false
+    }
+    pathValidationStatus.value = 'success'
+    addRequestSuccess('Path validation', pathValidationSuccessMessage())
+    return true
+  } catch (error) {
+    pathValidationStatus.value = 'error'
+    pathValidationError.value = error instanceof Error ? error.message : 'Path validation failed.'
+    addActionError('Path validation', pathValidationError.value, true)
+    return false
+  }
+}
+
+function buildPathValidationItems(): PathValidationItem[] {
+  const paths: PathValidationItem[] = [
+    { id: 'source', path: sourceFolder.value.trim(), kind: 'existing-directory' },
+  ]
+  if (activeWorkflow.value !== 'rename') {
+    paths.push({ id: 'output', path: outputFolder.value.trim(), kind: 'output-directory' })
+  }
+  return paths
+}
+
+function pathValidationSuccessMessage(): string {
+  return activeWorkflow.value === 'rename' ? 'Source path is ready.' : 'Source and output paths are ready.'
 }
 
 async function createOrganizePreview() {

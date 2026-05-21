@@ -20,6 +20,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/health", s.handleHealth)
 	mux.HandleFunc("/api/config/initial", s.withAuth(s.handleInitialConfig))
 	mux.HandleFunc("/api/config/options", s.withAuth(s.handleOptions))
+	mux.HandleFunc("/api/paths/validate", s.withAuth(s.handleValidatePaths))
 	mux.HandleFunc("/api/organize/preview", s.withAuth(s.handleOrganizePreview))
 	mux.HandleFunc("/api/organize/run", s.withAuth(s.handleOrganizeRun))
 	mux.HandleFunc("/api/rename/preview", s.withAuth(s.handleRenamePreview))
@@ -65,6 +66,23 @@ func (s *Server) handleInitialConfig(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleOptions(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, s.app.Options(r.Context()))
+}
+
+func (s *Server) handleValidatePaths(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, errors.New("method not allowed"))
+		return
+	}
+	var req app.PathValidationRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	resp, err := s.app.ValidatePaths(r.Context(), req)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) handleOrganizePreview(w http.ResponseWriter, r *http.Request) {

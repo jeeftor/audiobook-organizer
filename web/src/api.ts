@@ -177,6 +177,21 @@ export type ABSCleanMissingResponse = {
   library_id: string
 }
 
+export type PathValidationItem = {
+  id: string
+  path: string
+  kind: 'existing-directory' | 'output-directory'
+}
+
+export type PathValidationResponse = {
+  results: Array<{
+    id: string
+    path: string
+    valid: boolean
+    error?: string
+  }>
+}
+
 export type WebConfig = {
   host: string
   port: number
