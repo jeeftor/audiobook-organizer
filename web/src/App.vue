@@ -457,6 +457,49 @@
             </div>
           </template>
           <template v-else>
+            <div v-if="activeWorkflow === 'organize' && organizePreview" class="preview-checklist reviewed-plan">
+              <h3>Reviewed Organize Plan</h3>
+              <div class="result-grid compact">
+                <span>Metadata found</span><strong>{{ organizePreview.summary.MetadataFound.length }}</strong>
+                <span>Planned moves</span><strong>{{ organizePreview.summary.Moves.length }}</strong>
+                <span>Warnings</span><strong>{{ organizePreview.summary.MetadataMissing.length }}</strong>
+              </div>
+              <ul v-if="organizePreview.summary.MetadataMissing.length > 0" class="warning-list">
+                <li v-for="missing in organizePreview.summary.MetadataMissing.slice(0, 4)" :key="missing">{{ missing }}</li>
+              </ul>
+              <div v-if="organizePreview.summary.Moves.length > 0" class="move-list">
+                <div v-for="move in organizePreview.summary.Moves.slice(0, 4)" :key="move.from + move.to">
+                  <span>{{ move.from }}</span>
+                  <strong>{{ move.to }}</strong>
+                </div>
+              </div>
+            </div>
+            <div v-if="activeWorkflow === 'rename' && renamePreview" class="preview-checklist reviewed-plan">
+              <h3>Reviewed Rename Plan</h3>
+              <div class="result-grid compact">
+                <span>Files scanned</span><strong>{{ renamePreview.summary.FilesScanned }}</strong>
+                <span>Candidates</span><strong>{{ renamePreview.candidates.length }}</strong>
+                <span>Conflicts</span><strong>{{ renamePreview.summary.ConflictsFound }}</strong>
+                <span>Skipped</span><strong>{{ renamePreview.summary.FilesSkipped }}</strong>
+                <span>Errors</span><strong>{{ renamePreview.summary.Errors.length }}</strong>
+              </div>
+              <ul v-if="renamePreview.summary.Errors.length > 0" class="warning-list">
+                <li v-for="error in renamePreview.summary.Errors.slice(0, 4)" :key="error">{{ error }}</li>
+              </ul>
+              <div v-if="renamePreview.candidates.length > 0" class="move-list">
+                <div
+                  v-for="candidate in renamePreview.candidates.slice(0, 5)"
+                  :key="candidate.CurrentPath + candidate.ProposedPath"
+                  :class="{ warning: candidate.IsConflict || candidate.IsNoOp || !!candidate.Error }"
+                >
+                  <span>{{ candidate.CurrentPath }}</span>
+                  <strong>{{ candidate.ProposedPath }}</strong>
+                  <em v-if="candidate.IsConflict">Conflict</em>
+                  <em v-else-if="candidate.IsNoOp">Skipped: unchanged</em>
+                  <em v-else-if="candidate.Error">{{ candidate.Error }}</em>
+                </div>
+              </div>
+            </div>
             <p v-if="activeWorkflow === 'organize' && organizeRunError" class="inline-alert">{{ organizeRunError }}</p>
             <p v-if="activeWorkflow === 'rename' && renameRunError" class="inline-alert">{{ renameRunError }}</p>
             <button
