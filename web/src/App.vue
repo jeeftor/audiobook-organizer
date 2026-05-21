@@ -134,7 +134,7 @@
                   type="button"
                   :aria-checked="scanMode === mode.value"
                   :disabled="optionsLoading && workflowScanModes.length === 0"
-                  @click="scanMode = mode.value"
+                  @click="selectScanMode(mode.value)"
                 >
                   <FilePenLine v-if="mode.value === 'json'" :size="18" />
                   <FolderInput v-else-if="mode.value === 'embedded-directory'" :size="18" />
@@ -150,8 +150,13 @@
 
             <div v-if="activeWorkflow === 'rename'" class="panel-section">
               <h3>Rename Template</h3>
-              <label>Template</label>
-              <input v-model="renameTemplate" aria-label="Rename template" />
+              <TemplateBuilder
+                v-model="renameTemplate"
+                label="Filename template"
+                placeholder="{author} - {series} {series_number} - {title}"
+                :fields="renameTemplateFields"
+                empty-text="Select fields to build a filename template."
+              />
               <label class="check-row"><input v-model="renameRecursive" type="checkbox" /> Include subfolders</label>
               <label class="check-row"><input v-model="preservePath" type="checkbox" /> Preserve relative folders</label>
             </div>
@@ -163,12 +168,21 @@
                 <option v-if="optionsLoading && layoutOptions.length === 0" value="" disabled>Loading options</option>
                 <option v-for="option in layoutOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
               </select>
-              <label>Custom layout template</label>
-              <input
+              <TemplateBuilder
+                v-if="layout === customLayoutValue"
                 v-model="layoutTemplate"
-                aria-label="Custom layout template"
+                label="Custom layout template"
                 placeholder="{author}/{series}/{series-count} - {title}"
+                :fields="layoutTemplateFields"
+                empty-text="Select fields to build a custom path."
+                hint="Use slashes to create folders. Metadata values are sanitized inside each folder segment."
               />
+              <div v-else class="field-color-legend" aria-label="Preview color legend">
+                <span class="legend-token author">Author</span>
+                <span class="legend-token series">Series</span>
+                <span class="legend-token title">Title</span>
+                <span class="legend-token other">Other</span>
+              </div>
               <label class="check-row"><input v-model="removeEmpty" type="checkbox" /> Remove empty source folders after run</label>
             </div>
 
@@ -306,15 +320,21 @@
                   </template>
                 </div>
                 <ul v-if="organizePreview.summary.MetadataMissing.length > 0" class="warning-list">
-                  <li v-for="missing in organizePreview.summary.MetadataMissing.slice(0, 4)" :key="missing">{{ missing }}</li>
+                  <li v-for="missing in organizePreview.summary.MetadataMissing.slice(0, 4)" :key="missing">
+                    {{ displayOrganizeSourcePath(missing) }}
+                  </li>
                 </ul>
                 <div v-if="organizePreview.summary.Moves.length > 0" class="move-list">
                   <div
                     v-for="move in organizePreview.summary.Moves.slice(0, 5)"
                     :key="move.from + move.to"
                   >
-                    <span>{{ move.from }}</span>
-                    <strong>{{ move.to }}</strong>
+                    <span>{{ displayOrganizeSourcePath(move.from) }}</span>
+                    <strong class="colored-path">
+                      <template v-for="(part, index) in coloredOrganizeTargetParts(move.to)" :key="index">
+                        <span :class="part.kind">{{ part.value }}</span>
+                      </template>
+                    </strong>
                   </div>
                 </div>
               </template>
@@ -355,8 +375,12 @@
                     :key="candidate.CurrentPath + candidate.ProposedPath"
                     :class="{ warning: candidate.IsConflict || candidate.IsNoOp || !!candidate.Error }"
                   >
-                    <span>{{ candidate.CurrentPath }}</span>
-                    <strong>{{ candidate.ProposedPath }}</strong>
+                    <span>{{ displayRenameSourcePath(candidate.CurrentPath) }}</span>
+                    <strong class="colored-path">
+                      <template v-for="(part, index) in coloredRenameTargetParts(candidate.ProposedPath)" :key="index">
+                        <span :class="part.kind">{{ part.value }}</span>
+                      </template>
+                    </strong>
                     <em v-if="candidate.IsConflict">Conflict</em>
                     <em v-else-if="candidate.IsNoOp">Skipped: unchanged</em>
                     <em v-else-if="candidate.Error">{{ candidate.Error }}</em>
@@ -503,7 +527,9 @@
                 <span>Warnings</span><strong>{{ organizePreview.summary.MetadataMissing.length }}</strong>
               </div>
               <ul v-if="organizePreview.summary.MetadataMissing.length > 0" class="warning-list">
-                <li v-for="missing in organizePreview.summary.MetadataMissing.slice(0, 4)" :key="missing">{{ missing }}</li>
+                <li v-for="missing in organizePreview.summary.MetadataMissing.slice(0, 4)" :key="missing">
+                  {{ displayOrganizeSourcePath(missing) }}
+                </li>
               </ul>
               <div v-if="organizePreview.summary.Moves.length > 0" class="selection-toolbar">
                 <button class="secondary-action compact-action" type="button" @click="selectAllOrganizeMoves">
@@ -526,8 +552,12 @@
                     @change="toggleOrganizeMove(move.from)"
                   />
                   <span>
-                    <span>{{ move.from }}</span>
-                    <strong>{{ move.to }}</strong>
+                    <span>{{ displayOrganizeSourcePath(move.from) }}</span>
+                    <strong class="colored-path">
+                      <template v-for="(part, index) in coloredOrganizeTargetParts(move.to)" :key="index">
+                        <span :class="part.kind">{{ part.value }}</span>
+                      </template>
+                    </strong>
                   </span>
                 </label>
               </div>
@@ -568,8 +598,12 @@
                     @change="toggleRenameCandidate(candidate.CurrentPath)"
                   />
                   <span>
-                    <span>{{ candidate.CurrentPath }}</span>
-                    <strong>{{ candidate.ProposedPath }}</strong>
+                    <span>{{ displayRenameSourcePath(candidate.CurrentPath) }}</span>
+                    <strong class="colored-path">
+                      <template v-for="(part, index) in coloredRenameTargetParts(candidate.ProposedPath)" :key="index">
+                        <span :class="part.kind">{{ part.value }}</span>
+                      </template>
+                    </strong>
                     <em v-if="candidate.IsConflict">Conflict</em>
                     <em v-else-if="candidate.IsNoOp">Skipped: unchanged</em>
                     <em v-else-if="candidate.Error">{{ candidate.Error }}</em>
@@ -600,6 +634,19 @@
               </div>
               <div v-if="organizeRun?.log_path" class="recovery-note">
                 Undo details are available in the backend log at {{ organizeRun.log_path }}.
+              </div>
+              <div v-if="organizeRun?.summary.Moves.length" class="move-list operation-list">
+                <div
+                  v-for="move in organizeRun.summary.Moves"
+                  :key="move.from + move.to"
+                >
+                  <span>{{ displayOrganizeSourcePath(move.from) }}</span>
+                  <strong class="colored-path">
+                    <template v-for="(part, index) in coloredOrganizeTargetParts(move.to)" :key="index">
+                      <span :class="part.kind">{{ part.value }}</span>
+                    </template>
+                  </strong>
+                </div>
               </div>
               <div v-if="organizeReviewWarnings.length > 0" class="review-details">
                 <h4>Warnings</h4>
@@ -633,6 +680,23 @@
               </div>
               <div v-if="renameRun?.log_path" class="recovery-note">
                 Undo details are available in the backend log at {{ renameRun.log_path }}.
+              </div>
+              <div v-if="renameRun?.candidates.length" class="move-list operation-list">
+                <div
+                  v-for="candidate in renameRun.candidates"
+                  :key="candidate.CurrentPath + candidate.ProposedPath"
+                  :class="{ warning: candidate.IsConflict || candidate.IsNoOp || !!candidate.Error }"
+                >
+                  <span>{{ displayRenameSourcePath(candidate.CurrentPath) }}</span>
+                  <strong class="colored-path">
+                    <template v-for="(part, index) in coloredRenameTargetParts(candidate.ProposedPath)" :key="index">
+                      <span :class="part.kind">{{ part.value }}</span>
+                    </template>
+                  </strong>
+                  <em v-if="candidate.IsConflict">Conflict</em>
+                  <em v-else-if="candidate.IsNoOp">Skipped: unchanged</em>
+                  <em v-else-if="candidate.Error">{{ candidate.Error }}</em>
+                </div>
               </div>
               <div v-if="renameReviewWarnings.length > 0" class="review-details">
                 <h4>Warnings</h4>
@@ -680,6 +744,7 @@ import {
   Server,
   Trash2,
 } from 'lucide-vue-next'
+import TemplateBuilder, { type TemplateField } from './components/TemplateBuilder.vue'
 import {
   apiGet,
   apiPost,
@@ -716,6 +781,10 @@ type RequestState = 'idle' | 'loading' | 'success' | 'error'
 type EditablePathMapping = {
   abs_prefix: string
   local_prefix: string
+}
+type ColoredTextPart = {
+  kind: TemplateField['kind'] | 'text' | 'separator'
+  value: string
 }
 
 type ActivityEvent = {
@@ -783,7 +852,29 @@ const stageText: Record<StageId, { heading: string; copy: string }> = {
   },
 }
 
+const customLayoutValue = 'custom'
+const defaultCustomLayoutTemplate = '{author}/{series|Standalone}/{series-count} - {title}'
+const customLayoutOption: Option = { value: customLayoutValue, label: 'Custom' }
 const defaultLayouts: Option[] = [{ value: 'author-series-title', label: 'Author / Series / Title' }]
+const layoutTemplateFields: TemplateField[] = [
+  { value: 'author', label: 'Author', kind: 'author' },
+  { value: 'authors', label: 'Authors', kind: 'author' },
+  { value: 'title', label: 'Title', kind: 'title' },
+  { value: 'series', label: 'Series', kind: 'series' },
+  { value: 'series-count', label: 'Series #', kind: 'series' },
+  { value: 'narrator', label: 'Narrator', kind: 'other' },
+  { value: 'track', label: 'Track', kind: 'other' },
+  { value: 'year', label: 'Year', kind: 'other' },
+]
+const renameTemplateFields: TemplateField[] = [
+  { value: 'author', label: 'Author', kind: 'author' },
+  { value: 'title', label: 'Title', kind: 'title' },
+  { value: 'series', label: 'Series', kind: 'series' },
+  { value: 'series_number', label: 'Series #', kind: 'series' },
+  { value: 'narrator', label: 'Narrator', kind: 'other' },
+  { value: 'track', label: 'Track', kind: 'other' },
+  { value: 'year', label: 'Year', kind: 'other' },
+]
 const defaultScanModes: Option[] = [
   { value: 'json', label: 'metadata.json' },
   { value: 'embedded-directory', label: 'Embedded metadata by directory' },
@@ -811,6 +902,7 @@ const sourcePathMessage = ref('')
 const outputPathMessage = ref('')
 const activePathDropTarget = ref<PathFieldId | null>(null)
 const scanMode = ref('json')
+const scanModeUserSelected = ref(false)
 const layout = ref('author-series-title')
 const layoutTemplate = ref('')
 const removeEmpty = ref(false)
@@ -875,10 +967,12 @@ const currentWorkflow = computed(() => workflows.find((workflow) => workflow.id 
 const currentStage = computed(() => stageText[activeStage.value])
 const optionsLoading = computed(() => optionsState.value === 'loading')
 const layoutOptions = computed(() => {
+  const appendCustom = (options: Option[]) =>
+    options.some((option) => option.value === customLayoutValue) ? options : [...options, customLayoutOption]
   if (layouts.value.length > 0) {
-    return layouts.value
+    return appendCustom(layouts.value)
   }
-  return optionsState.value === 'fallback' ? defaultLayouts : []
+  return optionsState.value === 'fallback' ? appendCustom(defaultLayouts) : []
 })
 const scanModeOptions = computed(() => {
   if (scanModes.value.length > 0) {
@@ -1190,6 +1284,11 @@ function selectWorkflow(workflow: WorkflowId) {
   })
 }
 
+function selectScanMode(mode: string) {
+  scanModeUserSelected.value = true
+  scanMode.value = mode
+}
+
 function isStageLocked(stage: StageId) {
   if (stage === 'configure') {
     return false
@@ -1262,6 +1361,173 @@ function selectAllRenameCandidates() {
 
 function clearRenameCandidateSelection() {
   selectedRenamePaths.value = []
+}
+
+function displayOrganizeSourcePath(path: string): string {
+  return displayLocalPath(path, sourceFolder.value)
+}
+
+function displayRenameSourcePath(path: string): string {
+  return displayLocalPath(path, sourceFolder.value)
+}
+
+function coloredOrganizeTargetParts(path: string): ColoredTextPart[] {
+  return coloredPathParts(path, outputFolder.value, activeLayoutSegmentKinds())
+}
+
+function coloredRenameTargetParts(path: string): ColoredTextPart[] {
+  return coloredPathParts(path, sourceFolder.value, templateSegmentKinds(renameTemplate.value, renameTemplateFields))
+}
+
+function coloredPathParts(path: string, basePath: string, segmentKinds: TemplateField['kind'][]): ColoredTextPart[] {
+  if (segmentKinds.length === 0) {
+    return [{ kind: 'text', value: displayLocalPath(path, basePath) }]
+  }
+
+  const normalizedPath = path.replaceAll('\\', '/')
+  const normalizedBase = trimTrailingPathSeparators(basePath.trim()).replaceAll('\\', '/')
+  const baseEndIndex = findBasePathEndIndex(normalizedPath, normalizedBase)
+  if (baseEndIndex === normalizedPath.length) {
+    return [{ kind: 'text', value: path }]
+  }
+  if (baseEndIndex >= 0) {
+    const displayBase = displayBasePath(path.slice(0, baseEndIndex), basePath)
+    return [
+      { kind: 'text', value: displayBase },
+      { kind: 'separator', value: path[baseEndIndex] ?? '/' },
+      ...coloredRelativePathParts(path.slice(baseEndIndex + 1), segmentKinds),
+    ]
+  }
+
+  return coloredRelativePathParts(path, segmentKinds)
+}
+
+function displayLocalPath(path: string, basePath: string): string {
+  const normalizedPath = path.replaceAll('\\', '/')
+  const normalizedBase = trimTrailingPathSeparators(basePath.trim()).replaceAll('\\', '/')
+  const baseEndIndex = findBasePathEndIndex(normalizedPath, normalizedBase)
+  if (baseEndIndex < 0) {
+    return path
+  }
+  const suffix = path.slice(baseEndIndex)
+  return `${displayBasePath(path.slice(0, baseEndIndex), basePath)}${suffix}`
+}
+
+function displayBasePath(absoluteBase: string, configuredBase: string): string {
+  const trimmed = trimTrailingPathSeparators(configuredBase.trim())
+  if (!trimmed || isAbsolutePath(trimmed)) {
+    return absoluteBase
+  }
+  return trimmed
+}
+
+function isAbsolutePath(path: string): boolean {
+  return path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(path)
+}
+
+function findBasePathEndIndex(normalizedPath: string, normalizedBase: string): number {
+  const candidates = basePathMatchCandidates(normalizedBase)
+  for (const candidate of candidates) {
+    if (normalizedPath === candidate) {
+      return normalizedPath.length
+    }
+    if (normalizedPath.startsWith(`${candidate}/`)) {
+      return candidate.length
+    }
+    const embeddedIndex = normalizedPath.indexOf(`/${candidate}/`)
+    if (embeddedIndex >= 0) {
+      return embeddedIndex + 1 + candidate.length
+    }
+  }
+  return -1
+}
+
+function basePathMatchCandidates(normalizedBase: string): string[] {
+  const candidates = new Set<string>()
+  const cleanedBase = trimLeadingCurrentDirectory(normalizedBase)
+  if (cleanedBase) {
+    candidates.add(cleanedBase)
+  }
+  const segments = cleanedBase.split('/').filter(Boolean)
+  for (let index = 1; index < segments.length; index += 1) {
+    candidates.add(segments.slice(index).join('/'))
+  }
+  return [...candidates].sort((left, right) => right.length - left.length)
+}
+
+function trimLeadingCurrentDirectory(path: string): string {
+  let trimmed = path
+  while (trimmed.startsWith('./')) {
+    trimmed = trimmed.slice(2)
+  }
+  return trimmed
+}
+
+function coloredRelativePathParts(path: string, segmentKinds: TemplateField['kind'][]): ColoredTextPart[] {
+  const parts: ColoredTextPart[] = []
+  const segments = path.split(/([/\\])/)
+  let segmentIndex = 0
+  for (const segment of segments) {
+    if (!segment) {
+      continue
+    }
+    if (segment === '/' || segment === '\\') {
+      parts.push({ kind: 'separator', value: segment })
+      continue
+    }
+    parts.push({ kind: segmentKinds[segmentIndex] ?? 'text', value: segment })
+    segmentIndex += 1
+  }
+  return parts.length > 0 ? parts : [{ kind: 'text', value: path }]
+}
+
+function activeLayoutSegmentKinds(): TemplateField['kind'][] {
+  if (layout.value === customLayoutValue) {
+    return templateSegmentKinds(layoutTemplate.value, layoutTemplateFields)
+  }
+  switch (layout.value) {
+    case 'author-only':
+      return ['author']
+    case 'author-title':
+      return ['author', 'title']
+    case 'author-series':
+      return ['author', 'series']
+    case 'author-series-title':
+      return ['author', 'series', 'title']
+    case 'author-series-title-number':
+      return ['author', 'series', 'title']
+    case 'series-title':
+      return ['series', 'title']
+    case 'series-title-number':
+      return ['series', 'title']
+    default:
+      return []
+  }
+}
+
+function templateSegmentKinds(template: string, fields: TemplateField[]): TemplateField['kind'][] {
+  const fieldKinds = new Map(fields.map((field) => [field.value.toLowerCase(), field.kind]))
+  return template
+    .split('/')
+    .map((segment) => templateTokenKinds(segment, fieldKinds))
+    .filter((kind): kind is TemplateField['kind'] => Boolean(kind))
+}
+
+function templateTokenKinds(segment: string, fieldKinds: Map<string, TemplateField['kind']>): TemplateField['kind'] | '' {
+  const kinds = [...segment.matchAll(/\{([^{}]+)\}/g)]
+    .map((match) => match[1].split('|')[0]?.trim().toLowerCase() ?? '')
+    .map((field) => fieldKinds.get(field) ?? 'other')
+  const uniqueKinds = [...new Set(kinds)]
+  if (uniqueKinds.length === 0) {
+    return ''
+  }
+  if (uniqueKinds.length === 1) {
+    return uniqueKinds[0]
+  }
+  if (uniqueKinds.includes('title')) {
+    return 'title'
+  }
+  return 'other'
 }
 
 function stateLabel(name: string, state: LoadState) {
@@ -1471,6 +1737,19 @@ async function createOrganizePreview() {
         config: buildOrganizerConfig(true),
       }),
     )
+    if (shouldDefaultToEmbeddedFileMetadata(response)) {
+      organizePreviewStatus.value = 'idle'
+      organizePreviewStale.value = false
+      scanMode.value = 'embedded-file'
+      addEvent({
+        time: now(),
+        level: 'info',
+        event: 'Local default: Embedded metadata by file',
+        detail: 'No metadata.json records were found, so the preview will retry with file metadata.',
+      })
+      scheduleActivePreviewRefresh()
+      return
+    }
     organizePreview.value = response
     selectedOrganizeSources.value = response.summary.Moves.map((move) => move.from)
     organizePreviewStatus.value = 'success'
@@ -1487,6 +1766,17 @@ async function createOrganizePreview() {
     organizePreviewError.value = error instanceof Error ? error.message : 'Preview failed.'
     addActionError('Organize preview', organizePreviewError.value, requestStarted)
   }
+}
+
+function shouldDefaultToEmbeddedFileMetadata(response: OrganizePreviewResponse): boolean {
+  return (
+    activeWorkflow.value === 'organize' &&
+    scanMode.value === 'json' &&
+    !scanModeUserSelected.value &&
+    response.summary.MetadataFound.length === 0 &&
+    response.summary.MetadataMissing.length > 0 &&
+    workflowScanModes.value.some((mode) => mode.value === 'embedded-file')
+  )
 }
 
 async function createRenamePreview() {
@@ -1780,6 +2070,8 @@ async function runRename() {
 
 function buildOrganizerConfig(dryRun: boolean, selectedSourcePaths?: string[]): OrganizerConfig {
   const defaults = organizerDefaults.value
+  const customLayoutSelected = layout.value === customLayoutValue
+  const selectedLayout = customLayoutSelected ? defaults?.layout || defaultLayouts[0].value : layout.value
   return {
     base_dir: sourceFolder.value.trim(),
     output_dir: outputFolder.value.trim(),
@@ -1789,8 +2081,8 @@ function buildOrganizerConfig(dryRun: boolean, selectedSourcePaths?: string[]): 
     use_embedded_metadata: shouldUseEmbeddedMetadata(),
     flat: shouldUseFlatMode(),
     skip_errors: defaults?.skip_errors ?? false,
-    layout: layout.value,
-    layout_template: layoutTemplate.value.trim(),
+    layout: selectedLayout,
+    layout_template: customLayoutSelected ? layoutTemplate.value.trim() : '',
     author_format: defaults?.author_format || 'first-last',
     field_mapping: defaults?.field_mapping ?? defaultFieldMapping,
     allowed_source_paths: selectedSourcePaths ?? defaults?.allowed_source_paths,
@@ -2049,8 +2341,8 @@ onMounted(async () => {
     renameDefaults.value = config.rename
     sourceFolder.value = config.initial?.input_dir || config.organizer?.base_dir || ''
     outputFolder.value = config.initial?.output_dir || config.organizer?.output_dir || ''
-    layout.value = config.organizer?.layout || layout.value
     layoutTemplate.value = config.organizer?.layout_template || ''
+    layout.value = layoutTemplate.value ? customLayoutValue : config.organizer?.layout || layout.value
     removeEmpty.value = config.organizer?.remove_empty ?? false
     setInitialScanMode(config)
     renameTemplate.value = config.rename?.template || renameTemplate.value
@@ -2089,6 +2381,12 @@ onMounted(async () => {
   }
   bootstrapComplete.value = true
   scheduleActivePreviewRefresh()
+})
+
+watch(layout, () => {
+  if (layout.value === customLayoutValue && !layoutTemplate.value.trim()) {
+    layoutTemplate.value = defaultCustomLayoutTemplate
+  }
 })
 
 watch([sourceFolder, outputFolder, scanMode, layout, layoutTemplate, removeEmpty], () => {

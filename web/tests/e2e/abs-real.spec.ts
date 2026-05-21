@@ -56,7 +56,7 @@ test('drives ABS setup and operations against the real ABS harness', async ({ pa
 
   await expect(page.getByRole('heading', { name: 'ABS Operation Results' })).toBeVisible()
   await expectSummaryValue(page, 'Metadata items', '2')
-  await expectSummaryValue(page, 'Library items', '2')
+  await expectSummaryValue(page, 'Library state items', '2')
   await expectSummaryValue(page, 'Missing / invalid', '0 / 0')
   await expect(page.getByText(audiobookRoot).first()).toBeVisible()
 
@@ -87,7 +87,7 @@ test('drives ABS setup and operations against the real ABS harness', async ({ pa
   await expect(page.getByText(/Scan triggered for/)).toBeVisible()
   await page.getByRole('button', { name: 'Review & Run Select, execute, inspect' }).click()
   await waitForCleanState(page)
-  await expectSummaryValue(page, 'Library items', '1')
+  await expectSummaryValue(page, 'Library state items', '1')
   await expectSummaryValue(page, 'Missing / invalid', '0 / 0')
 
   await page.getByRole('button', { name: 'Review & Run Select, execute, inspect' }).click()
@@ -162,7 +162,7 @@ async function summaryValue(page: Page, label: string): Promise<string> {
 }
 
 function summaryLocator(page: Page, label: string) {
-  return page.locator(`.result-grid.compact >> xpath=./span[normalize-space(.)="${label}"]/following-sibling::strong[1]`)
+  return page.locator(`.result-grid >> xpath=./span[normalize-space(.)="${label}"]/following-sibling::strong[1]`)
 }
 
 function loadABSTestingEnv(): Record<string, string> {

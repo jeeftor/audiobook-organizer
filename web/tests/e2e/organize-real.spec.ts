@@ -191,6 +191,7 @@ test('uses a custom layout template for real organize preview and execution', as
     await loadApp(page)
     await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
     await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
+    await page.getByRole('combobox', { name: 'Layout' }).selectOption('custom')
     await page
       .getByRole('textbox', { name: 'Custom layout template' })
       .fill('{author}/{series}/{series-count} - {title} ({narrator})')

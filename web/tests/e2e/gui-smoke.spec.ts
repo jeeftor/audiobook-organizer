@@ -51,8 +51,10 @@ test('uses backend bootstrap options and scopes ABS scan mode to ABS workflow', 
   await loadApp(page)
 
   await expect(page.locator('select[aria-label="Layout"] option[value="author-series-title-number"]')).toHaveCount(1)
+  await expect(page.locator('select[aria-label="Layout"] option[value="custom"]')).toHaveCount(1)
   await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveCount(0)
   await expect(page.getByLabel('Use embedded metadata')).toHaveCount(0)
+  await expect(page.getByLabel('Preview color legend')).toBeVisible()
 
   await page.getByRole('button', { name: /Audiobookshelf/ }).click()
   await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveCount(1)
@@ -101,6 +103,47 @@ test('creates organize previews from configure and derives embedded mode from me
   } finally {
     await rm(tempDir, { recursive: true, force: true })
   }
+})
+
+test('defaults from missing metadata.json to embedded file metadata for automatic previews', async ({ page }) => {
+  const previewBodies: Record<string, any>[] = []
+
+  await mockValidPathValidation(page)
+  await page.route('**/api/organize/preview', async (route) => {
+    const body = route.request().postDataJSON()
+    previewBodies.push(body)
+    const firstRequest = previewBodies.length === 1
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        summary: {
+          MetadataFound: firstRequest ? [] : ['/repo/books-dev/input/beef/The Magician.m4b'],
+          MetadataMissing: firstRequest ? ['/repo/books-dev/input/beef'] : [],
+          Moves: firstRequest
+            ? []
+            : [
+                {
+                  from: '/repo/books-dev/input/beef/The Magician.m4b',
+                  to: '/repo/books-dev/output/C. S. Lewis/The Chronicles of Narnia/01 - The Magician.m4b',
+                },
+              ],
+          EmptyDirsRemoved: [],
+        },
+      }),
+    })
+  })
+
+  await loadApp(page)
+  await page.getByRole('textbox', { name: 'Source folder' }).fill('./books-dev/input')
+  await page.getByRole('textbox', { name: 'Output folder' }).fill('./books-dev/output')
+
+  await expect(page.getByRole('radio', { name: 'Embedded metadata by file' })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.locator('.move-list').filter({ hasText: './books-dev/input/beef/The Magician.m4b' })).toBeVisible()
+  await expect(page.locator('.move-list').filter({ hasText: './books-dev/output/C. S. Lewis' })).toBeVisible()
+  expect(previewBodies).toHaveLength(2)
+  expect(previewBodies[0].config).toEqual(expect.objectContaining({ use_embedded_metadata: false, flat: false }))
+  expect(previewBodies[1].config).toEqual(expect.objectContaining({ use_embedded_metadata: true, flat: true }))
 })
 
 test('keeps invalid configure paths on the first step before preview requests run', async ({ page }) => {
@@ -177,7 +220,7 @@ test('keeps staged workflows usable without document overflow on narrow viewport
   await expectNoDocumentOverflow(page)
 
   await page.getByRole('button', { name: /Rename/ }).click()
-  await expect(page.getByRole('textbox', { name: 'Rename template' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Filename template' })).toBeVisible()
   await expectNoDocumentOverflow(page)
 
   await page.getByRole('button', { name: /Audiobookshelf/ }).click()
@@ -212,7 +255,7 @@ test('shows bootstrap fallback state when config and options fail', async ({ pag
   await expect(page.getByText(/options fallback/)).toBeVisible()
   await expect(page.locator('.event-row').filter({ hasText: 'Config unavailable' })).toHaveCount(1)
   await expect(page.locator('.event-row').filter({ hasText: 'Options unavailable' })).toHaveCount(1)
-  await expect(page.locator('select[aria-label="Layout"] option')).toHaveText(['Author / Series / Title'])
+  await expect(page.locator('select[aria-label="Layout"] option')).toHaveText(['Author / Series / Title', 'Custom'])
   await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveCount(0)
 })
 
@@ -526,7 +569,7 @@ test('contracts organize preview and run UI state with mocked backend responses'
 
   await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
   await expect(page.getByText('/library/source/missing')).toBeVisible()
-  await expect(page.getByText('/library/output/Author/Book/audio.mp3')).toBeVisible()
+  await expect(page.locator('.move-list').filter({ hasText: '/library/output/Author/Book/audio.mp3' })).toBeVisible()
   expect(previewBody?.config).toEqual(
     expect.objectContaining({
       base_dir: '/library/source',
@@ -536,6 +579,7 @@ test('contracts organize preview and run UI state with mocked backend responses'
     }),
   )
 
+  await page.getByRole('combobox', { name: 'Layout' }).selectOption('custom')
   await page.getByRole('textbox', { name: 'Custom layout template' }).fill('{author}/{title}')
   await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
   expect(previewBody?.config).toEqual(expect.objectContaining({ layout_template: '{author}/{title}' }))
@@ -543,7 +587,7 @@ test('contracts organize preview and run UI state with mocked backend responses'
   await page.getByRole('button', { name: 'Review & Run', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Review and run' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Reviewed Organize Plan' })).toBeVisible()
-  await expect(page.locator('.reviewed-plan').getByText('/library/output/Author/Book/audio.mp3')).toBeVisible()
+  await expect(page.locator('.reviewed-plan').filter({ hasText: '/library/output/Author/Book/audio.mp3' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Review and run' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Reviewed Organize Plan' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Run 1 Selected Move' })).toBeEnabled()
@@ -558,6 +602,7 @@ test('contracts organize preview and run UI state with mocked backend responses'
   await expect(
     page.locator('.review-layout .result-grid strong').filter({ hasText: '/library/output/.abook-org.log' }),
   ).toBeVisible()
+  await expect(page.locator('.review-layout').filter({ hasText: '/library/output/Author/Book/audio.mp3' })).toBeVisible()
   expect(runBody?.config).toEqual(
     expect.objectContaining({
       dry_run: false,
@@ -668,10 +713,10 @@ test('contracts rename preview and run UI state with mocked backend responses', 
   await loadApp(page)
   await page.getByRole('button', { name: /Rename/ }).click()
   await page.getByRole('textbox', { name: 'Source folder' }).fill('/library/source')
-  await page.getByRole('textbox', { name: 'Rename template' }).fill('{author} - {title}')
+  await page.getByRole('textbox', { name: 'Filename template' }).fill('{author} - {title}')
 
   await expect(page.getByRole('heading', { name: 'Rename preview ready' })).toBeVisible()
-  await expect(page.getByText('/library/source/book/Rename Author - Rename Book.mp3')).toBeVisible()
+  await expect(page.locator('.move-list').filter({ hasText: '/library/source/book/Rename Author - Rename Book.mp3' })).toBeVisible()
   await expect(page.locator('.move-list em').filter({ hasText: /^Conflict$/ })).toBeVisible()
   await expect(page.getByText('missing metadata in skipped.mp3')).toBeVisible()
   expect(previewBody?.config).toEqual(
@@ -688,7 +733,7 @@ test('contracts rename preview and run UI state with mocked backend responses', 
   await page.getByRole('button', { name: 'Review & Run', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Review and run' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Reviewed Rename Plan' })).toBeVisible()
-  await expect(page.locator('.reviewed-plan').getByText('/library/source/book/Rename Author - Rename Book.mp3')).toBeVisible()
+  await expect(page.locator('.reviewed-plan').filter({ hasText: '/library/source/book/Rename Author - Rename Book.mp3' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Review and run' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Reviewed Rename Plan' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Run 2 Selected Files' })).toBeEnabled()
@@ -703,6 +748,7 @@ test('contracts rename preview and run UI state with mocked backend responses', 
   await expect(
     page.locator('.review-layout .result-grid strong').filter({ hasText: '/library/source/.abook-rename.log' }),
   ).toBeVisible()
+  await expect(page.locator('.review-layout').filter({ hasText: '/library/source/book/Rename Author - Rename Book.mp3' })).toBeVisible()
   expect(runBody?.config).toEqual(
     expect.objectContaining({
       dry_run: false,
