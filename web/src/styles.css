@@ -374,6 +374,46 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(7, 139, 79, 0.1);
 }
 
+.metadata-source-control {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.metadata-source-option {
+  min-width: 0;
+  min-height: 48px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: #12161c;
+  color: var(--muted);
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.metadata-source-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.metadata-source-option.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.metadata-source-loading {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .check-row {
   display: flex;
   align-items: center;
@@ -543,6 +583,35 @@ select:focus {
   color: var(--accent);
 }
 
+.preview-side-panel {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.preview-inputs {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 18px;
+}
+
+.preview-inputs-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.preview-inputs-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 760;
+}
+
 .preview-checklist ul {
   margin: 0;
   padding-left: 20px;
@@ -591,6 +660,12 @@ select:focus {
 
 .secondary-action:hover {
   border-color: var(--accent);
+}
+
+.compact-action {
+  min-height: 32px;
+  padding: 0 11px;
+  font-size: 12px;
 }
 
 .inline-alert {
@@ -670,6 +745,49 @@ select:focus {
   font-size: 11px;
   font-style: normal;
   font-weight: 760;
+}
+
+.selection-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.selectable-list {
+  max-height: 380px;
+  overflow: auto;
+}
+
+.move-list .selection-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  margin: 0;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #14181e;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.move-list .selection-row input {
+  width: 16px;
+  min-height: 16px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+}
+
+.move-list .selection-row > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.move-list .selection-row.warning {
+  border-color: rgba(243, 170, 60, 0.42);
 }
 
 .run-layout {
@@ -864,6 +982,7 @@ select:focus {
 
   .configure-grid,
   .preview-layout,
+  .metadata-source-control,
   .operation-grid {
     grid-template-columns: 1fr;
   }
@@ -954,6 +1073,7 @@ select:focus {
 
   .panel-section,
   .preview-empty,
+  .preview-inputs,
   .preview-checklist,
   .warning-panel,
   .review-layout,

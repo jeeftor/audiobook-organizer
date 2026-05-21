@@ -147,6 +147,63 @@ func TestRenamer_ScanFiles(t *testing.T) {
 	}
 }
 
+func TestRenamerScanFilesHonorsAllowedCurrentPaths(t *testing.T) {
+	tmpDir := t.TempDir()
+	selectedPath := createDummyRenameBook(t, tmpDir, "selected", "selected.mp3")
+	createDummyRenameBook(t, tmpDir, "ignored", "ignored.mp3")
+
+	renamer, err := NewRenamer(&RenamerConfig{
+		BaseDir:             tmpDir,
+		Template:            "{author} - {title}",
+		AuthorFormat:        AuthorFormatFirstLast,
+		Recursive:           true,
+		AllowedCurrentPaths: []string{selectedPath},
+	})
+	if err != nil {
+		t.Fatalf("NewRenamer() error: %v", err)
+	}
+
+	candidates, err := renamer.ScanFiles()
+	if err != nil {
+		t.Fatalf("ScanFiles() error: %v", err)
+	}
+
+	if got := len(candidates); got != 1 {
+		t.Fatalf("candidate count = %d, want 1", got)
+	}
+	if candidates[0].CurrentPath != selectedPath {
+		t.Fatalf("candidate path = %q, want %q", candidates[0].CurrentPath, selectedPath)
+	}
+	if summary := renamer.GetSummary(); summary.FilesScanned != 1 {
+		t.Fatalf("FilesScanned = %d, want 1", summary.FilesScanned)
+	}
+}
+
+func TestRenamerScanFilesRejectsInvalidAllowedCurrentPath(t *testing.T) {
+	tmpDir := t.TempDir()
+	createDummyRenameBook(t, tmpDir, "selected", "selected.mp3")
+	missingPath := filepath.Join(tmpDir, "missing", "missing.mp3")
+
+	renamer, err := NewRenamer(&RenamerConfig{
+		BaseDir:             tmpDir,
+		Template:            "{author} - {title}",
+		AuthorFormat:        AuthorFormatFirstLast,
+		Recursive:           true,
+		AllowedCurrentPaths: []string{missingPath},
+	})
+	if err != nil {
+		t.Fatalf("NewRenamer() error: %v", err)
+	}
+
+	_, err = renamer.ScanFiles()
+	if err == nil {
+		t.Fatal("ScanFiles() error = nil, want error")
+	}
+	if !strings.Contains(err.Error(), "resolve allowed rename path") {
+		t.Fatalf("ScanFiles() error = %q, want allowed path resolution context", err)
+	}
+}
+
 func TestRenamer_GenerateNewFilename(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -203,6 +260,27 @@ func TestRenamer_GenerateNewFilename(t *testing.T) {
 			}
 		})
 	}
+}
+
+func createDummyRenameBook(t *testing.T, root, dirName, audioName string) string {
+	t.Helper()
+	bookDir := filepath.Join(root, dirName)
+	if err := os.MkdirAll(bookDir, 0o755); err != nil {
+		t.Fatalf("Failed to create book directory: %v", err)
+	}
+	metadataPath := filepath.Join(bookDir, "metadata.json")
+	if err := os.WriteFile(
+		metadataPath,
+		[]byte(`{"title":"Allowed Book","authors":["Allowed Author"]}`),
+		0o644,
+	); err != nil {
+		t.Fatalf("Failed to write metadata.json: %v", err)
+	}
+	audioPath := filepath.Join(bookDir, audioName)
+	if err := os.WriteFile(audioPath, []byte("dummy audio"), 0o644); err != nil {
+		t.Fatalf("Failed to write audio file: %v", err)
+	}
+	return audioPath
 }
 
 func TestRenamer_GenerateNewPathTemplateCompatibility(t *testing.T) {

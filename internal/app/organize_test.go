@@ -102,6 +102,41 @@ func TestRunOrganizeForcesRunAndReturnsLogPath(t *testing.T) {
 	assertFileExists(t, filepath.Join(outputDir, "App Author", "App Test Book", "audio.mp3"))
 }
 
+func TestRunOrganizeHonorsAllowedSourcePaths(t *testing.T) {
+	service := NewService(DefaultWebConfig("127.0.0.1", 0, false, "", ""))
+	inputDir, outputDir := createOrganizeFixture(t)
+	selectedDir := filepath.Join(inputDir, "selected_book")
+
+	if err := os.MkdirAll(selectedDir, 0o755); err != nil {
+		t.Fatalf("create selected book dir: %v", err)
+	}
+	writeFile(
+		t,
+		filepath.Join(selectedDir, "metadata.json"),
+		`{"title":"Selected Book","authors":["Selected Author"]}`,
+	)
+	writeFile(t, filepath.Join(selectedDir, "selected.mp3"), "fake audio")
+
+	config := organizeTestConfig(inputDir, outputDir, true)
+	config.AllowedSourcePaths = []string{selectedDir}
+	resp, err := service.RunOrganize(context.Background(), OrganizeRequest{
+		Config: config,
+	})
+	if err != nil {
+		t.Fatalf("RunOrganize() error = %v", err)
+	}
+
+	if got := len(resp.Summary.Moves); got != 1 {
+		t.Fatalf("Moves length = %d, want 1", got)
+	}
+	assertFileExists(
+		t,
+		filepath.Join(outputDir, "Selected Author", "Selected Book", "selected.mp3"),
+	)
+	assertFileExists(t, filepath.Join(inputDir, "test_book", "audio.mp3"))
+	assertFileNotExists(t, filepath.Join(outputDir, "App Author", "App Test Book", "audio.mp3"))
+}
+
 func organizeTestConfig(inputDir, outputDir string, dryRun bool) OrganizerConfigDTO {
 	return OrganizerConfigDTO{
 		BaseDir:   inputDir,

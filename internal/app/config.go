@@ -53,6 +53,7 @@ type RenameConfigDTO struct {
 	StrictMode          bool            `json:"strict_mode"`
 	PreservePath        bool            `json:"preserve_path"`
 	UseEmbeddedMetadata bool            `json:"use_embedded_metadata"`
+	AllowedCurrentPaths []string        `json:"allowed_current_paths,omitempty"`
 }
 
 // FieldMappingDTO is the JSON-safe metadata field mapping.
@@ -133,6 +134,7 @@ func (d RenameConfigDTO) ToRenamerConfig() organizer.RenamerConfig {
 		StrictMode:          d.StrictMode,
 		PreservePath:        d.PreservePath,
 		UseEmbeddedMetadata: d.UseEmbeddedMetadata,
+		AllowedCurrentPaths: d.AllowedCurrentPaths,
 	}
 }
 
