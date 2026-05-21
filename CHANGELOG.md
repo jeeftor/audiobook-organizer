@@ -66,6 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Made local web UI manual testing clearer by adding a configure-step preview action and consolidating embedded metadata selection into the metadata source menu.
 - Added local web UI path validation on the configure step so invalid source/output directories are caught before preview requests run.
 - Show the reviewed organize and rename plans on the local web UI run step before mutating actions execute.
+- Improved local web UI manual testing by replacing the metadata source dropdown with icon buttons, showing preview inputs with an edit setup affordance, and letting users select which organize moves or rename candidates execute from a reviewed preview.
 - Updated the layout guide and docs workflow to use public-domain book examples and added more table-based layout guidance.
 
 ---

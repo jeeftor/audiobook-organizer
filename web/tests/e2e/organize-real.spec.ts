@@ -45,28 +45,28 @@ test('runs organize preview and execution against real filesystem fixtures', asy
     await expect(page.getByRole('heading', { name: 'Reviewed Organize Plan' })).toBeVisible()
     await expect(page.locator('.reviewed-plan').getByText(fixture.expectedDir)).toBeVisible()
     await expect(page.locator('.reviewed-plan .warning-list').getByText(fixture.missingDir)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Run Organize' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Run 1 Selected Move' })).toBeEnabled()
 
     page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toContain('Run Organize will change files')
+      expect(dialog.message()).toContain('Run Organize will change files for 1 selected move')
       await dialog.dismiss()
     })
-    await page.getByRole('button', { name: 'Run Organize' }).click()
+    await page.getByRole('button', { name: 'Run 1 Selected Move' }).click()
     await expect(page.getByRole('heading', { name: 'Execute the reviewed plan' })).toBeVisible()
     await expect.poll(() => pathExists(fixture.expectedFile)).toBe(false)
     await expect(page.locator('.event-row').filter({ hasText: 'Request started: Organize run' })).toHaveCount(0)
     expect(organizeRequests).not.toContain('/api/organize/run')
 
     page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toContain('Run Organize will change files')
+      expect(dialog.message()).toContain('Run Organize will change files for 1 selected move')
       await dialog.accept()
     })
-    await page.getByRole('button', { name: 'Run Organize' }).click()
+    await page.getByRole('button', { name: 'Run 1 Selected Move' }).click()
 
     await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
     await expect(page.locator('.review-layout .result-grid strong').filter({ hasText: fixture.expectedLog })).toBeVisible()
     await expect(page.getByText(`Undo details are available in the backend log at ${fixture.expectedLog}.`)).toBeVisible()
-    await expect(page.locator('.review-layout .warning-list').getByText(fixture.missingDir)).toBeVisible()
+    await expectReviewSummaryValue(page, 'Warnings', '0')
     await expect(page.locator('.event-row').filter({ hasText: 'Request started: Organize preview' })).toHaveCount(1)
     await expect(page.locator('.event-row').filter({ hasText: 'Request succeeded: Organize preview' })).toHaveCount(1)
     await expect(page.locator('.event-row').filter({ hasText: 'Local review: Organize preview accepted' })).toHaveCount(1)
@@ -83,6 +83,38 @@ test('runs organize preview and execution against real filesystem fixtures', asy
   }
 })
 
+test('runs only selected organize preview rows against real filesystem fixtures', async ({ page }) => {
+  test.setTimeout(60_000)
+
+  const fixture = await createOrganizeSelectionFixture()
+  try {
+    await loadApp(page)
+    await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
+    await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
+    await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
+    await expectSummaryValue(page, 'Planned moves', '2')
+    await page.locator('.selectable-list input[type="checkbox"]').nth(1).uncheck()
+    await expectSummaryValue(page, 'Selected moves', '1')
+
+    await page.getByRole('button', { name: 'Review Preview & Continue' }).click()
+    await expect(page.getByRole('button', { name: 'Run 1 Selected Move' })).toBeEnabled()
+    page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toContain('Run Organize will change files for 1 selected move')
+      await dialog.accept()
+    })
+    await page.getByRole('button', { name: 'Run 1 Selected Move' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
+    await expect.poll(() => pathExists(fixture.selectedOutputFile)).toBe(true)
+    await expect.poll(() => pathExists(fixture.unselectedInputFile)).toBe(true)
+    await expect.poll(() => pathExists(fixture.unselectedOutputFile)).toBe(false)
+  } finally {
+    await fixture.cleanup()
+  }
+})
+
 test('organizes a real EPUB fixture through embedded metadata mode', async ({ page }) => {
   test.setTimeout(60_000)
 
@@ -93,7 +125,7 @@ test('organizes a real EPUB fixture through embedded metadata mode', async ({ pa
     await loadApp(page)
     await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
     await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
-    await page.getByLabel('Metadata source').selectOption('embedded-directory')
+    await page.getByRole('radio', { name: 'Embedded metadata by directory' }).click()
     await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
     await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
 
@@ -109,10 +141,10 @@ test('organizes a real EPUB fixture through embedded metadata mode', async ({ pa
 
     await page.getByRole('button', { name: 'Review Preview & Continue' }).click()
     page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toContain('Run Organize will change files')
+      expect(dialog.message()).toContain('Run Organize will change files for 1 selected move')
       await dialog.accept()
     })
-    await page.getByRole('button', { name: 'Run Organize' }).click()
+    await page.getByRole('button', { name: 'Run 1 Selected Move' }).click()
 
     await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
     await expect.poll(() => pathExists(fixture.expectedFile)).toBe(true)
@@ -146,10 +178,10 @@ test('uses numbered layout and removes empty source folders after organize run',
 
     await page.getByRole('button', { name: 'Review Preview & Continue' }).click()
     page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toContain('Run Organize will change files')
+      expect(dialog.message()).toContain('Run Organize will change files for 1 selected move')
       await dialog.accept()
     })
-    await page.getByRole('button', { name: 'Run Organize' }).click()
+    await page.getByRole('button', { name: 'Run 1 Selected Move' }).click()
 
     await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
     await expect(page.locator('.review-layout .result-grid strong').filter({ hasText: fixture.expectedLog })).toBeVisible()
@@ -183,10 +215,10 @@ test('uses a custom layout template for real organize preview and execution', as
 
     await page.getByRole('button', { name: 'Review Preview & Continue' }).click()
     page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toContain('Run Organize will change files')
+      expect(dialog.message()).toContain('Run Organize will change files for 1 selected move')
       await dialog.accept()
     })
-    await page.getByRole('button', { name: 'Run Organize' }).click()
+    await page.getByRole('button', { name: 'Run 1 Selected Move' }).click()
 
     await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
     await expect.poll(() => pathExists(fixture.expectedFile)).toBe(true)
@@ -248,6 +280,17 @@ type OrganizeFixture = {
   cleanup: () => Promise<void>
 }
 
+type OrganizeSelectionFixture = {
+  sourceDir: string
+  outputDir: string
+  selectedBookDir: string
+  unselectedBookDir: string
+  selectedOutputFile: string
+  unselectedInputFile: string
+  unselectedOutputFile: string
+  cleanup: () => Promise<void>
+}
+
 type EmbeddedEPUBFixture = OrganizeFixture & {
   sourceFile: string
 }
@@ -296,6 +339,45 @@ async function createOrganizeFixture(): Promise<OrganizeFixture> {
     expectedDir,
     expectedFile: join(expectedDir, 'audio.mp3'),
     expectedLog: join(resolvedOutputDir, '.abook-org.log'),
+    cleanup: () => rm(root, { recursive: true, force: true }),
+  }
+}
+
+async function createOrganizeSelectionFixture(): Promise<OrganizeSelectionFixture> {
+  const root = await mkFixtureRoot()
+  const sourceDir = join(root, 'source')
+  const outputDir = join(root, 'output')
+  const selectedBookDir = join(sourceDir, 'selected-book')
+  const unselectedBookDir = join(sourceDir, 'unselected-book')
+
+  await mkdir(selectedBookDir, { recursive: true })
+  await mkdir(unselectedBookDir, { recursive: true })
+  await mkdir(outputDir, { recursive: true })
+  await writeFile(
+    join(selectedBookDir, 'metadata.json'),
+    JSON.stringify({
+      title: 'Selected Book',
+      authors: ['Selection Author'],
+    }),
+  )
+  await writeFile(
+    join(unselectedBookDir, 'metadata.json'),
+    JSON.stringify({
+      title: 'Unselected Book',
+      authors: ['Selection Author'],
+    }),
+  )
+  await writeFile(join(selectedBookDir, 'selected.mp3'), 'fake audio data')
+  await writeFile(join(unselectedBookDir, 'unselected.mp3'), 'fake audio data')
+
+  return {
+    sourceDir,
+    outputDir,
+    selectedBookDir,
+    unselectedBookDir,
+    selectedOutputFile: join(outputDir, 'Selection Author', 'Selected Book', 'selected.mp3'),
+    unselectedInputFile: join(unselectedBookDir, 'unselected.mp3'),
+    unselectedOutputFile: join(outputDir, 'Selection Author', 'Unselected Book', 'unselected.mp3'),
     cleanup: () => rm(root, { recursive: true, force: true }),
   }
 }
@@ -464,5 +546,11 @@ async function expectSummaryValue(page: Page, label: string, value: string): Pro
     page.locator(
       `.result-grid.compact >> xpath=./span[normalize-space(.)="${label}"]/following-sibling::strong[1]`,
     ),
+  ).toHaveText(value)
+}
+
+async function expectReviewSummaryValue(page: Page, label: string, value: string): Promise<void> {
+  await expect(
+    page.locator(`.review-layout .result-grid >> xpath=./span[normalize-space(.)="${label}"]/following-sibling::strong[1]`),
   ).toHaveText(value)
 }

@@ -133,6 +133,64 @@ func TestRunRenameAppliesCandidatesAndWritesLog(t *testing.T) {
 	assertPathMissing(t, filepath.Join(inputDir, "02-conflict-b", "original-b.mp3"))
 }
 
+func TestRunRenameHonorsAllowedCurrentPaths(t *testing.T) {
+	service := NewService(DefaultWebConfig("127.0.0.1", 0, false, "", ""))
+	inputDir := createRenameFixture(t)
+	selectedPath := filepath.Join(inputDir, "01-conflict-a", "original-a.mp3")
+
+	resp, err := service.RunRename(context.Background(), RenameRequest{
+		Config: RenameConfigDTO{
+			BaseDir:             inputDir,
+			Template:            "{author} - {title}",
+			DryRun:              true,
+			AuthorFormat:        "first-last",
+			Recursive:           true,
+			PreservePath:        true,
+			AllowedCurrentPaths: []string{selectedPath},
+			FieldMapping: FieldMappingDTO{
+				TitleField:   "title",
+				SeriesField:  "series",
+				AuthorFields: []string{"authors"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("RunRename() error = %v", err)
+	}
+
+	if got := len(resp.Candidates); got != 1 {
+		t.Fatalf("candidate count = %d, want 1", got)
+	}
+	if resp.Summary.FilesScanned != 1 {
+		t.Fatalf("FilesScanned = %d, want 1", resp.Summary.FilesScanned)
+	}
+	if resp.Summary.FilesRenamed != 1 {
+		t.Fatalf("FilesRenamed = %d, want 1", resp.Summary.FilesRenamed)
+	}
+	if resp.Summary.FilesSkipped != 0 {
+		t.Fatalf("FilesSkipped = %d, want 0", resp.Summary.FilesSkipped)
+	}
+	if resp.Summary.ConflictsFound != 0 {
+		t.Fatalf("ConflictsFound = %d, want 0", resp.Summary.ConflictsFound)
+	}
+	if len(resp.Summary.Errors) != 0 {
+		t.Fatalf("Errors length = %d, want 0", len(resp.Summary.Errors))
+	}
+
+	assertPathExists(
+		t,
+		filepath.Join(inputDir, "01-conflict-a", "Conflict Author - Conflict Book.mp3"),
+	)
+	assertPathExists(t, filepath.Join(inputDir, "02-conflict-b", "original-b.mp3"))
+	assertPathExists(t, filepath.Join(inputDir, "03-noop", "Noop Author - Noop Book.mp3"))
+	assertPathExists(t, filepath.Join(inputDir, "04-broken", "broken.mp3"))
+	assertPathMissing(t, selectedPath)
+	assertPathMissing(
+		t,
+		filepath.Join(inputDir, "02-conflict-b", "Conflict Author - Conflict Book.mp3"),
+	)
+}
+
 func createRenameFixture(t *testing.T) string {
 	t.Helper()
 

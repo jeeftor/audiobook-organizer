@@ -123,14 +123,27 @@
               {{ outputPathMessage }}
             </p>
             <label>{{ currentWorkflow.modeLabel }}</label>
-            <select
-              v-model="scanMode"
-              aria-label="Metadata source"
-              :disabled="optionsLoading && workflowScanModes.length === 0"
-            >
-              <option v-if="optionsLoading && workflowScanModes.length === 0" value="" disabled>Loading options</option>
-              <option v-for="mode in workflowScanModes" :key="mode.value" :value="mode.value">{{ mode.label }}</option>
-            </select>
+            <div class="metadata-source-control" role="radiogroup" aria-label="Metadata source">
+              <button
+                v-for="mode in workflowScanModes"
+                :key="mode.value"
+                class="metadata-source-option"
+                :class="{ active: scanMode === mode.value }"
+                role="radio"
+                type="button"
+                :aria-checked="scanMode === mode.value"
+                :disabled="optionsLoading && workflowScanModes.length === 0"
+                @click="scanMode = mode.value"
+              >
+                <FilePenLine v-if="mode.value === 'json'" :size="18" />
+                <FolderInput v-else-if="mode.value === 'embedded-directory'" :size="18" />
+                <AudioLines v-else :size="18" />
+                <span>{{ mode.label }}</span>
+              </button>
+              <div v-if="optionsLoading && workflowScanModes.length === 0" class="metadata-source-loading">
+                Loading options
+              </div>
+            </div>
             <p class="hint">{{ currentWorkflow.configureHint }}</p>
           </div>
 
@@ -323,6 +336,28 @@
               <p v-if="absLibraryStateError" class="inline-alert">{{ absLibraryStateError }}</p>
             </template>
           </div>
+          <div class="preview-side-panel">
+            <div class="preview-inputs">
+              <div class="preview-inputs-header">
+                <h3>Preview Inputs</h3>
+                <button class="secondary-action compact-action" type="button" @click="editSetup">
+                  <FilePenLine :size="16" /> Edit Setup
+                </button>
+              </div>
+              <div class="result-grid compact">
+                <span>Source</span><strong>{{ sourceFolder || 'Not set' }}</strong>
+                <template v-if="activeWorkflow !== 'rename'">
+                  <span>Output</span><strong>{{ outputFolder || 'Not set' }}</strong>
+                </template>
+                <span>Metadata</span><strong>{{ selectedMetadataSourceLabel }}</strong>
+                <template v-if="activeWorkflow === 'organize'">
+                  <span>Layout</span><strong>{{ selectedLayoutLabel }}</strong>
+                </template>
+                <template v-if="activeWorkflow === 'rename'">
+                  <span>Template</span><strong>{{ renameTemplate || 'Not set' }}</strong>
+                </template>
+              </div>
+            </div>
           <div v-if="activeWorkflow === 'organize'" class="preview-checklist">
             <h3>Preview Summary</h3>
             <p v-if="!organizePreview">No organize preview has run.</p>
@@ -330,6 +365,7 @@
               <div class="result-grid compact">
                 <span>Metadata found</span><strong>{{ organizePreview.summary.MetadataFound.length }}</strong>
                 <span>Planned moves</span><strong>{{ organizePreview.summary.Moves.length }}</strong>
+                <span>Selected moves</span><strong>{{ selectedOrganizeMoveCount }}</strong>
                 <span>Warnings</span><strong>{{ organizePreview.summary.MetadataMissing.length }}</strong>
                 <template v-if="organizePreview.log_path">
                   <span>Log path</span><strong>{{ organizePreview.log_path }}</strong>
@@ -338,11 +374,31 @@
               <ul v-if="organizePreview.summary.MetadataMissing.length > 0" class="warning-list">
                 <li v-for="missing in organizePreview.summary.MetadataMissing.slice(0, 4)" :key="missing">{{ missing }}</li>
               </ul>
-              <div v-if="organizePreview.summary.Moves.length > 0" class="move-list">
-                <div v-for="move in organizePreview.summary.Moves.slice(0, 4)" :key="move.from + move.to">
-                  <span>{{ move.from }}</span>
-                  <strong>{{ move.to }}</strong>
-                </div>
+              <div v-if="organizePreview.summary.Moves.length > 0" class="selection-toolbar">
+                <button class="secondary-action compact-action" type="button" @click="selectAllOrganizeMoves">
+                  Select All
+                </button>
+                <button class="secondary-action compact-action" type="button" @click="clearOrganizeMoveSelection">
+                  Select None
+                </button>
+              </div>
+              <div v-if="organizePreview.summary.Moves.length > 0" class="move-list selectable-list">
+                <label
+                  v-for="move in organizePreview.summary.Moves"
+                  :key="move.from + move.to"
+                  class="selection-row"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="isOrganizeMoveSelected(move.from)"
+                    :aria-label="`Select move ${move.from}`"
+                    @change="toggleOrganizeMove(move.from)"
+                  />
+                  <span>
+                    <span>{{ move.from }}</span>
+                    <strong>{{ move.to }}</strong>
+                  </span>
+                </label>
               </div>
             </template>
           </div>
@@ -353,6 +409,7 @@
               <div class="result-grid compact">
                 <span>Files scanned</span><strong>{{ renamePreview.summary.FilesScanned }}</strong>
                 <span>Candidates</span><strong>{{ renamePreview.candidates.length }}</strong>
+                <span>Selected files</span><strong>{{ selectedRenameCandidateCount }}</strong>
                 <span>Conflicts</span><strong>{{ renamePreview.summary.ConflictsFound }}</strong>
                 <span>Skipped</span><strong>{{ renamePreview.summary.FilesSkipped }}</strong>
                 <span>Errors</span><strong>{{ renamePreview.summary.Errors.length }}</strong>
@@ -360,18 +417,36 @@
               <ul v-if="renamePreview.summary.Errors.length > 0" class="warning-list">
                 <li v-for="error in renamePreview.summary.Errors.slice(0, 4)" :key="error">{{ error }}</li>
               </ul>
-              <div v-if="renamePreview.candidates.length > 0" class="move-list">
-                <div
-                  v-for="candidate in renamePreview.candidates.slice(0, 5)"
+              <div v-if="renamePreview.candidates.length > 0" class="selection-toolbar">
+                <button class="secondary-action compact-action" type="button" @click="selectAllRenameCandidates">
+                  Select Actionable
+                </button>
+                <button class="secondary-action compact-action" type="button" @click="clearRenameCandidateSelection">
+                  Select None
+                </button>
+              </div>
+              <div v-if="renamePreview.candidates.length > 0" class="move-list selectable-list">
+                <label
+                  v-for="candidate in renamePreview.candidates"
                   :key="candidate.CurrentPath + candidate.ProposedPath"
+                  class="selection-row"
                   :class="{ warning: candidate.IsConflict || candidate.IsNoOp || !!candidate.Error }"
                 >
-                  <span>{{ candidate.CurrentPath }}</span>
-                  <strong>{{ candidate.ProposedPath }}</strong>
-                  <em v-if="candidate.IsConflict">Conflict</em>
-                  <em v-else-if="candidate.IsNoOp">Skipped: unchanged</em>
-                  <em v-else-if="candidate.Error">{{ candidate.Error }}</em>
-                </div>
+                  <input
+                    type="checkbox"
+                    :checked="isRenameCandidateSelected(candidate.CurrentPath)"
+                    :disabled="!isRenameCandidateSelectable(candidate)"
+                    :aria-label="`Select rename candidate ${candidate.CurrentPath}`"
+                    @change="toggleRenameCandidate(candidate.CurrentPath)"
+                  />
+                  <span>
+                    <span>{{ candidate.CurrentPath }}</span>
+                    <strong>{{ candidate.ProposedPath }}</strong>
+                    <em v-if="candidate.IsConflict">Conflict</em>
+                    <em v-else-if="candidate.IsNoOp">Skipped: unchanged</em>
+                    <em v-else-if="candidate.Error">{{ candidate.Error }}</em>
+                  </span>
+                </label>
               </div>
             </template>
           </div>
@@ -407,6 +482,7 @@
                 <em v-else-if="item.is_invalid">Invalid</em>
               </div>
             </div>
+          </div>
           </div>
         </section>
 
@@ -462,16 +538,37 @@
               <div class="result-grid compact">
                 <span>Metadata found</span><strong>{{ organizePreview.summary.MetadataFound.length }}</strong>
                 <span>Planned moves</span><strong>{{ organizePreview.summary.Moves.length }}</strong>
+                <span>Selected moves</span><strong>{{ selectedOrganizeMoveCount }}</strong>
                 <span>Warnings</span><strong>{{ organizePreview.summary.MetadataMissing.length }}</strong>
               </div>
               <ul v-if="organizePreview.summary.MetadataMissing.length > 0" class="warning-list">
                 <li v-for="missing in organizePreview.summary.MetadataMissing.slice(0, 4)" :key="missing">{{ missing }}</li>
               </ul>
-              <div v-if="organizePreview.summary.Moves.length > 0" class="move-list">
-                <div v-for="move in organizePreview.summary.Moves.slice(0, 4)" :key="move.from + move.to">
-                  <span>{{ move.from }}</span>
-                  <strong>{{ move.to }}</strong>
-                </div>
+              <div v-if="organizePreview.summary.Moves.length > 0" class="selection-toolbar">
+                <button class="secondary-action compact-action" type="button" @click="selectAllOrganizeMoves">
+                  Select All
+                </button>
+                <button class="secondary-action compact-action" type="button" @click="clearOrganizeMoveSelection">
+                  Select None
+                </button>
+              </div>
+              <div v-if="organizePreview.summary.Moves.length > 0" class="move-list selectable-list">
+                <label
+                  v-for="move in organizePreview.summary.Moves"
+                  :key="move.from + move.to"
+                  class="selection-row"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="isOrganizeMoveSelected(move.from)"
+                    :aria-label="`Select move ${move.from}`"
+                    @change="toggleOrganizeMove(move.from)"
+                  />
+                  <span>
+                    <span>{{ move.from }}</span>
+                    <strong>{{ move.to }}</strong>
+                  </span>
+                </label>
               </div>
             </div>
             <div v-if="activeWorkflow === 'rename' && renamePreview" class="preview-checklist reviewed-plan">
@@ -479,6 +576,7 @@
               <div class="result-grid compact">
                 <span>Files scanned</span><strong>{{ renamePreview.summary.FilesScanned }}</strong>
                 <span>Candidates</span><strong>{{ renamePreview.candidates.length }}</strong>
+                <span>Selected files</span><strong>{{ selectedRenameCandidateCount }}</strong>
                 <span>Conflicts</span><strong>{{ renamePreview.summary.ConflictsFound }}</strong>
                 <span>Skipped</span><strong>{{ renamePreview.summary.FilesSkipped }}</strong>
                 <span>Errors</span><strong>{{ renamePreview.summary.Errors.length }}</strong>
@@ -486,18 +584,36 @@
               <ul v-if="renamePreview.summary.Errors.length > 0" class="warning-list">
                 <li v-for="error in renamePreview.summary.Errors.slice(0, 4)" :key="error">{{ error }}</li>
               </ul>
-              <div v-if="renamePreview.candidates.length > 0" class="move-list">
-                <div
-                  v-for="candidate in renamePreview.candidates.slice(0, 5)"
+              <div v-if="renamePreview.candidates.length > 0" class="selection-toolbar">
+                <button class="secondary-action compact-action" type="button" @click="selectAllRenameCandidates">
+                  Select Actionable
+                </button>
+                <button class="secondary-action compact-action" type="button" @click="clearRenameCandidateSelection">
+                  Select None
+                </button>
+              </div>
+              <div v-if="renamePreview.candidates.length > 0" class="move-list selectable-list">
+                <label
+                  v-for="candidate in renamePreview.candidates"
                   :key="candidate.CurrentPath + candidate.ProposedPath"
+                  class="selection-row"
                   :class="{ warning: candidate.IsConflict || candidate.IsNoOp || !!candidate.Error }"
                 >
-                  <span>{{ candidate.CurrentPath }}</span>
-                  <strong>{{ candidate.ProposedPath }}</strong>
-                  <em v-if="candidate.IsConflict">Conflict</em>
-                  <em v-else-if="candidate.IsNoOp">Skipped: unchanged</em>
-                  <em v-else-if="candidate.Error">{{ candidate.Error }}</em>
-                </div>
+                  <input
+                    type="checkbox"
+                    :checked="isRenameCandidateSelected(candidate.CurrentPath)"
+                    :disabled="!isRenameCandidateSelectable(candidate)"
+                    :aria-label="`Select rename candidate ${candidate.CurrentPath}`"
+                    @change="toggleRenameCandidate(candidate.CurrentPath)"
+                  />
+                  <span>
+                    <span>{{ candidate.CurrentPath }}</span>
+                    <strong>{{ candidate.ProposedPath }}</strong>
+                    <em v-if="candidate.IsConflict">Conflict</em>
+                    <em v-else-if="candidate.IsNoOp">Skipped: unchanged</em>
+                    <em v-else-if="candidate.Error">{{ candidate.Error }}</em>
+                  </span>
+                </label>
               </div>
             </div>
             <p v-if="activeWorkflow === 'organize' && organizeRunError" class="inline-alert">{{ organizeRunError }}</p>
@@ -659,6 +775,7 @@ import {
   type OptionsResponse,
   type PathValidationItem,
   type PathValidationResponse,
+  type RenameCandidate,
   type RenameConfig,
   type RenamePreviewResponse,
   type RenameRunResponse,
@@ -807,6 +924,8 @@ const organizePreview = ref<OrganizePreviewResponse | null>(null)
 const organizeRun = ref<OrganizeRunResponse | null>(null)
 const renamePreview = ref<RenamePreviewResponse | null>(null)
 const renameRun = ref<RenameRunResponse | null>(null)
+const selectedOrganizeSources = ref<string[]>([])
+const selectedRenamePaths = ref<string[]>([])
 const organizePreviewStatus = ref<RequestState>('idle')
 const organizeRunStatus = ref<RequestState>('idle')
 const renamePreviewStatus = ref<RequestState>('idle')
@@ -851,6 +970,12 @@ const scanModeOptions = computed(() => {
 })
 const workflowScanModes = computed(() => {
   return scanModeOptions.value.filter((mode) => activeWorkflow.value === 'abs' || mode.value !== 'abs')
+})
+const selectedMetadataSourceLabel = computed(() => {
+  return workflowScanModes.value.find((mode) => mode.value === scanMode.value)?.label ?? scanMode.value
+})
+const selectedLayoutLabel = computed(() => {
+  return layoutOptions.value.find((option) => option.value === layout.value)?.label ?? layout.value
 })
 const serverLabel = computed(() =>
   [
@@ -930,6 +1055,12 @@ const runActionLabel = computed(() => {
   if (activeWorkflow.value === 'organize' && organizeRunStatus.value === 'loading') {
     return 'Running Organize'
   }
+  if (activeWorkflow.value === 'rename') {
+    return selectedRenameCandidateCount.value === 1 ? 'Run 1 Selected File' : `Run ${selectedRenameCandidateCount.value} Selected Files`
+  }
+  if (activeWorkflow.value === 'organize') {
+    return selectedOrganizeMoveCount.value === 1 ? 'Run 1 Selected Move' : `Run ${selectedOrganizeMoveCount.value} Selected Moves`
+  }
   return currentWorkflow.value.runAction
 })
 const configureActionLabel = computed(() => {
@@ -965,6 +1096,12 @@ const isConfigureActionDisabled = computed(() => {
 })
 const absMissingCount = computed(() => absLibraryState.value?.items.filter((item) => item.is_missing).length ?? 0)
 const absInvalidCount = computed(() => absLibraryState.value?.items.filter((item) => item.is_invalid).length ?? 0)
+const selectedOrganizeMoveCount = computed(
+  () => organizePreview.value?.summary.Moves.filter((move) => isOrganizeMoveSelected(move.from)).length ?? 0,
+)
+const selectedRenameCandidateCount = computed(
+  () => renamePreview.value?.candidates.filter((candidate) => isRenameCandidateSelected(candidate.CurrentPath)).length ?? 0,
+)
 const organizeReviewSummary = computed(() => organizeRun.value ?? organizePreview.value)
 const organizeReviewWarnings = computed(() => organizeReviewSummary.value?.summary.MetadataMissing ?? [])
 const organizeReviewErrors = computed(() => {
@@ -1109,12 +1246,12 @@ const absReviewCopy = computed(() => {
 })
 const isRunActionDisabled = computed(() => {
   if (activeWorkflow.value === 'rename') {
-    return !previewReady.value || renameRunStatus.value === 'loading'
+    return !previewReady.value || renameRunStatus.value === 'loading' || selectedRenameCandidateCount.value === 0
   }
   if (activeWorkflow.value === 'abs') {
     return !absSetupReady.value
   }
-  return !previewReady.value || organizeRunStatus.value === 'loading'
+  return !previewReady.value || organizeRunStatus.value === 'loading' || selectedOrganizeMoveCount.value === 0
 })
 
 function selectWorkflow(workflow: WorkflowId) {
@@ -1141,6 +1278,64 @@ function isStageLocked(stage: StageId) {
     return !absSetupReady.value || absScanStatus.value === 'loading' || absCleanStatus.value === 'loading'
   }
   return !previewReady.value
+}
+
+function editSetup() {
+  previewReady.value = false
+  activeStage.value = 'configure'
+  addEvent({
+    time: now(),
+    level: 'info',
+    event: 'Local navigation: Setup editing',
+    detail: 'Preview review reset until inputs are checked again.',
+  })
+}
+
+function isOrganizeMoveSelected(sourcePath: string) {
+  return selectedOrganizeSources.value.includes(sourcePath)
+}
+
+function toggleOrganizeMove(sourcePath: string) {
+  if (isOrganizeMoveSelected(sourcePath)) {
+    selectedOrganizeSources.value = selectedOrganizeSources.value.filter((path) => path !== sourcePath)
+    return
+  }
+  selectedOrganizeSources.value = [...selectedOrganizeSources.value, sourcePath]
+}
+
+function selectAllOrganizeMoves() {
+  selectedOrganizeSources.value = organizePreview.value?.summary.Moves.map((move) => move.from) ?? []
+}
+
+function clearOrganizeMoveSelection() {
+  selectedOrganizeSources.value = []
+}
+
+function isRenameCandidateSelectable(candidate: RenameCandidate) {
+  return !candidate.Error && !candidate.IsNoOp
+}
+
+function isRenameCandidateSelected(currentPath: string) {
+  return selectedRenamePaths.value.includes(currentPath)
+}
+
+function toggleRenameCandidate(currentPath: string) {
+  if (isRenameCandidateSelected(currentPath)) {
+    selectedRenamePaths.value = selectedRenamePaths.value.filter((path) => path !== currentPath)
+    return
+  }
+  selectedRenamePaths.value = [...selectedRenamePaths.value, currentPath]
+}
+
+function selectAllRenameCandidates() {
+  selectedRenamePaths.value =
+    renamePreview.value?.candidates
+      .filter((candidate) => isRenameCandidateSelectable(candidate))
+      .map((candidate) => candidate.CurrentPath) ?? []
+}
+
+function clearRenameCandidateSelection() {
+  selectedRenamePaths.value = []
 }
 
 async function runConfigureAction() {
@@ -1370,6 +1565,7 @@ async function createOrganizePreview() {
       }),
     )
     organizePreview.value = response
+    selectedOrganizeSources.value = response.summary.Moves.map((move) => move.from)
     organizePreviewStatus.value = 'success'
     addRequestSuccess(
       'Organize preview',
@@ -1377,6 +1573,7 @@ async function createOrganizePreview() {
     )
   } catch (error) {
     organizePreview.value = null
+    selectedOrganizeSources.value = []
     organizePreviewStatus.value = 'error'
     organizePreviewError.value = error instanceof Error ? error.message : 'Preview failed.'
     addActionError('Organize preview', organizePreviewError.value, requestStarted)
@@ -1416,6 +1613,9 @@ async function createRenamePreview() {
       }),
     )
     renamePreview.value = response
+    selectedRenamePaths.value = response.candidates
+      .filter((candidate) => isRenameCandidateSelectable(candidate))
+      .map((candidate) => candidate.CurrentPath)
     renamePreviewStatus.value = 'success'
     addRequestSuccess(
       'Rename preview',
@@ -1423,6 +1623,7 @@ async function createRenamePreview() {
     )
   } catch (error) {
     renamePreview.value = null
+    selectedRenamePaths.value = []
     renamePreviewStatus.value = 'error'
     renamePreviewError.value = error instanceof Error ? error.message : 'Rename preview failed.'
     addActionError('Rename preview', renamePreviewError.value, requestStarted)
@@ -1617,7 +1818,16 @@ async function runOrganize() {
   if (organizePreviewStatus.value !== 'success' || !previewReady.value || organizeRunStatus.value === 'loading') {
     return
   }
-  if (!window.confirm('Run Organize will change files using the reviewed preview. Continue?')) {
+  if (selectedOrganizeMoveCount.value === 0) {
+    organizeRunError.value = 'Select at least one planned move before running organize.'
+    addActionError('Organize run', organizeRunError.value, false)
+    return
+  }
+  if (
+    !window.confirm(
+      `Run Organize will change files for ${selectedOrganizeMoveCount.value} selected move(s). Continue?`,
+    )
+  ) {
     return
   }
 
@@ -1629,7 +1839,7 @@ async function runOrganize() {
     requestStarted = true
     const response = normalizeOrganizeResponse(
       await apiPost<OrganizeRunResponse>('/api/organize/run', {
-        config: buildOrganizerConfig(false),
+        config: buildOrganizerConfig(false, selectedOrganizeSources.value),
       }),
     )
     organizeRun.value = response
@@ -1647,7 +1857,16 @@ async function runRename() {
   if (renamePreviewStatus.value !== 'success' || !previewReady.value || renameRunStatus.value === 'loading') {
     return
   }
-  if (!window.confirm('Run Rename will change files using the reviewed candidates. Continue?')) {
+  if (selectedRenameCandidateCount.value === 0) {
+    renameRunError.value = 'Select at least one rename candidate before running rename.'
+    addActionError('Rename run', renameRunError.value, false)
+    return
+  }
+  if (
+    !window.confirm(
+      `Run Rename will change ${selectedRenameCandidateCount.value} selected file(s). Continue?`,
+    )
+  ) {
     return
   }
 
@@ -1659,7 +1878,7 @@ async function runRename() {
     requestStarted = true
     const response = normalizeRenameResponse(
       await apiPost<RenameRunResponse>('/api/rename/run', {
-        config: buildRenameConfig(false),
+        config: buildRenameConfig(false, selectedRenamePaths.value),
       }),
     )
     renameRun.value = response
@@ -1673,7 +1892,7 @@ async function runRename() {
   }
 }
 
-function buildOrganizerConfig(dryRun: boolean): OrganizerConfig {
+function buildOrganizerConfig(dryRun: boolean, selectedSourcePaths?: string[]): OrganizerConfig {
   const defaults = organizerDefaults.value
   return {
     base_dir: sourceFolder.value.trim(),
@@ -1688,11 +1907,11 @@ function buildOrganizerConfig(dryRun: boolean): OrganizerConfig {
     layout_template: layoutTemplate.value.trim(),
     author_format: defaults?.author_format || 'first-last',
     field_mapping: defaults?.field_mapping ?? defaultFieldMapping,
-    allowed_source_paths: defaults?.allowed_source_paths,
+    allowed_source_paths: selectedSourcePaths ?? defaults?.allowed_source_paths,
   }
 }
 
-function buildRenameConfig(dryRun: boolean): RenameConfig {
+function buildRenameConfig(dryRun: boolean, selectedCurrentPaths?: string[]): RenameConfig {
   const defaults = renameDefaults.value
   return {
     base_dir: sourceFolder.value.trim(),
@@ -1705,6 +1924,7 @@ function buildRenameConfig(dryRun: boolean): RenameConfig {
     strict_mode: defaults?.strict_mode ?? false,
     preserve_path: preservePath.value,
     use_embedded_metadata: shouldUseEmbeddedMetadata(),
+    allowed_current_paths: selectedCurrentPaths ?? defaults?.allowed_current_paths,
   }
 }
 
@@ -1749,6 +1969,7 @@ function shouldUseFlatMode() {
 function resetOrganizeResults() {
   organizePreview.value = null
   organizeRun.value = null
+  selectedOrganizeSources.value = []
   organizePreviewStatus.value = 'idle'
   organizeRunStatus.value = 'idle'
   organizePreviewError.value = ''
@@ -1758,6 +1979,7 @@ function resetOrganizeResults() {
 function resetRenameResults() {
   renamePreview.value = null
   renameRun.value = null
+  selectedRenamePaths.value = []
   renamePreviewStatus.value = 'idle'
   renameRunStatus.value = 'idle'
   renamePreviewError.value = ''

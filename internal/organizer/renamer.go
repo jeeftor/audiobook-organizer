@@ -23,6 +23,7 @@ type RenamerConfig struct {
 	PreservePath        bool         // Only rename filename, keep directory
 	PromptEnabled       bool         // Prompt before renaming each file
 	UseEmbeddedMetadata bool         // Force embedded metadata, ignore metadata.json
+	AllowedCurrentPaths []string     // When non-empty, only process these current file paths
 }
 
 // Validate checks if the configuration is valid and returns helpful error messages
@@ -222,8 +223,12 @@ func (r *Renamer) Execute() error {
 // ScanFiles finds renameable files in directory
 func (r *Renamer) ScanFiles() ([]RenameCandidate, error) {
 	var candidates []RenameCandidate
+	allowedPaths, err := r.allowedCurrentPaths()
+	if err != nil {
+		return candidates, err
+	}
 
-	err := filepath.Walk(r.config.BaseDir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(r.config.BaseDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -240,6 +245,15 @@ func (r *Renamer) ScanFiles() ([]RenameCandidate, error) {
 		ext := strings.ToLower(filepath.Ext(path))
 		if !IsSupportedFile(ext) {
 			return nil
+		}
+		if len(allowedPaths) > 0 {
+			normalizedPath, err := normalizeExistingPath(path)
+			if err != nil {
+				return err
+			}
+			if _, ok := allowedPaths[normalizedPath]; !ok {
+				return nil
+			}
 		}
 
 		r.summary.FilesScanned++
@@ -299,6 +313,38 @@ func (r *Renamer) ScanFiles() ([]RenameCandidate, error) {
 
 	r.finalizePreviewSummary(candidates)
 	return candidates, nil
+}
+
+func (r *Renamer) allowedCurrentPaths() (map[string]struct{}, error) {
+	if len(r.config.AllowedCurrentPaths) == 0 {
+		return nil, nil
+	}
+
+	allowedPaths := make(map[string]struct{}, len(r.config.AllowedCurrentPaths))
+	for _, path := range r.config.AllowedCurrentPaths {
+		trimmed := strings.TrimSpace(path)
+		if trimmed == "" {
+			continue
+		}
+		normalizedPath, err := normalizeExistingPath(trimmed)
+		if err != nil {
+			return nil, fmt.Errorf("resolve allowed rename path %s: %w", trimmed, err)
+		}
+		allowedPaths[normalizedPath] = struct{}{}
+	}
+	return allowedPaths, nil
+}
+
+func normalizeExistingPath(path string) (string, error) {
+	absolutePath, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return "", err
+	}
+	resolvedPath, err := filepath.EvalSymlinks(absolutePath)
+	if err != nil {
+		return "", err
+	}
+	return resolvedPath, nil
 }
 
 func (r *Renamer) finalizePreviewSummary(candidates []RenameCandidate) {
