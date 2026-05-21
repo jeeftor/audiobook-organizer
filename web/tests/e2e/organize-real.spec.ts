@@ -27,7 +27,7 @@ test('runs organize preview and execution against real filesystem fixtures', asy
     await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
     await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
 
-    await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
     await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
 
     await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
@@ -39,12 +39,14 @@ test('runs organize preview and execution against real filesystem fixtures', asy
     await expect.poll(() => pathExists(fixture.expectedFile)).toBe(false)
     expect(organizeRequests).toContain('/api/organize/preview')
 
-    await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
-    await page.getByRole('button', { name: 'Review Preview & Continue' }).click()
-    await expect(page.getByRole('heading', { name: 'Execute the reviewed plan' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Reviewed Organize Plan' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
+    await page.getByRole('button', { name: 'Review Planned Changes' }).click()
+    await expect(page.getByRole('heading', { name: 'Review planned changes' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Planned Organize Changes' })).toBeVisible()
     await expect(page.locator('.reviewed-plan').getByText(fixture.expectedDir)).toBeVisible()
     await expect(page.locator('.reviewed-plan .warning-list').getByText(fixture.missingDir)).toBeVisible()
+    await page.getByRole('button', { name: 'Continue to Run' }).click()
+    await expect(page.getByRole('heading', { name: 'Run and results' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Run 1 Selected Move' })).toBeEnabled()
 
     page.once('dialog', async (dialog) => {
@@ -52,7 +54,7 @@ test('runs organize preview and execution against real filesystem fixtures', asy
       await dialog.dismiss()
     })
     await page.getByRole('button', { name: 'Run 1 Selected Move' }).click()
-    await expect(page.getByRole('heading', { name: 'Execute the reviewed plan' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Run and results' })).toBeVisible()
     await expect.poll(() => pathExists(fixture.expectedFile)).toBe(false)
     await expect(page.locator('.event-row').filter({ hasText: 'Request started: Organize run' })).toHaveCount(0)
     expect(organizeRequests).not.toContain('/api/organize/run')
@@ -95,10 +97,11 @@ test('runs only selected organize preview rows against real filesystem fixtures'
 
     await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
     await expectSummaryValue(page, 'Planned moves', '2')
+    await page.getByRole('button', { name: 'Review Planned Changes' }).click()
     await page.locator('.selectable-list input[type="checkbox"]').nth(1).uncheck()
     await expectSummaryValue(page, 'Selected moves', '1')
 
-    await page.getByRole('button', { name: 'Review Preview & Continue' }).click()
+    await page.getByRole('button', { name: 'Continue to Run' }).click()
     await expect(page.getByRole('button', { name: 'Run 1 Selected Move' })).toBeEnabled()
     page.once('dialog', async (dialog) => {
       expect(dialog.message()).toContain('Run Organize will change files for 1 selected move')
@@ -126,7 +129,6 @@ test('organizes a real EPUB fixture through embedded metadata mode', async ({ pa
     await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
     await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
     await page.getByRole('radio', { name: 'Embedded metadata by directory' }).click()
-    await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
     await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
 
     await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
@@ -139,7 +141,8 @@ test('organizes a real EPUB fixture through embedded metadata mode', async ({ pa
     await expect.poll(() => pathExists(fixture.sourceFile)).toBe(true)
     expect(organizeRequests).toContain('/api/organize/preview')
 
-    await page.getByRole('button', { name: 'Review Preview & Continue' }).click()
+    await page.getByRole('button', { name: 'Review Planned Changes' }).click()
+    await page.getByRole('button', { name: 'Continue to Run' }).click()
     page.once('dialog', async (dialog) => {
       expect(dialog.message()).toContain('Run Organize will change files for 1 selected move')
       await dialog.accept()
@@ -166,7 +169,6 @@ test('uses numbered layout and removes empty source folders after organize run',
     await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
     await page.getByRole('combobox', { name: 'Layout' }).selectOption('author-series-title-number')
     await page.getByLabel('Remove empty source folders after run').check()
-    await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
     await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
 
     await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
@@ -176,7 +178,8 @@ test('uses numbered layout and removes empty source folders after organize run',
     await expect.poll(() => pathExists(fixture.expectedFile)).toBe(false)
     await expect.poll(() => pathExists(fixture.bookDir)).toBe(true)
 
-    await page.getByRole('button', { name: 'Review Preview & Continue' }).click()
+    await page.getByRole('button', { name: 'Review Planned Changes' }).click()
+    await page.getByRole('button', { name: 'Continue to Run' }).click()
     page.once('dialog', async (dialog) => {
       expect(dialog.message()).toContain('Run Organize will change files for 1 selected move')
       await dialog.accept()
@@ -204,7 +207,6 @@ test('uses a custom layout template for real organize preview and execution', as
     await page
       .getByRole('textbox', { name: 'Custom layout template' })
       .fill('{author}/{series}/{series-count} - {title} ({narrator})')
-    await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
     await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
 
     await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
@@ -213,7 +215,8 @@ test('uses a custom layout template for real organize preview and execution', as
     await expect(page.getByText(fixture.expectedDir)).toBeVisible()
     await expect.poll(() => pathExists(fixture.expectedFile)).toBe(false)
 
-    await page.getByRole('button', { name: 'Review Preview & Continue' }).click()
+    await page.getByRole('button', { name: 'Review Planned Changes' }).click()
+    await page.getByRole('button', { name: 'Continue to Run' }).click()
     page.once('dialog', async (dialog) => {
       expect(dialog.message()).toContain('Run Organize will change files for 1 selected move')
       await dialog.accept()
@@ -238,33 +241,26 @@ test('reports real backend path validation errors for organize preview', async (
     await loadApp(page)
     await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.missingSourceDir)
     await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
-    await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
     await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
 
-    await expect(page.locator('.inline-alert').filter({ hasText: 'base directory does not exist' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
-    await page.getByRole('button', { name: 'Review Inspect backend results' }).click()
-    await expect(page.locator('.review-layout .error-list').getByText(/Organize preview: .*base directory/)).toBeVisible()
+    await expect(page.locator('.inline-alert').filter({ hasText: 'Directory does not exist' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
 
-    await page.getByRole('button', { name: 'Configure & Scan Choose workflow inputs' }).click()
     await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
     await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.missingOutputDir)
-    await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
     await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
 
     await expect(page.locator('.inline-alert').filter({ hasText: 'error resolving output directory path' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
 
-    await page.getByRole('button', { name: 'Configure & Scan Choose workflow inputs' }).click()
     await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
-    await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
     await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
 
     await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
     await expect(page.locator('.inline-alert')).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Run & Results Execute and inspect results' })).toBeDisabled()
     await expect.poll(() => pathExists(fixture.expectedFile)).toBe(false)
-    expect(organizeRequests.filter((path) => path === '/api/organize/preview')).toHaveLength(3)
+    expect(organizeRequests.filter((path) => path === '/api/organize/preview')).toHaveLength(2)
   } finally {
     await fixture.cleanup()
   }
