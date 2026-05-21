@@ -65,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added local web UI folder picker and drag-and-drop affordances for source and output path fields, with clear fallback messaging when the browser cannot expose a local path.
 - Made local web UI manual testing clearer by adding a configure-step preview action and consolidating embedded metadata selection into the metadata source menu.
 - Added local web UI path validation on the configure step so invalid source/output directories are caught before preview requests run.
+- Show the reviewed organize and rename plans on the local web UI run step before mutating actions execute.
 - Updated the layout guide and docs workflow to use public-domain book examples and added more table-based layout guidance.
 
 ---

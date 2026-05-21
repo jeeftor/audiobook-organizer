@@ -675,7 +675,11 @@ select:focus {
 .run-layout {
   display: grid;
   gap: 14px;
-  max-width: 720px;
+  max-width: 920px;
+}
+
+.reviewed-plan {
+  max-width: 100%;
 }
 
 .operation-grid {

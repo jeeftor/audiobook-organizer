@@ -556,6 +556,8 @@ test('contracts organize preview and run UI state with mocked backend responses'
 
   await page.getByRole('button', { name: 'Review Preview & Continue' }).click()
   await expect(page.getByRole('heading', { name: 'Execute the reviewed plan' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Reviewed Organize Plan' })).toBeVisible()
+  await expect(page.locator('.reviewed-plan').getByText('/library/output/Author/Book/audio.mp3')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Run Organize' })).toBeEnabled()
 
   page.once('dialog', async (dialog) => {
@@ -700,6 +702,8 @@ test('contracts rename preview and run UI state with mocked backend responses', 
 
   await page.getByRole('button', { name: 'Review Candidates & Continue' }).click()
   await expect(page.getByRole('heading', { name: 'Execute the reviewed plan' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Reviewed Rename Plan' })).toBeVisible()
+  await expect(page.locator('.reviewed-plan').getByText('/library/source/book/Rename Author - Rename Book.mp3')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Run Rename' })).toBeEnabled()
 
   page.once('dialog', async (dialog) => {

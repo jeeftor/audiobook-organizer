@@ -42,6 +42,9 @@ test('runs organize preview and execution against real filesystem fixtures', asy
     await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
     await page.getByRole('button', { name: 'Review Preview & Continue' }).click()
     await expect(page.getByRole('heading', { name: 'Execute the reviewed plan' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Reviewed Organize Plan' })).toBeVisible()
+    await expect(page.locator('.reviewed-plan').getByText(fixture.expectedDir)).toBeVisible()
+    await expect(page.locator('.reviewed-plan .warning-list').getByText(fixture.missingDir)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Run Organize' })).toBeEnabled()
 
     page.once('dialog', async (dialog) => {
