@@ -26,7 +26,6 @@ test('runs organize preview and execution against real filesystem fixtures', asy
     await loadApp(page)
     await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
     await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
-    await page.getByRole('button', { name: 'Preview Review dry-run output' }).click()
 
     await expect(page.getByRole('button', { name: 'Run Execute after review' })).toBeDisabled()
     await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
