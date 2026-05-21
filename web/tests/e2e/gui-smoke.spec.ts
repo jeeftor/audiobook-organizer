@@ -52,9 +52,48 @@ test('uses backend bootstrap options and scopes ABS scan mode to ABS workflow', 
 
   await expect(page.locator('select[aria-label="Layout"] option[value="author-series-title-number"]')).toHaveCount(1)
   await expect(page.locator('select[aria-label="Metadata source"] option[value="abs"]')).toHaveCount(0)
+  await expect(page.getByLabel('Use embedded metadata')).toHaveCount(0)
 
   await page.getByRole('button', { name: /Audiobookshelf/ }).click()
   await expect(page.locator('select[aria-label="Metadata source"] option[value="abs"]')).toHaveCount(1)
+})
+
+test('creates organize previews from configure and derives embedded mode from metadata source', async ({ page }) => {
+  let previewBody: Record<string, any> | undefined
+
+  await page.route('**/api/organize/preview', async (route) => {
+    previewBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        summary: {
+          MetadataFound: [],
+          MetadataMissing: [],
+          Moves: [],
+          EmptyDirsRemoved: [],
+        },
+      }),
+    })
+  })
+
+  await loadApp(page)
+  await page.getByRole('textbox', { name: 'Source folder' }).fill('/manual/source')
+  await page.getByRole('textbox', { name: 'Output folder' }).fill('/manual/output')
+  await page.getByLabel('Metadata source').selectOption('embedded-file')
+  await page.getByRole('button', { name: 'Create Dry-run Preview' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
+  expect(previewBody).toEqual(
+    expect.objectContaining({
+      config: expect.objectContaining({
+        base_dir: '/manual/source',
+        output_dir: '/manual/output',
+        use_embedded_metadata: true,
+        flat: true,
+      }),
+    }),
+  )
 })
 
 test('supports folder picker and drop affordances while preserving manual path entry', async ({ page }) => {

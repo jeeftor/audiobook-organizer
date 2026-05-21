@@ -155,7 +155,6 @@
               aria-label="Custom layout template"
               placeholder="{author}/{series}/{series-count} - {title}"
             />
-            <label class="check-row"><input v-model="useEmbeddedMetadata" type="checkbox" /> Use embedded metadata</label>
             <label class="check-row"><input v-model="removeEmpty" type="checkbox" /> Remove empty source folders after run</label>
           </div>
 
@@ -256,6 +255,17 @@
                 <strong>{{ mapping.local_prefix }}</strong>
               </div>
             </div>
+          </div>
+
+          <div class="configure-actions">
+            <button
+              class="primary-action"
+              type="button"
+              :disabled="isConfigureActionDisabled"
+              @click="runConfigureAction"
+            >
+              <Play :size="18" /> {{ configureActionLabel }}
+            </button>
           </div>
         </section>
 
@@ -725,7 +735,6 @@ const activePathDropTarget = ref<PathFieldId | null>(null)
 const scanMode = ref('json')
 const layout = ref('author-series-title')
 const layoutTemplate = ref('')
-const useEmbeddedMetadata = ref(false)
 const removeEmpty = ref(false)
 const renameTemplate = ref('{author} - {series} {series_number} - {title}')
 const renameRecursive = ref(true)
@@ -874,6 +883,24 @@ const runActionLabel = computed(() => {
     return 'Running Organize'
   }
   return currentWorkflow.value.runAction
+})
+const configureActionLabel = computed(() => {
+  if (activeWorkflow.value === 'rename') {
+    return renamePreviewActionLabel.value
+  }
+  if (activeWorkflow.value === 'abs') {
+    return 'Review ABS Operations'
+  }
+  return organizePreviewActionLabel.value
+})
+const isConfigureActionDisabled = computed(() => {
+  if (activeWorkflow.value === 'rename') {
+    return !sourceFolder.value.trim() || !renameTemplate.value.trim() || renamePreviewStatus.value === 'loading'
+  }
+  if (activeWorkflow.value === 'abs') {
+    return !absSetupReady.value
+  }
+  return !sourceFolder.value.trim() || !outputFolder.value.trim() || organizePreviewStatus.value === 'loading'
 })
 const absMissingCount = computed(() => absLibraryState.value?.items.filter((item) => item.is_missing).length ?? 0)
 const absInvalidCount = computed(() => absLibraryState.value?.items.filter((item) => item.is_invalid).length ?? 0)
@@ -1053,6 +1080,20 @@ function isStageLocked(stage: StageId) {
     return !absSetupReady.value || absScanStatus.value === 'loading' || absCleanStatus.value === 'loading'
   }
   return !previewReady.value
+}
+
+async function runConfigureAction() {
+  if (isConfigureActionDisabled.value) {
+    return
+  }
+  activeStage.value = 'preview'
+  if (activeWorkflow.value === 'rename') {
+    await createRenamePreview()
+    return
+  }
+  if (activeWorkflow.value === 'organize') {
+    await createOrganizePreview()
+  }
 }
 
 function stateLabel(name: string, state: LoadState) {
@@ -1573,7 +1614,7 @@ function assertABSSetupReady() {
 }
 
 function shouldUseEmbeddedMetadata() {
-  return useEmbeddedMetadata.value || scanMode.value === 'embedded-directory' || scanMode.value === 'embedded-file'
+  return scanMode.value === 'embedded-directory' || scanMode.value === 'embedded-file'
 }
 
 function shouldUseFlatMode() {
@@ -1666,6 +1707,18 @@ function ensureScanModeFitsWorkflow() {
   scanMode.value = workflowScanModes.value[0]?.value || 'json'
 }
 
+function setInitialScanMode(config: WebConfig) {
+  if (config.organizer?.flat) {
+    scanMode.value = 'embedded-file'
+    return
+  }
+  if (config.organizer?.use_embedded_metadata || config.rename?.use_embedded_metadata) {
+    scanMode.value = 'embedded-directory'
+    return
+  }
+  scanMode.value = 'json'
+}
+
 function now() {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
@@ -1690,8 +1743,8 @@ onMounted(async () => {
     outputFolder.value = config.initial?.output_dir || config.organizer?.output_dir || ''
     layout.value = config.organizer?.layout || layout.value
     layoutTemplate.value = config.organizer?.layout_template || ''
-    useEmbeddedMetadata.value = config.organizer?.use_embedded_metadata ?? false
     removeEmpty.value = config.organizer?.remove_empty ?? false
+    setInitialScanMode(config)
     renameTemplate.value = config.rename?.template || renameTemplate.value
     renameRecursive.value = config.rename?.recursive ?? true
     preservePath.value = config.rename?.preserve_path ?? true
@@ -1728,7 +1781,7 @@ onMounted(async () => {
   }
 })
 
-watch([sourceFolder, outputFolder, scanMode, layout, layoutTemplate, useEmbeddedMetadata, removeEmpty], () => {
+watch([sourceFolder, outputFolder, scanMode, layout, layoutTemplate, removeEmpty], () => {
   if (activeWorkflow.value !== 'organize') {
     return
   }
@@ -1736,7 +1789,7 @@ watch([sourceFolder, outputFolder, scanMode, layout, layoutTemplate, useEmbedded
   resetOrganizeResults()
 })
 
-watch([sourceFolder, scanMode, useEmbeddedMetadata, renameTemplate, renameRecursive, preservePath], () => {
+watch([sourceFolder, scanMode, renameTemplate, renameRecursive, preservePath], () => {
   if (activeWorkflow.value !== 'rename') {
     return
   }

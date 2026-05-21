@@ -308,6 +308,12 @@ button:disabled {
   align-items: start;
 }
 
+.configure-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-start;
+}
+
 .panel-section,
 .preview-empty,
 .preview-checklist,
