@@ -68,6 +68,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show the reviewed organize and rename plans on the local web UI run step before mutating actions execute.
 - Improved local web UI manual testing by replacing the metadata source dropdown with icon buttons, showing preview inputs with an edit setup affordance, and letting users select which organize moves or rename candidates execute from a reviewed preview.
 - Combined local web UI setup and dry-run preview into an iterative first stage with stale-preview handling, a focused planned-change review stage, and run results on the final stage.
+- Refined the local web UI iterative flow so setup option changes auto-refresh previews and review/run selection share one final workflow stage.
+- Improved local web UI manual testing with a reusable template builder, colored layout/rename fields, relative local preview paths, completed move lists after execution, and automatic fallback from missing `metadata.json` previews to embedded file metadata.
 - Updated the layout guide and docs workflow to use public-domain book examples and added more table-based layout guidance.
 
 ---
