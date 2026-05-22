@@ -12,7 +12,7 @@ const captureDir = join(repoRoot, 'output', 'docs-visuals', 'tui')
 const sampleRoot = join(repoRoot, 'output', 'docs-tui-sample')
 const tapeDir = join(repoRoot, 'docs', 'visuals', 'tui')
 const browserShimDir = join(repoRoot, 'output', 'docs-vhs-browser-bin')
-const containerImage = process.env.ABO_DOCS_TUI_VHS_IMAGE || 'ghcr.io/charmbracelet/vhs:v0.11.0'
+const containerImage = process.env.ABO_DOCS_TUI_VHS_IMAGE || 'audiobook-organizer-vhs:local'
 
 const captures = [
   {
@@ -177,7 +177,7 @@ async function runVHS(capture, { env, mode }) {
       env,
     })
   }
-  await waitForFile(join(captureDir, capture.gif))
+  await waitForStableFile(join(captureDir, capture.gif))
 }
 
 async function runContainerVHS(capture) {
@@ -192,6 +192,8 @@ async function runContainerVHS(capture) {
     'TERM=xterm-256color',
     '--env',
     'HOME=/tmp',
+    '--env',
+    'VHS_NO_SANDBOX=1',
   ]
 
   const uid = typeof process.getuid === 'function' ? process.getuid() : undefined
@@ -302,21 +304,31 @@ async function extractFinalFrame(capture) {
   ])
 }
 
-async function waitForFile(path) {
-  const deadline = Date.now() + 5_000
+async function waitForStableFile(path) {
+  const deadline = Date.now() + 30_000
   let lastError
+  let lastSize = -1
+  let stableChecks = 0
 
   while (Date.now() < deadline) {
     try {
-      await stat(path)
-      return
+      const fileStat = await stat(path)
+      if (fileStat.size > 0 && fileStat.size === lastSize) {
+        stableChecks += 1
+      } else {
+        stableChecks = 0
+      }
+      if (stableChecks >= 3) {
+        return
+      }
+      lastSize = fileStat.size
     } catch (error) {
       lastError = error
-      await new Promise((resolve) => setTimeout(resolve, 100))
     }
+    await new Promise((resolve) => setTimeout(resolve, 100))
   }
 
-  throw new Error(`Timed out waiting for VHS output ${path}.\n${lastError}`)
+  throw new Error(`Timed out waiting for stable VHS output ${path}.\n${lastError}`)
 }
 
 async function assertCommand(command, args, installHint) {
