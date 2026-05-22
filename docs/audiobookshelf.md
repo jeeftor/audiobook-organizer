@@ -2,6 +2,12 @@
 
 Audiobookshelf workflows are for libraries where ABS already knows the book metadata or where ABS needs to rescan after filesystem changes.
 
+## Normal Lifecycle
+
+ABS organization is a full cycle: configure sidecar metadata, preview, organize, scan ABS, clean up old missing paths if ABS still reports them, and keep the undo log until the library is verified.
+
+![Audiobookshelf organize lifecycle](abs-organize-lifecycle.svg)
+
 ## Configure `metadata.json` Sidecars
 
 For the standard local-folder organize workflow, configure Audiobookshelf to store metadata alongside your books. When this ABS setting is enabled, Audiobookshelf writes a `metadata.json` file into each book directory whenever metadata is generated or updated. Audiobook Organizer can then use those sidecar files as the default metadata source.
@@ -94,12 +100,13 @@ See [Local Web UI](GUI.md) for the browser workflow.
 - Use a separate output directory for the first ABS organize run.
 - Keep `.abook-org.log` until ABS has scanned and you have verified the library.
 - Trigger an ABS scan after filesystem moves so the server reconciles changed paths.
+- Clean up missing old-path entries if ABS still lists them after the scan.
 
-## Clean Up Missing ABS Items
+## After Organizing: Scan And Clean Up Missing Items
 
-Audiobook Organizer moves files on disk; it does not directly rewrite Audiobookshelf database rows. After a non-dry-run organization, ABS may temporarily show missing items until the library scan and cleanup process reconciles the moved paths.
+Audiobook Organizer moves files on disk; it does not directly rewrite Audiobookshelf database rows. After a non-dry-run organization, scanning and missing-item cleanup are normal post-run steps for ABS-managed libraries.
 
-If the library shows issues like missing books, open the ABS **Issues** view:
+First trigger an Audiobookshelf library scan so ABS can discover moved files. If the library still shows issues like missing books after the scan, open the ABS **Issues** view:
 
 ![Audiobookshelf issues view showing missing books](issues.jpg)
 
