@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="520" viewBox="0 0 1180 520" role="img" aria-labelledby="title desc">
+  <title id="title">Audiobookshelf organize lifecycle</title>
+  <desc id="desc">A six step workflow: configure Audiobookshelf metadata sidecars, preview with dry run, organize files, trigger an Audiobookshelf scan, clean up missing old paths, and verify the library while keeping the undo log.</desc>
+  <defs>
+    <style>
+      .bg { fill: #eef2f6; }
+      .title { fill: #101828; font: 800 34px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .subtitle { fill: #526174; font: 500 17px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .card { fill: #ffffff; stroke: #cfd8e5; stroke-width: 1.5; }
+      .card-dark { fill: #172033; stroke: #30415e; stroke-width: 1.5; }
+      .num { fill: #172033; font: 800 18px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .num-light { fill: #ffffff; font: 800 18px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .step-title { fill: #101828; font: 800 21px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .step-title-light { fill: #ffffff; font: 800 21px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .step-body { fill: #536176; font: 500 15px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .step-body-light { fill: #d7deea; font: 500 15px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .badge { fill: #48c6b0; }
+      .badge-dark { fill: #24344d; }
+      .arrow { stroke: #7b8ba1; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .arrow-strong { stroke: #48c6b0; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .label { fill: #526174; font: 700 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; text-transform: uppercase; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7b8ba1"/>
+    </marker>
+    <marker id="arrowStrong" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#48c6b0"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1180" height="520" rx="18"/>
+  <text class="title" x="48" y="62">Audiobookshelf organize lifecycle</text>
+  <text class="subtitle" x="48" y="92">This is the expected ABS flow: prepare metadata, move files safely, then let ABS reconcile the library.</text>
+
+  <g transform="translate(48 132)">
+    <rect class="card" x="0" y="0" width="330" height="132" rx="12"/>
+    <circle class="badge" cx="34" cy="34" r="18"/>
+    <text class="num" x="29" y="41">1</text>
+    <text class="step-title" x="66" y="34">Configure ABS</text>
+    <text class="step-body" x="24" y="72">Enable Store metadata with item</text>
+    <text class="step-body" x="24" y="96">so each book gets metadata.json.</text>
+
+    <path class="arrow" d="M 344 66 H 398" marker-end="url(#arrow)"/>
+
+    <rect class="card" x="414" y="0" width="330" height="132" rx="12"/>
+    <circle class="badge" cx="448" cy="34" r="18"/>
+    <text class="num" x="443" y="41">2</text>
+    <text class="step-title" x="480" y="34">Preview first</text>
+    <text class="step-body" x="438" y="72">Run a dry-run with the same</text>
+    <text class="step-body" x="438" y="96">source, output, and metadata mode.</text>
+
+    <path class="arrow" d="M 758 66 H 812" marker-end="url(#arrow)"/>
+
+    <rect class="card-dark" x="828" y="0" width="300" height="132" rx="12"/>
+    <circle class="badge" cx="862" cy="34" r="18"/>
+    <text class="num" x="857" y="41">3</text>
+    <text class="step-title-light" x="894" y="34">Organize</text>
+    <text class="step-body-light" x="852" y="72">Run without dry-run after</text>
+    <text class="step-body-light" x="852" y="96">the plan looks correct.</text>
+  </g>
+
+  <path class="arrow-strong" d="M 1026 284 C 1026 326 996 346 946 346 H 906" marker-end="url(#arrowStrong)"/>
+
+  <g transform="translate(48 324)">
+    <rect class="card" x="828" y="0" width="300" height="132" rx="12"/>
+    <circle class="badge" cx="862" cy="34" r="18"/>
+    <text class="num" x="857" y="41">4</text>
+    <text class="step-title" x="894" y="34">Trigger scan</text>
+    <text class="step-body" x="852" y="72">Ask ABS to rescan so it sees</text>
+    <text class="step-body" x="852" y="96">the moved filesystem paths.</text>
+
+    <path class="arrow" d="M 812 66 H 758" marker-end="url(#arrow)"/>
+
+    <rect class="card" x="414" y="0" width="330" height="132" rx="12"/>
+    <circle class="badge" cx="448" cy="34" r="18"/>
+    <text class="num" x="443" y="41">5</text>
+    <text class="step-title" x="480" y="34">Clean missing items</text>
+    <text class="step-body" x="438" y="72">If ABS still lists old paths, use</text>
+    <text class="step-body" x="438" y="96">Issues to remove missing entries.</text>
+
+    <path class="arrow" d="M 398 66 H 344" marker-end="url(#arrow)"/>
+
+    <rect class="card" x="0" y="0" width="330" height="132" rx="12"/>
+    <circle class="badge-dark" cx="34" cy="34" r="18"/>
+    <text class="num-light" x="29" y="41">6</text>
+    <text class="step-title" x="66" y="34">Verify and keep log</text>
+    <text class="step-body" x="24" y="72">Check the library, then keep</text>
+    <text class="step-body" x="24" y="96">.abook-org.log until satisfied.</text>
+  </g>
+
+  <text class="label" x="48" y="496">Normal path, not an error state</text>
+</svg>

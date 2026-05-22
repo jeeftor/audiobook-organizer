@@ -24,7 +24,7 @@ Audiobook Organizer ships as one binary named `audiobook-organizer`. Install the
 
 Those sidecars give Audiobook Organizer a stable book-level source for title, author, series, narrator, and year. If your library does not have `metadata.json` files, use embedded metadata mode instead. See [Audiobookshelf](audiobookshelf.md) for the full ABS setup and cleanup flow, or [Explore Metadata](explore-metadata.md) to decide which metadata source to use.
 
-After a real organize run, Audiobookshelf may show old paths as missing until it scans and reconciles moved files. The **Enable folder watcher for library** setting may help, but you should still trigger a scan and clean up stale missing-book entries when needed. See [Audiobookshelf](audiobookshelf.md#clean-up-missing-abs-items).
+After a real organize run, Audiobookshelf may show old paths as missing until it scans and reconciles moved files. The **Enable folder watcher for library** setting may help, but you should still trigger a scan and clean up stale missing-book entries when needed. See [After Organizing: Scan And Clean Up Missing Items](audiobookshelf.md#after-organizing-scan-and-clean-up-missing-items).
 
 ## Install Audiobook Organizer
 
