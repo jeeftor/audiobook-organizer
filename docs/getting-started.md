@@ -19,11 +19,20 @@ See [Installation](INSTALLATION.md) for platform-specific options and package no
 
 ## If You Use Audiobookshelf
 
-Before organizing an Audiobookshelf-managed library, enable **Store metadata with item** in the Audiobookshelf library settings. That setting writes a `metadata.json` file beside each book when ABS metadata is generated or updated.
+<section class="media-callout">
+  <a class="media-callout-image" href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/store_metadata.jpg" target="_blank" rel="noopener">
+    <img src="store_metadata.jpg" alt="Audiobookshelf setting for storing metadata.json files">
+  </a>
+  <div class="media-callout-copy">
+    <p>Before organizing an Audiobookshelf-managed library, enable <strong>Store metadata with item</strong> in the Audiobookshelf library settings.</p>
+    <p>That setting writes a <code>metadata.json</code> file beside each book when ABS metadata is generated or updated.</p>
+    <p>Those sidecar files are the safest first metadata source for local organization because they keep the book-level title, author, series, narrator, and year data beside the audio files.</p>
+  </div>
+</section>
 
-![Audiobookshelf setting for storing metadata.json files](store_metadata.jpg)
+The normal ABS cycle is: configure sidecar metadata, preview, organize, scan ABS, clean up old missing paths if ABS still reports them, and keep the undo log until the library is verified.
 
-Those sidecar files are the safest first metadata source for local organization because they keep the book-level title, author, series, narrator, and year data beside the audio files. After a non-dry-run organization, run or trigger an Audiobookshelf library scan so ABS can reconcile moved paths.
+![Audiobookshelf organize lifecycle](abs-organize-lifecycle.svg)
 
 See [Audiobookshelf](audiobookshelf.md) for cleanup screenshots, path mapping checks, and scan commands.
 
