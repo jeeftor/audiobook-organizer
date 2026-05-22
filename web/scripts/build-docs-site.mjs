@@ -495,6 +495,35 @@ p, li { font-size: 16px; }
   font-size: 13px;
 }
 
+.media-callout {
+  display: grid;
+  grid-template-columns: minmax(260px, 420px) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+  margin: 22px 0;
+}
+
+.media-callout-image {
+  display: block;
+}
+
+.media-callout-image img {
+  display: block;
+  width: 100%;
+  border: 1px solid #d1dae7;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgb(15 23 42 / 10%);
+}
+
+.media-callout-copy {
+  padding-top: 2px;
+}
+
+.media-callout-copy p:first-child {
+  margin-top: 0;
+}
+
 .site-footer {
   margin-top: 56px;
   padding-top: 18px;
@@ -589,7 +618,8 @@ img {
   .doc-hero h1 { font-size: 36px; }
   .visual-grid,
   .capability-grid,
-  .workflow-list {
+  .workflow-list,
+  .media-callout {
     grid-template-columns: 1fr;
   }
 }
