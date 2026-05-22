@@ -34,6 +34,23 @@ The normal ABS cycle is: configure sidecar metadata, preview, organize, scan ABS
 
 ![Audiobookshelf organize lifecycle](abs-organize-lifecycle.svg)
 
+After the scan, ABS may still list old filesystem paths as missing. That is a normal cleanup step after moving files, not a failed organize run. Review the missing items in ABS, then use the missing-books cleanup action when the organized paths are already visible in the library.
+
+<section class="image-pair" aria-label="Audiobookshelf missing item cleanup screenshots">
+  <figure>
+    <a href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/issues.jpg" target="_blank" rel="noopener">
+      <img src="issues.jpg" alt="Audiobookshelf issues view showing missing books">
+    </a>
+    <figcaption><a href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/issues.jpg" target="_blank" rel="noopener">Open image</a> - review missing old paths in the ABS Issues view.</figcaption>
+  </figure>
+  <figure>
+    <a href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/remove_books.jpg" target="_blank" rel="noopener">
+      <img src="remove_books.jpg" alt="Audiobookshelf remove missing books action">
+    </a>
+    <figcaption><a href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/remove_books.jpg" target="_blank" rel="noopener">Open image</a> - remove missing entries after ABS has found the organized files.</figcaption>
+  </figure>
+</section>
+
 See [Audiobookshelf](audiobookshelf.md) for cleanup screenshots, path mapping checks, and scan commands.
 
 ## Choose A Small Source Folder

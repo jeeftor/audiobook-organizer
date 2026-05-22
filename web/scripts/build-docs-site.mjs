@@ -524,6 +524,39 @@ p, li { font-size: 16px; }
   margin-top: 0;
 }
 
+.image-pair {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.72fr) minmax(260px, 1fr);
+  gap: 18px;
+  align-items: start;
+  margin: 22px 0;
+}
+
+.image-pair figure {
+  margin: 0;
+}
+
+.image-pair img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 260px;
+  border: 1px solid #d1dae7;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgb(15 23 42 / 10%);
+}
+
+.image-pair figcaption {
+  margin-top: 8px;
+  color: #536176;
+  font-size: 13px;
+}
+
+.image-pair figcaption a {
+  color: #1260a8;
+}
+
 .site-footer {
   margin-top: 56px;
   padding-top: 18px;
@@ -619,6 +652,7 @@ img {
   .visual-grid,
   .capability-grid,
   .workflow-list,
+  .image-pair,
   .media-callout {
     grid-template-columns: 1fr;
   }
