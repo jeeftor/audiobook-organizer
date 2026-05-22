@@ -19,11 +19,37 @@ See [Installation](INSTALLATION.md) for platform-specific options and package no
 
 ## If You Use Audiobookshelf
 
-Before organizing an Audiobookshelf-managed library, enable **Store metadata with item** in the Audiobookshelf library settings. That setting writes a `metadata.json` file beside each book when ABS metadata is generated or updated.
+<section class="media-callout">
+  <a class="media-callout-image" href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/store_metadata.jpg" target="_blank" rel="noopener">
+    <img src="store_metadata.jpg" alt="Audiobookshelf setting for storing metadata.json files">
+  </a>
+  <div class="media-callout-copy">
+    <p>Before organizing an Audiobookshelf-managed library, enable <strong>Store metadata with item</strong> in the Audiobookshelf library settings.</p>
+    <p>That setting writes a <code>metadata.json</code> file beside each book when ABS metadata is generated or updated.</p>
+    <p>Those sidecar files are the safest first metadata source for local organization because they keep the book-level title, author, series, narrator, and year data beside the audio files.</p>
+  </div>
+</section>
 
-![Audiobookshelf setting for storing metadata.json files](store_metadata.jpg)
+The normal ABS cycle is: configure sidecar metadata, preview, organize, scan ABS, clean up old missing paths if ABS still reports them, and keep the undo log until the library is verified.
 
-Those sidecar files are the safest first metadata source for local organization because they keep the book-level title, author, series, narrator, and year data beside the audio files. After a non-dry-run organization, run or trigger an Audiobookshelf library scan so ABS can reconcile moved paths.
+![Audiobookshelf organize lifecycle](abs-organize-lifecycle.svg)
+
+After the scan, ABS may still list old filesystem paths as missing. That is a normal cleanup step after moving files, not a failed organize run. Review the missing items in ABS, then use the missing-books cleanup action when the organized paths are already visible in the library.
+
+<section class="image-pair" aria-label="Audiobookshelf missing item cleanup screenshots">
+  <figure>
+    <a href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/issues.jpg" target="_blank" rel="noopener">
+      <img src="issues.jpg" alt="Audiobookshelf issues view showing missing books">
+    </a>
+    <figcaption><a href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/issues.jpg" target="_blank" rel="noopener">Open image</a> - review missing old paths in the ABS Issues view.</figcaption>
+  </figure>
+  <figure>
+    <a href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/remove_books.jpg" target="_blank" rel="noopener">
+      <img src="remove_books.jpg" alt="Audiobookshelf remove missing books action">
+    </a>
+    <figcaption><a href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/remove_books.jpg" target="_blank" rel="noopener">Open image</a> - remove missing entries after ABS has found the organized files.</figcaption>
+  </figure>
+</section>
 
 See [Audiobookshelf](audiobookshelf.md) for cleanup screenshots, path mapping checks, and scan commands.
 
