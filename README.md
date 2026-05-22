@@ -5,6 +5,15 @@ Audiobook Organizer is a single Go binary for previewing, organizing, renaming, 
 [![codecov](https://codecov.io/gh/jeeftor/audiobook-organizer/branch/master/graph/badge.svg)](https://codecov.io/gh/jeeftor/audiobook-organizer)
 [![Coverage Status](https://coveralls.io/repos/github/jeeftor/audiobook-organizer/badge.svg?branch=master)](https://coveralls.io/github/jeeftor/audiobook-organizer?branch=master)
 
+## [Open Documentation](https://jeeftor.github.io/audiobook-organizer/)
+
+Use this README as the quick project overview. The generated documentation site is the primary home for installation details, first-run guidance, workflow pages, troubleshooting, and generated screenshots/GIFs.
+
+[Getting Started](https://jeeftor.github.io/audiobook-organizer/getting-started.html) |
+[Installation](https://jeeftor.github.io/audiobook-organizer/installation.html) |
+[Choose An Interface](https://jeeftor.github.io/audiobook-organizer/interfaces.html) |
+[Audiobookshelf](https://jeeftor.github.io/audiobook-organizer/audiobookshelf.html)
+
 ![Audiobook Organizer web UI preview](https://jeeftor.github.io/audiobook-organizer/assets/generated/web-ui/web-ui-metadata-json-preview.png)
 
 ![Animated CLI organize run](https://jeeftor.github.io/audiobook-organizer/assets/generated/cli/cli-organize-run.gif)
@@ -179,7 +188,11 @@ audiobook-organizer abs scan \
 
 ## Documentation
 
-Published docs: <https://jeeftor.github.io/audiobook-organizer/>
+The generated documentation site is the canonical long-form guide:
+
+<https://jeeftor.github.io/audiobook-organizer/>
+
+The README should stay a compact GitHub landing page: what the tool does, how to install it, how to run safely, and where Audiobookshelf users must start. The docs site owns the full workflow pages, troubleshooting, detailed reference material, and generated visual demos.
 
 Repo docs:
 

@@ -76,6 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved local web UI manual testing with a reusable template builder, colored layout/rename fields, relative local preview paths, completed move lists after execution, and automatic fallback from missing `metadata.json` previews to embedded file metadata.
 - Updated the layout guide and docs workflow to use public-domain book examples and added more table-based layout guidance.
 - Surfaced the Audiobookshelf lifecycle and missing-item cleanup screenshots on Getting Started and made the ABS metadata settings screenshot a compact side-by-side callout.
+- Clarified the README as a compact project landing page and added a prominent link to the generated documentation site.
 
 ---
 
