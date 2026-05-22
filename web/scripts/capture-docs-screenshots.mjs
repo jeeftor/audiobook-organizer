@@ -193,7 +193,7 @@ async function startWebServer() {
 
     child.stdout.on('data', (chunk) => {
       output += chunk.toString()
-      const match = output.match(serverURLPattern)
+      const match = serverURLPattern.exec(output)
       if (!match) {
         return
       }
@@ -272,7 +272,9 @@ async function disableMotion(page) {
   })
 }
 
-main().catch((error) => {
+try {
+  await main()
+} catch (error) {
   console.error(error)
   process.exitCode = 1
-})
+}
