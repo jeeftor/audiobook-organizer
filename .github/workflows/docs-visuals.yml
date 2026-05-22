@@ -7,9 +7,11 @@ on:
     paths:
       - ".github/workflows/docs-visuals.yml"
       - "Makefile"
-      - "cmd/web.go"
-      - "cmd/gui.go"
+      - "cmd/**"
+      - "docs/CLI.md"
+      - "docs/visuals/**"
       - "internal/app/**"
+      - "internal/organizer/**"
       - "internal/server/**"
       - "testdata/mp3flat/**"
       - "web/**"
@@ -19,9 +21,11 @@ on:
     paths:
       - ".github/workflows/docs-visuals.yml"
       - "Makefile"
-      - "cmd/web.go"
-      - "cmd/gui.go"
+      - "cmd/**"
+      - "docs/CLI.md"
+      - "docs/visuals/**"
       - "internal/app/**"
+      - "internal/organizer/**"
       - "internal/server/**"
       - "testdata/mp3flat/**"
       - "web/**"
@@ -50,6 +54,21 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: web/package-lock.json
+
+      - name: Install VHS runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          curl -fsSL -o /tmp/ttyd https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64
+          sudo install -m 755 /tmp/ttyd /usr/local/bin/ttyd
+          ffmpeg -version
+          ttyd --version
+
+      - name: Install VHS
+        run: |
+          go install github.com/charmbracelet/vhs@v0.11.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          "$(go env GOPATH)/bin/vhs" --version
 
       - name: Cache Playwright browsers
         uses: actions/cache@v5
