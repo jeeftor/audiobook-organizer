@@ -61,7 +61,7 @@ Current capture names are `organize-preview` and `rename-field-mapping`. Each ca
 ABO_DOCS_TUI_CAPTURES=organize-preview make docs-tui-captures
 ```
 
-The TUI capture workflow requires [VHS](https://github.com/charmbracelet/vhs) and `ffmpeg`. If local VHS opens full Chrome instead of a headless browser, set `ABO_DOCS_BROWSER_EXECUTABLE_PATH` or `PUPPETEER_EXECUTABLE_PATH` to a Chrome Headless Shell binary. The runner also checks the common Puppeteer cache locations before falling back to VHS defaults.
+The TUI capture workflow requires [VHS](https://github.com/charmbracelet/vhs) and `ffmpeg` on Linux. On macOS, the workflow uses Docker by default so VHS runs in Linux instead of launching the local Chrome app. The default container image is `ghcr.io/charmbracelet/vhs:v0.11.0`; set `ABO_DOCS_TUI_VHS_IMAGE` when you need to use an approved registry mirror. Set `ABO_DOCS_TUI_VHS_MODE=native` only on hosts where native VHS is known to use a safe headless browser.
 
 The aggregate `make docs-visuals` target includes these TUI captures, and CI uploads the generated files as docs visual artifacts.
 

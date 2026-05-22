@@ -2,6 +2,8 @@
 GIT_TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 BUILD_TIME ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+UNAME_S := $(shell uname -s)
+DOCKER_GOARCH ?= $(shell docker version --format '{{.Server.Arch}}' 2>/dev/null | sed 's/aarch64/arm64/;s/x86_64/amd64/')
 
 VERSION_FLAGS := \
 	-X github.com/jeeftor/audiobook-organizer/cmd.buildVersion=$(GIT_TAG) \
@@ -114,8 +116,14 @@ docs-cli-gifs: dev
 	cd web && npm run docs:cli:gifs
 
 # Generate documentation captures for the terminal user interface
-docs-tui-captures: dev
+docs-tui-captures:
+ifeq ($(UNAME_S),Darwin)
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(DOCKER_GOARCH) go build $(LDFLAGS) -o bin/audiobook-organizer
+	cd web && ABO_DOCS_TUI_VHS_MODE=container npm run docs:tui
+else
+	$(MAKE) dev
 	cd web && npm run docs:tui
+endif
 
 # Generate documentation screenshots for the local web UI
 docs-web-screenshots: web-build

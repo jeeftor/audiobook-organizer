@@ -12,6 +12,7 @@ const captureDir = join(repoRoot, 'output', 'docs-visuals', 'tui')
 const sampleRoot = join(repoRoot, 'output', 'docs-tui-sample')
 const tapeDir = join(repoRoot, 'docs', 'visuals', 'tui')
 const browserShimDir = join(repoRoot, 'output', 'docs-vhs-browser-bin')
+const containerImage = process.env.ABO_DOCS_TUI_VHS_IMAGE || 'ghcr.io/charmbracelet/vhs:v0.11.0'
 
 const captures = [
   {
@@ -29,14 +30,19 @@ const captures = [
 ]
 
 async function main() {
-  await assertCommand('vhs', ['--version'], 'Install Charmbracelet VHS, then rerun "make docs-tui-captures".')
   await assertCommand('ffmpeg', ['-version'], 'Install ffmpeg, then rerun "make docs-tui-captures".')
+  const mode = resolveVHSMode()
+  if (mode === 'native') {
+    await assertCommand('vhs', ['--version'], 'Install Charmbracelet VHS, then rerun "make docs-tui-captures".')
+  } else {
+    await assertCommand('docker', ['version'], 'Start Docker or set ABO_DOCS_TUI_VHS_MODE=native on a Linux host.')
+  }
 
   if (!process.env.ABO_DOCS_TUI_CAPTURES) {
     await rm(captureDir, { recursive: true, force: true })
   }
   await mkdir(captureDir, { recursive: true })
-  const vhsEnv = await createVHSEnv()
+  const vhsEnv = mode === 'native' ? await createVHSEnv() : undefined
 
   const generated = []
   for (const capture of capturesToRun()) {
@@ -45,7 +51,7 @@ async function main() {
     await createTUISampleLibrary()
 
     try {
-      await runVHS(capture, vhsEnv)
+      await runVHS(capture, { env: vhsEnv, mode })
       await extractFinalFrame(capture)
       generated.push(`  output/docs-visuals/tui/${capture.gif}`)
       generated.push(`  output/docs-visuals/tui/${capture.png}`)
@@ -58,6 +64,27 @@ async function main() {
   for (const path of generated) {
     console.log(path)
   }
+}
+
+function resolveVHSMode() {
+  const mode = process.env.ABO_DOCS_TUI_VHS_MODE || 'auto'
+  if (!['auto', 'container', 'native'].includes(mode)) {
+    throw new Error('ABO_DOCS_TUI_VHS_MODE must be one of: auto, container, native')
+  }
+
+  if (mode === 'container') {
+    return 'container'
+  }
+  if (mode === 'native') {
+    if (process.platform === 'darwin' && process.env.ABO_DOCS_TUI_ALLOW_MACOS_NATIVE_VHS !== '1') {
+      throw new Error(
+        'Native VHS is disabled on macOS because Rod can launch /Applications/Google Chrome.app and trigger crash dialogs. Use container mode or set ABO_DOCS_TUI_ALLOW_MACOS_NATIVE_VHS=1 to override.',
+      )
+    }
+    return 'native'
+  }
+
+  return process.platform === 'darwin' ? 'container' : 'native'
 }
 
 function capturesToRun() {
@@ -142,11 +169,46 @@ async function createMetadataBook({ directory, sourceFile, targetFile, metadata 
   await copyFile(join(repoRoot, sourceFile), join(bookDir, targetFile))
 }
 
-async function runVHS(capture, env) {
-  await runCommand('vhs', ['-q', join(tapeDir, capture.tape)], {
-    env,
-  })
+async function runVHS(capture, { env, mode }) {
+  if (mode === 'container') {
+    await runContainerVHS(capture)
+  } else {
+    await runCommand('vhs', ['-q', join(tapeDir, capture.tape)], {
+      env,
+    })
+  }
   await waitForFile(join(captureDir, capture.gif))
+}
+
+async function runContainerVHS(capture) {
+  const args = [
+    'run',
+    '--rm',
+    '--volume',
+    `${repoRoot}:/workspace`,
+    '--workdir',
+    '/workspace',
+    '--env',
+    'TERM=xterm-256color',
+    '--env',
+    'HOME=/tmp',
+  ]
+
+  const uid = typeof process.getuid === 'function' ? process.getuid() : undefined
+  const gid = typeof process.getgid === 'function' ? process.getgid() : undefined
+  if (uid !== undefined && gid !== undefined) {
+    args.push('--user', `${uid}:${gid}`)
+  }
+
+  args.push(containerImage, '-q', join('docs', 'visuals', 'tui', capture.tape))
+
+  try {
+    await runCommand('docker', args)
+  } catch (error) {
+    throw new Error(
+      `Unable to run VHS in Docker with image ${containerImage}. Pull or mirror the image, or set ABO_DOCS_TUI_VHS_IMAGE to an available VHS image.\n${error}`,
+    )
+  }
 }
 
 async function createVHSEnv() {
