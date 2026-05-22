@@ -102,7 +102,7 @@ function linkStandaloneImages(html) {
     /<p><img src="([^"]+)" alt="([^"]*)"><\/p>/g,
     (_match, src, alt) => {
       const href = imageHref(src)
-      return `<figure class="doc-image"><a href="${href}" target="_blank" rel="noopener"><img src="${src}" alt="${alt}"></a><figcaption><a href="${href}" target="_blank" rel="noopener">Open image</a></figcaption></figure>`
+      return `<figure class="doc-image"><a href="${href}" target="_blank" rel="noopener"><img src="${src}" alt="${alt}"></a></figure>`
     },
   )
 }
