@@ -10,6 +10,7 @@ const webRoot = resolve(scriptDir, '..')
 const repoRoot = resolve(webRoot, '..')
 const screenshotDir = join(repoRoot, 'output', 'docs-visuals', 'web-ui')
 const sampleRoot = join(repoRoot, 'output', 'docs-web-ui-sample')
+const goBuildCache = process.env.GOCACHE || join(repoRoot, 'output', 'go-build-cache')
 const metadataSourceDir = 'output/docs-web-ui-sample/metadata-json/source'
 const metadataOutputDir = 'output/docs-web-ui-sample/metadata-json/organized'
 const embeddedSourceDir = 'output/docs-web-ui-sample/embedded/source'
@@ -165,7 +166,10 @@ async function startWebServer() {
   const child = spawn('go', ['run', '.', 'web', '--host', '127.0.0.1', '--port', '0', '--no-open'], {
     cwd: repoRoot,
     detached: process.platform !== 'win32',
-    env: process.env,
+    env: {
+      ...process.env,
+      GOCACHE: goBuildCache,
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   })
 

@@ -9,8 +9,10 @@
     "preview": "vite preview --host 127.0.0.1",
     "docs:cli": "node scripts/capture-docs-cli.mjs",
     "docs:cli:gifs": "node scripts/capture-docs-cli-gifs.mjs",
+    "docs:site": "node scripts/build-docs-site.mjs",
     "docs:screenshots": "node scripts/capture-docs-screenshots.mjs",
     "docs:tui": "node scripts/capture-docs-tui.mjs",
+    "docs:verify": "node scripts/verify-docs.mjs",
     "install:browsers": "playwright install chromium",
     "test:e2e": "npm run build && playwright test",
     "test:e2e:headed": "npm run build && playwright test --headed",
@@ -24,6 +26,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "marked": "^18.0.4",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.1.8"
   }
