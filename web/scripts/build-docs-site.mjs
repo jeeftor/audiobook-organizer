@@ -326,9 +326,17 @@ h1 {
 }
 
 h2 {
+  font-size: 26px;
   margin-top: 40px;
+  margin-bottom: 16px;
   padding-top: 10px;
   border-top: 1px solid #cdd6e2;
+}
+
+h3 {
+  font-size: 21px;
+  margin-top: 30px;
+  margin-bottom: 12px;
 }
 
 p, li { font-size: 16px; }
