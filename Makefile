@@ -2,6 +2,9 @@
 GIT_TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 BUILD_TIME ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+UNAME_S := $(shell uname -s)
+DOCKER_GOARCH ?= $(shell docker version --format '{{.Server.Arch}}' 2>/dev/null | sed 's/aarch64/arm64/;s/x86_64/amd64/')
+ABO_DOCS_TUI_VHS_IMAGE ?= audiobook-organizer-vhs:local
 
 VERSION_FLAGS := \
 	-X github.com/jeeftor/audiobook-organizer/cmd.buildVersion=$(GIT_TAG) \
@@ -17,7 +20,7 @@ INTEGRATION_TEST_PKGS = $(shell go list ./... | grep -v '/integration$$')
 ABS_TEST_RUN ?= Test(ABSHarnessSmokeResetContract|MetadataJSONMode|EmbeddedAlreadyIndexed|EmbeddedMetadataImport|FlatMode(Mechanics|Import)|RESTHarness_((MetadataJSONMode|EmbeddedMetadataImport|FlatModeImport)Lifecycle|ABS(Setup|Operation)Endpoints)|ABSMetadataMode)
 ABS_REST_TEST_RUN ?= TestRESTHarness_((MetadataJSONMode|EmbeddedMetadataImport|FlatModeImport)Lifecycle|ABS(Setup|Operation)Endpoints)
 
-.PHONY: all build clean dev dev-linux-amd64 web-install web-build web-dev docs-cli-captures docs-cli-gifs docs-web-screenshots docs-visuals gui-rest-test gui-test gui-test-abs gui-test-headed gui-test-ui abs-dev-seed abs-dev-init abs-dev-configure abs-dev-up abs-dev-down abs-dev-reset abs-dev-reset-all abs-dev-scan abs-dev-reset-scan abs-ci-smoke abs-test-metadata abs-test-rest abs-test-matrix abs-test-e2e abs-dev-capture-baseline abs-dev-restore-baseline abs-dev-wait release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help scp-dev
+.PHONY: all build clean dev dev-linux-amd64 web-install web-build web-dev docs-cli-captures docs-cli-gifs docs-tui-image docs-tui-captures docs-web-screenshots docs-visuals gui-rest-test gui-test gui-test-abs gui-test-headed gui-test-ui abs-dev-seed abs-dev-init abs-dev-configure abs-dev-up abs-dev-down abs-dev-reset abs-dev-reset-all abs-dev-scan abs-dev-reset-scan abs-ci-smoke abs-test-metadata abs-test-rest abs-test-matrix abs-test-e2e abs-dev-capture-baseline abs-dev-restore-baseline abs-dev-wait release test test-unit test-integration coverage coverage-html lint fmt fmt-check vet help scp-dev
 
 # Default target - show help
 all: help
@@ -34,6 +37,8 @@ help:
 	@printf "    %-26s %s\n" "web-dev" "Run the web frontend dev server"
 	@printf "    %-26s %s\n" "docs-cli-captures" "Generate docs captures for the CLI"
 	@printf "    %-26s %s\n" "docs-cli-gifs" "Generate animated docs GIFs for the CLI"
+	@printf "    %-26s %s\n" "docs-tui-image" "Build local Docker image for macOS TUI captures"
+	@printf "    %-26s %s\n" "docs-tui-captures" "Generate docs captures for the TUI"
 	@printf "    %-26s %s\n" "docs-web-screenshots" "Generate docs screenshots for the local web UI"
 	@printf "    %-26s %s\n" "docs-visuals" "Generate all local docs visuals"
 	@printf "    %-26s %s\n" "gui-rest-test" "Run local web UI REST endpoint tests"
@@ -112,12 +117,26 @@ docs-cli-captures: dev
 docs-cli-gifs: dev
 	cd web && npm run docs:cli:gifs
 
+# Generate documentation captures for the terminal user interface
+docs-tui-image:
+	docker build -f docs/visuals/tui/Dockerfile -t $(ABO_DOCS_TUI_VHS_IMAGE) .
+
+docs-tui-captures:
+ifeq ($(UNAME_S),Darwin)
+	$(MAKE) docs-tui-image
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(DOCKER_GOARCH) go build $(LDFLAGS) -o bin/audiobook-organizer
+	cd web && ABO_DOCS_TUI_VHS_MODE=container ABO_DOCS_TUI_VHS_IMAGE=$(ABO_DOCS_TUI_VHS_IMAGE) npm run docs:tui
+else
+	$(MAKE) dev
+	cd web && npm run docs:tui
+endif
+
 # Generate documentation screenshots for the local web UI
 docs-web-screenshots: web-build
 	cd web && npm run docs:screenshots
 
-# Generate all local documentation visuals. Future TUI capture targets should be added here.
-docs-visuals: docs-web-screenshots docs-cli-captures docs-cli-gifs
+# Generate all local documentation visuals.
+docs-visuals: docs-web-screenshots docs-cli-captures docs-cli-gifs docs-tui-captures
 
 # Run local web UI REST endpoint tests
 gui-rest-test:

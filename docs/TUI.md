@@ -45,6 +45,28 @@ go install github.com/jeeftor/audiobook-organizer@latest
 
 ---
 
+## Local TUI Captures
+
+Generate local TUI documentation captures from the repository root:
+
+```bash
+make docs-tui-captures
+```
+
+The workflow builds the binary, stages committed LibriVox sample media from `testdata/mp3flat/` under `output/docs-tui-sample/`, runs scripted VHS sessions for the organize and rename TUIs, and writes ignored artifacts under `output/docs-visuals/tui/`.
+
+Current capture names are `organize-preview` and `rename-field-mapping`. Each capture writes an animated GIF plus a static PNG extracted from the final frame. Regenerate one or more specific captures with:
+
+```bash
+ABO_DOCS_TUI_CAPTURES=organize-preview make docs-tui-captures
+```
+
+The TUI capture workflow requires [VHS](https://github.com/charmbracelet/vhs) and `ffmpeg` on Linux. On macOS, `make docs-tui-captures` builds and uses the local `audiobook-organizer-vhs:local` Docker image so VHS runs in Linux instead of launching the local Chrome app. Use `make docs-tui-image` to rebuild that image directly. Set `ABO_DOCS_TUI_VHS_IMAGE` to use a different local or mirrored image. Set `ABO_DOCS_TUI_VHS_MODE=native` only on hosts where native VHS is known to use a safe headless browser.
+
+The aggregate `make docs-visuals` target includes these TUI captures, and CI uploads the generated files as docs visual artifacts.
+
+---
+
 ## Organization TUI
 
 The **Organization TUI** guides you through organizing audiobooks into structured directories.
