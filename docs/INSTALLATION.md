@@ -28,7 +28,9 @@ After a real organize run, Audiobookshelf may show old paths as missing until it
 
 ## Install Audiobook Organizer
 
-## Direct Download From GitHub
+Choose the installation method that matches how you want to run the tool.
+
+### Direct Download From GitHub
 
 Download the latest release for your platform from:
 
@@ -40,7 +42,7 @@ Use this option when you want a release archive or package file without Homebrew
 audiobook-organizer version
 ```
 
-## macOS
+### macOS
 
 ```bash
 brew tap jeeftor/tap
@@ -49,7 +51,7 @@ brew install audiobook-organizer
 
 You can also download the macOS archive from GitHub Releases and place the `audiobook-organizer` binary somewhere on your `PATH`.
 
-## Linux
+### Linux
 
 Download the package or archive for your platform from [GitHub Releases](https://github.com/jeeftor/audiobook-organizer/releases). The examples below assume you downloaded a release package file into the current directory. The project does not currently document an APT, Yum/DNF, or APK repository that makes `apt install audiobook-organizer` work without first downloading or configuring a package source.
 
@@ -66,7 +68,7 @@ sudo apk add --allow-untrusted ./audiobook-organizer-*.apk
 
 The web UI runs in your existing browser and does not require native desktop runtime packages.
 
-## Windows
+### Windows
 
 Download `audiobook-organizer-windows-amd64.zip` from GitHub Releases, extract it, and run:
 
@@ -74,7 +76,7 @@ Download `audiobook-organizer-windows-amd64.zip` from GitHub Releases, extract i
 .\audiobook-organizer.exe version
 ```
 
-## Docker
+### Docker
 
 ```bash
 docker pull jeffsui/audiobook-organizer:latest
@@ -87,7 +89,7 @@ docker run --rm \
 
 The local web UI is primarily intended for host installs. For Docker, prefer CLI or TUI workflows unless you explicitly publish and secure a local port.
 
-## Go Install
+### Go Install
 
 ```bash
 go install github.com/jeeftor/audiobook-organizer@latest
@@ -95,7 +97,7 @@ go install github.com/jeeftor/audiobook-organizer@latest
 audiobook-organizer version
 ```
 
-## Build From Source
+### Build From Source
 
 ```bash
 git clone https://github.com/jeeftor/audiobook-organizer.git
