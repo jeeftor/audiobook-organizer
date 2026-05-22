@@ -1,7 +1,6 @@
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { copyFile, mkdir, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
@@ -17,6 +16,7 @@ const embeddedSourceDir = 'output/docs-web-ui-sample/embedded/source'
 const embeddedOutputDir = 'output/docs-web-ui-sample/embedded/organized'
 const serverURLPattern = /http:\/\/127\.0\.0\.1:(\d+)\/\?token=([a-f0-9]+)/
 const screenshotViewport = { width: 1440, height: 1200 }
+const serverStartupTimeoutMs = Number(process.env.ABO_DOCS_SERVER_STARTUP_TIMEOUT_MS || 120_000)
 
 async function main() {
   await createSampleLibrary()
@@ -165,22 +165,30 @@ async function startWebServer() {
   const child = spawn('go', ['run', '.', 'web', '--host', '127.0.0.1', '--port', '0', '--no-open'], {
     cwd: repoRoot,
     detached: process.platform !== 'win32',
-    env: {
-      ...process.env,
-      GOCACHE: join(tmpdir(), 'audiobook-organizer-go-build'),
-    },
+    env: process.env,
     stdio: ['ignore', 'pipe', 'pipe'],
   })
 
   let output = ''
   const startup = new Promise((resolveStartup, rejectStartup) => {
     const timeout = setTimeout(() => {
-      rejectStartup(new Error(`Timed out waiting for web server URL.\n${output}`))
-    }, 20_000)
+      failStartup(new Error(`Timed out waiting for web server URL after ${serverStartupTimeoutMs}ms.\n${output}`))
+    }, serverStartupTimeoutMs)
 
-    child.once('error', rejectStartup)
+    let settled = false
+
+    function failStartup(error) {
+      if (settled) {
+        return
+      }
+      settled = true
+      clearTimeout(timeout)
+      void stopWebServer(child).finally(() => rejectStartup(error))
+    }
+
+    child.once('error', failStartup)
     child.once('exit', (code, signal) => {
-      rejectStartup(new Error(`Web server exited before startup: code=${code} signal=${signal}\n${output}`))
+      failStartup(new Error(`Web server exited before startup: code=${code} signal=${signal}\n${output}`))
     })
 
     child.stdout.on('data', (chunk) => {
@@ -189,6 +197,10 @@ async function startWebServer() {
       if (!match) {
         return
       }
+      if (settled) {
+        return
+      }
+      settled = true
       clearTimeout(timeout)
       resolveStartup({
         url: `http://127.0.0.1:${match[1]}/?token=${match[2]}`,
