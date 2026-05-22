@@ -20,13 +20,50 @@ Use it when you want to:
 - trigger Audiobookshelf scans after filesystem changes;
 - undo organization and rename operations from generated logs.
 
-## Audiobookshelf `metadata.json` Setup
+## Audiobookshelf `metadata.json` Workflow
 
-If Audiobookshelf is your metadata source, enable **Store metadata with item** in the Audiobookshelf library settings before organizing. Audiobookshelf will write a `metadata.json` sidecar into each book directory when metadata is generated or updated, and Audiobook Organizer can use those sidecars as the default metadata source.
+If Audiobookshelf is your metadata source, configure ABS to store metadata beside each book before organizing. In the Audiobookshelf library settings, enable **Store metadata with item**. When ABS metadata is generated or updated, Audiobookshelf writes a `metadata.json` sidecar into each book directory.
 
 ![Audiobookshelf setting for storing metadata.json files](docs/store_metadata.jpg)
 
-After a real organization run, Audiobookshelf may briefly show old paths as missing until the library scans and reconciles the moved files. See [Audiobookshelf](docs/audiobookshelf.md) for the setup, cleanup screenshots, path mapping checks, and scan workflow.
+That sidecar is the safest first metadata source for local organization because it keeps the book-level title, author, series, narrator, and year data next to the audio files:
+
+```text
+/audiobooks/The Case of Charles Dexter Ward/
+  metadata.json
+  01 - Chapter 1.mp3
+  02 - Chapter 2.mp3
+```
+
+Preview the organizer against those sidecars before moving files:
+
+```bash
+audiobook-organizer \
+  --dir=/audiobooks \
+  --out=/organized-audiobooks \
+  --dry-run \
+  --verbose
+```
+
+When `metadata.json` exists beside MP3 or M4B files, Audiobook Organizer can use hybrid metadata: book-level fields come from `metadata.json`, while track-level fields can come from embedded audio tags. If your library does not have sidecar metadata, use embedded metadata mode instead:
+
+```bash
+audiobook-organizer \
+  --dir=/audiobooks \
+  --out=/organized-audiobooks \
+  --use-embedded-metadata \
+  --dry-run
+```
+
+Audiobook Organizer moves files on disk; it does not rewrite Audiobookshelf database rows directly. After a real organization run, Audiobookshelf may briefly show old paths as missing until the library scans and reconciles the moved files. If that happens, open the ABS **Issues** view:
+
+![Audiobookshelf issues view showing missing books](docs/issues.jpg)
+
+Then use the missing-books cleanup action:
+
+![Audiobookshelf remove missing books action](docs/remove_books.jpg)
+
+The **Enable folder watcher for library** setting may help ABS detect some moved files, but a deliberate scan after filesystem changes is still the safer habit. See [Audiobookshelf](docs/audiobookshelf.md) for the full setup, cleanup, path mapping checks, and scan workflow.
 
 ## Install
 
