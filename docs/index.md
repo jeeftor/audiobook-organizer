@@ -30,6 +30,18 @@ Audiobook Organizer is for audiobook libraries that have drifted into inconsiste
   </figure>
 </section>
 
+## Common Tasks
+
+| Task | Start With |
+| --- | --- |
+| Organize books into `Author/Series/Title` | [Organize](organize.md) |
+| Rename files from title, author, series, track, or disc fields | [Rename Files](RENAME_FEATURE.md) |
+| Use Audiobookshelf-created `metadata.json` files | [Audiobookshelf](audiobookshelf.md) |
+| No `metadata.json`, but audio files have tags | [Explore Metadata](explore-metadata.md) |
+| MP3 tags use non-standard fields | [Metadata Sources](METADATA.md#field-mapping) |
+| Previous organization or rename needs to be reverted | [Safety And Undo](safety-and-undo.md) |
+| Planned paths look wrong | [Troubleshooting](troubleshooting.md) |
+
 ## Audiobookshelf Users
 
 If Audiobookshelf is your metadata source, enable **Store metadata with item** before the first organize run. This writes a `metadata.json` sidecar beside each book so Audiobook Organizer can preview and organize from the same metadata ABS uses.
