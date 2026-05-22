@@ -44,6 +44,14 @@ Use a separate output folder for the first run:
 /books/organized/
 ```
 
+If the source folder does not have `metadata.json` files, inspect embedded metadata before organizing:
+
+```bash
+audiobook-organizer metadata --dir=/books/source --use-embedded-metadata
+```
+
+For a flat folder of individual audiobook files, preview with `--flat` instead of the default directory-as-book behavior.
+
 ## Preview First
 
 Run a dry run before moving files:

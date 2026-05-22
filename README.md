@@ -124,6 +124,19 @@ Organization writes `.abook-org.log`; rename writes `.abook-rename.log`. Keep th
 
 Full comparison: [Choose An Interface](docs/interfaces.md).
 
+## Common Tasks
+
+| Task | Use |
+| --- | --- |
+| Organize books into `Author/Series/Title` | `audiobook-organizer --dir=/books --layout=author-series-title --dry-run` |
+| Rename files from title, author, series, track, or disc fields | `audiobook-organizer rename --dir=/books --dry-run` |
+| No `metadata.json`, but audio files have tags | `audiobook-organizer --dir=/books --use-embedded-metadata --dry-run` |
+| Flat folder of individual audiobooks | `audiobook-organizer --dir=/books --flat --dry-run` |
+| MP3 tags use non-standard fields | map fields with `--author-fields`, `--title-field`, `--series-field`, `--track-field`, or `--disc-field` |
+| Previous organization needs to be reverted | `audiobook-organizer --dir=/books --undo` |
+
+See [Organize](docs/organize.md), [Explore Metadata](docs/explore-metadata.md), [Metadata Sources](docs/METADATA.md), and [Safety And Undo](docs/safety-and-undo.md).
+
 ## Common Commands
 
 Start the local browser UI:
