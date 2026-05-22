@@ -9,6 +9,7 @@ audiobook-organizer
 # Test data
 books/
 books-meta/
+books-dev/
 gui-books/
 devbooks/
 output/

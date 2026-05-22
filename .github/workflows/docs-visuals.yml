@@ -1,0 +1,82 @@
+name: Docs Visuals
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ "main", "master", "feature/**", "develop", "dev" ]
+    paths:
+      - ".github/workflows/docs-visuals.yml"
+      - "Makefile"
+      - "cmd/web.go"
+      - "cmd/gui.go"
+      - "internal/app/**"
+      - "internal/server/**"
+      - "testdata/mp3flat/**"
+      - "web/**"
+      - "docs/GUI.md"
+  push:
+    branches: [ "master" ]
+    paths:
+      - ".github/workflows/docs-visuals.yml"
+      - "Makefile"
+      - "cmd/web.go"
+      - "cmd/gui.go"
+      - "internal/app/**"
+      - "internal/server/**"
+      - "testdata/mp3flat/**"
+      - "web/**"
+      - "docs/GUI.md"
+
+jobs:
+  docs-visuals:
+    name: Generate docs visuals
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 'stable'
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('web/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install frontend dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate docs visuals
+        run: make docs-visuals
+
+      - name: List generated visuals
+        run: find output/docs-visuals -maxdepth 3 -type f -print
+
+      - name: Upload docs visuals
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-visuals
+          path: output/docs-visuals/**
+          if-no-files-found: error
+          retention-days: 14

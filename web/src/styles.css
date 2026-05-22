@@ -129,14 +129,14 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-  padding: 16px 20px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--line);
   background: #14181d;
 }
 
 .workflow-card {
   min-width: 0;
-  min-height: 82px;
+  min-height: 72px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
@@ -147,7 +147,7 @@ button:disabled {
   align-items: center;
   column-gap: 10px;
   row-gap: 3px;
-  padding: 14px;
+  padding: 12px 14px;
   text-align: left;
 }
 
@@ -267,13 +267,13 @@ button:disabled {
   min-width: 0;
   min-height: 0;
   overflow: auto;
-  padding: 24px;
+  padding: 20px 24px;
   background: var(--bg);
 }
 
 .stage-header {
   max-width: 780px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .stage-header span {
@@ -285,8 +285,8 @@ button:disabled {
 }
 
 .stage-header h2 {
-  margin: 6px 0 8px;
-  font-size: 28px;
+  margin: 5px 0 6px;
+  font-size: 26px;
   line-height: 1.15;
   font-weight: 780;
   letter-spacing: 0;
@@ -304,7 +304,7 @@ button:disabled {
 .setup-preview-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: 14px;
   align-items: start;
 }
 
@@ -348,7 +348,7 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
-  padding: 18px;
+  padding: 16px;
 }
 
 .panel-section h3,
@@ -357,7 +357,7 @@ button:disabled {
 .warning-panel h3,
 .review-layout h3,
 .activity-panel h2 {
-  margin: 0 0 14px;
+  margin: 0 0 12px;
   font-size: 16px;
   font-weight: 760;
   letter-spacing: 0;
@@ -365,7 +365,7 @@ button:disabled {
 
 label {
   display: block;
-  margin: 13px 0 6px;
+  margin: 11px 0 5px;
   color: var(--text);
   font-size: 12px;
   font-weight: 720;
@@ -571,7 +571,7 @@ select:focus {
 }
 
 .hint {
-  margin: 12px 0 0;
+  margin: 9px 0 0;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.45;
@@ -889,14 +889,14 @@ select:focus {
 
 .move-list {
   display: grid;
-  gap: 8px;
-  margin-top: 14px;
+  gap: 7px;
+  margin-top: 12px;
 }
 
 .move-list div {
   display: grid;
-  gap: 3px;
-  padding: 9px;
+  gap: 2px;
+  padding: 8px 9px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: #14181e;

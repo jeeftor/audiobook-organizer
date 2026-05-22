@@ -34,6 +34,24 @@ The first web UI pass is an operational dashboard:
 
 The UI is intentionally browser-based instead of native-desktop-specific. That keeps releases to one binary and avoids platform-specific desktop runtime packaging.
 
+## Local Screenshots
+
+Generate local web UI screenshots from the repository root. The output files are local-only and ignored by git:
+
+```bash
+make docs-web-screenshots
+```
+
+The workflow builds the embedded web frontend, starts the real local Go web server with `--no-open`, drives the browser with Playwright, captures three populated states: a generated `metadata.json` sidecar preview, the matching Review & Run plan screen, and an embedded metadata preview, then writes PNG assets under the ignored `output/docs-visuals/web-ui/` directory. It copies committed LibriVox sample media from `testdata/mp3flat/` into generated local sample data under `output/docs-web-ui-sample/`, so the demo uses real public-domain audio while paths stay stable and do not include machine-specific absolute directories.
+
+If Playwright-managed Chromium is not installed, run:
+
+```bash
+cd web && npm run install:browsers
+```
+
+You can also point the workflow at an existing Chrome or Chrome Headless Shell binary with `ABO_DOCS_BROWSER_EXECUTABLE_PATH=/path/to/chrome make docs-web-screenshots`. Containerized visual generation is tracked separately in #148.
+
 ## Audiobookshelf
 
 The web API exposes Audiobookshelf workflow endpoints for:
