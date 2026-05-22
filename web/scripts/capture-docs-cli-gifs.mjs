@@ -84,12 +84,34 @@ async function assertVHS() {
 }
 
 async function runVHS(capture) {
-  await runCommand('vhs', ['-q', join(tapeDir, capture.tape)], {
-    cwd: repoRoot,
-    env: {
-      ...process.env,
-      NO_COLOR: '1',
-    },
+  const attempts = 3
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await runCommand('vhs', ['-q', join(tapeDir, capture.tape)], {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          NO_COLOR: '1',
+        },
+      })
+      return
+    } catch (error) {
+      if (attempt === attempts || !isRetryableVHSError(error)) {
+        throw error
+      }
+      await delay(1000 * attempt)
+    }
+  }
+}
+
+function isRetryableVHSError(error) {
+  const message = String(error?.message || error)
+  return message.includes('could not open ttyd') || message.includes('net::ERR_EMPTY_RESPONSE')
+}
+
+function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
   })
 }
 

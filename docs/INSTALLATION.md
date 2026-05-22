@@ -28,17 +28,17 @@ You can also download the macOS archive from GitHub Releases and place the `audi
 
 ## Linux
 
-Install the release package for your distribution, or download the archive from GitHub Releases.
+Download the package or archive for your platform from [GitHub Releases](https://github.com/jeeftor/audiobook-organizer/releases). The examples below assume you downloaded a release package file into the current directory. The project does not currently document an APT, Yum/DNF, or APK repository that makes `apt install audiobook-organizer` work without first downloading or configuring a package source.
 
 ```bash
-# Debian/Ubuntu package, if published for the release
-sudo apt install audiobook-organizer
+# Debian/Ubuntu .deb package
+sudo apt install ./audiobook-organizer_*_linux_amd64.deb
 
-# RedHat/Fedora package, if published for the release
-sudo yum install audiobook-organizer
+# RedHat/Fedora .rpm package
+sudo dnf install ./audiobook-organizer-*.x86_64.rpm
 
-# Alpine package, if published for the release
-sudo apk add audiobook-organizer
+# Alpine .apk package
+sudo apk add --allow-untrusted ./audiobook-organizer-*.apk
 
 audiobook-organizer web
 ```

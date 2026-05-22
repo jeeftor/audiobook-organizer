@@ -1,5 +1,10 @@
 name: Docs Visuals
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 on:
   workflow_dispatch:
   pull_request:
@@ -8,8 +13,8 @@ on:
       - ".github/workflows/docs-visuals.yml"
       - "Makefile"
       - "cmd/**"
-      - "docs/CLI.md"
-      - "docs/TUI.md"
+      - "README.md"
+      - "docs/**"
       - "docs/visuals/**"
       - "internal/app/**"
       - "internal/organizer/**"
@@ -17,15 +22,14 @@ on:
       - "internal/tui/**"
       - "testdata/mp3flat/**"
       - "web/**"
-      - "docs/GUI.md"
   push:
     branches: [ "master" ]
     paths:
       - ".github/workflows/docs-visuals.yml"
       - "Makefile"
       - "cmd/**"
-      - "docs/CLI.md"
-      - "docs/TUI.md"
+      - "README.md"
+      - "docs/**"
       - "docs/visuals/**"
       - "internal/app/**"
       - "internal/organizer/**"
@@ -33,7 +37,10 @@ on:
       - "internal/tui/**"
       - "testdata/mp3flat/**"
       - "web/**"
-      - "docs/GUI.md"
+
+concurrency:
+  group: docs-pages
+  cancel-in-progress: false
 
 jobs:
   docs-visuals:
@@ -93,8 +100,17 @@ jobs:
       - name: Generate docs visuals
         run: make docs-visuals
 
+      - name: Build docs site
+        run: make docs-site
+
+      - name: Verify docs site
+        run: make docs-verify
+
       - name: List generated visuals
         run: find output/docs-visuals -maxdepth 3 -type f -print
+
+      - name: List generated docs site
+        run: find output/docs-site -maxdepth 4 -type f -print
 
       - name: Upload docs visuals
         uses: actions/upload-artifact@v7
@@ -103,3 +119,25 @@ jobs:
           path: output/docs-visuals/**
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload docs site artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-site
+          path: output/docs-site/**
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Configure GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: output/docs-site
+
+      - name: Deploy GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/deploy-pages@v5
