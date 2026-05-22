@@ -7,9 +7,11 @@ on:
     paths:
       - ".github/workflows/docs-visuals.yml"
       - "Makefile"
-      - "cmd/web.go"
-      - "cmd/gui.go"
+      - "cmd/**"
+      - "docs/CLI.md"
+      - "docs/visuals/**"
       - "internal/app/**"
+      - "internal/organizer/**"
       - "internal/server/**"
       - "testdata/mp3flat/**"
       - "web/**"
@@ -19,9 +21,11 @@ on:
     paths:
       - ".github/workflows/docs-visuals.yml"
       - "Makefile"
-      - "cmd/web.go"
-      - "cmd/gui.go"
+      - "cmd/**"
+      - "docs/CLI.md"
+      - "docs/visuals/**"
       - "internal/app/**"
+      - "internal/organizer/**"
       - "internal/server/**"
       - "testdata/mp3flat/**"
       - "web/**"
@@ -50,6 +54,11 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: web/package-lock.json
+
+      - name: Install VHS
+        uses: charmbracelet/vhs-action@v2
+        with:
+          version: v0.11.0
 
       - name: Cache Playwright browsers
         uses: actions/cache@v5

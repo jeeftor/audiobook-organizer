@@ -45,6 +45,44 @@ docker pull jeffsui/audiobook-organizer:latest
 
 ---
 
+## Local CLI Captures
+
+Generate local command-line documentation captures from the repository root. The output files are local-only and ignored by git:
+
+```bash
+make docs-cli-captures
+```
+
+The workflow builds the CLI binary, copies committed LibriVox sample media from `testdata/mp3flat/` into generated sample data under `output/docs-cli-sample/`, runs representative non-interactive commands, renders terminal-style static PNG captures with Playwright, and writes them under `output/docs-visuals/cli/`.
+
+Current capture names are `help`, `organize-dry-run`, `metadata-inspect`, and `rename-preview`. Regenerate one or more specific captures with:
+
+```bash
+ABO_DOCS_CLI_CAPTURES=help,metadata-inspect make docs-cli-captures
+```
+
+If Playwright-managed Chromium is not installed, run:
+
+```bash
+cd web && npm run install:browsers
+```
+
+Generate animated CLI GIFs with [VHS](https://github.com/charmbracelet/vhs):
+
+```bash
+make docs-cli-gifs
+```
+
+Current GIF capture names are `organize-run`, `metadata-inspect`, and `rename-preview`. The organize run GIF stages fresh sample files, executes a real non-dry-run organize command, and lists the organized output files. Regenerate one or more specific GIFs with:
+
+```bash
+ABO_DOCS_CLI_GIFS=organize-run,rename-preview make docs-cli-gifs
+```
+
+You can also point the PNG workflow at an existing Chrome or Chrome Headless Shell binary with `ABO_DOCS_BROWSER_EXECUTABLE_PATH=/path/to/chrome make docs-cli-captures`. The aggregate `make docs-visuals` target includes web UI screenshots, static CLI PNG captures, and animated CLI GIF captures, and CI uploads the generated files as docs visual artifacts.
+
+---
+
 ## Basic Usage
 
 ### Organize Audiobooks
