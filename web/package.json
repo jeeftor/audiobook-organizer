@@ -7,6 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
+    "docs:screenshots": "node scripts/capture-docs-screenshots.mjs",
     "install:browsers": "playwright install chromium",
     "test:e2e": "npm run build && playwright test",
     "test:e2e:headed": "npm run build && playwright test --headed",
