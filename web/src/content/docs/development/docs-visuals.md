@@ -1,4 +1,7 @@
-# Docs Visuals
+---
+title: "Docs Visuals"
+description: "Developer workflow for generated documentation screenshots and GIFs."
+---
 
 The docs visual workflow generates web UI screenshots, CLI terminal captures, CLI animated GIFs, and TUI animated GIFs/static final frames.
 

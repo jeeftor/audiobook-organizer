@@ -1,5 +1,3 @@
-export const siteBaseURL = 'https://jeeftor.github.io/audiobook-organizer/'
-
 export const pages = [
   {
     source: 'docs/index.md',

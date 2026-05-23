@@ -1,0 +1,91 @@
+---
+title: Audiobook Organizer for Audiobookshelf
+description: Preview, organize, rename, inspect metadata, and keep an undo path for audiobook libraries.
+tableOfContents: false
+---
+
+<section class="doc-hero product-hero">
+  <div class="hero-copy">
+    <h1>Audiobook Organizer for Audiobookshelf (and More)</h1>
+    <p class="lead">Clean up audiobook folders with dry-run previews, metadata-aware layouts, rename templates, undo logs, and Audiobookshelf workflows.</p>
+    <div class="hero-actions">
+      <a class="button" href="/audiobook-organizer/getting-started/">Start safely</a>
+      <a class="button secondary" href="/audiobook-organizer/interfaces/">Choose workflow</a>
+    </div>
+  </div>
+  <figure class="hero-media">
+    <img src="/audiobook-organizer/assets/generated/web-ui/web-ui-metadata-json-preview.png" alt="Local web UI showing a metadata.json organize preview" />
+    <figcaption>Browser review before files move</figcaption>
+  </figure>
+</section>
+
+Audiobook Organizer is for audiobook libraries that have drifted into inconsistent folder names, filenames, metadata sources, or Audiobookshelf paths. It lets you inspect what it can read, preview what it would change, run the operation, and keep an undo path while you verify the result.
+
+<section class="visual-grid" aria-label="Generated workflow demos">
+  <figure>
+    <img src="/audiobook-organizer/assets/generated/cli/cli-organize-run.gif" alt="Animated CLI organize run showing a full-cycle non-dry-run workflow" />
+    <figcaption>Full-cycle CLI organization</figcaption>
+  </figure>
+  <figure>
+    <img src="/audiobook-organizer/assets/generated/tui/tui-organize-preview.gif" alt="Animated TUI organize preview workflow" />
+    <figcaption>Interactive terminal preview</figcaption>
+  </figure>
+  <figure>
+    <img src="/audiobook-organizer/assets/generated/cli/cli-rename-preview.gif" alt="Animated CLI rename preview workflow" />
+    <figcaption>Template rename preview</figcaption>
+  </figure>
+</section>
+
+## Common Tasks
+
+| Task | Start With |
+| --- | --- |
+| Organize books into `Author/Series/Title` | [Organize](organize/) |
+| Rename files from title, author, series, track, or disc fields | [Rename Files](rename/) |
+| Use Audiobookshelf-created `metadata.json` files | [Audiobookshelf](audiobookshelf/) |
+| No `metadata.json`, but audio files have tags | [Explore Metadata](explore-metadata/) |
+| MP3 tags use non-standard fields | [Metadata Sources](metadata/#field-mapping) |
+| Previous organization or rename needs to be reverted | [Safety And Undo](safety-and-undo/) |
+| Planned paths look wrong | [Troubleshooting](troubleshooting/) |
+
+## Audiobookshelf Users
+
+<section class="media-callout">
+  <a class="media-callout-image" href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/store_metadata.jpg" target="_blank" rel="noopener">
+    <img src="/audiobook-organizer/assets/docs/store_metadata.jpg" alt="Audiobookshelf setting for storing metadata.json files" />
+  </a>
+  <div class="media-callout-copy">
+    <p>If you use Audiobookshelf, enable <strong>Store metadata with item</strong> before the first organize run. This makes ABS save a <code>metadata.json</code> file beside each book, and Audiobook Organizer reads that file when it previews folder changes.</p>
+    <p>After a non-dry-run organization, trigger an Audiobookshelf scan and clean up any stale missing-book entries if ABS still points at old paths.</p>
+    <p><a href="/audiobook-organizer/audiobookshelf/">Audiobookshelf setup and cleanup flow</a></p>
+  </div>
+</section>
+
+## What It Does
+
+<section class="capability-grid" aria-label="Audiobook Organizer capabilities">
+  <article>
+    <h3>Organize</h3>
+    <p>Move or copy books into layouts such as <code>Author/Series/Title</code>, including custom layout templates.</p>
+  </article>
+  <article>
+    <h3>Rename Files</h3>
+    <p>Build filenames from title, author, series, track, disc, narrator, and other metadata fields.</p>
+  </article>
+  <article>
+    <h3>Explore Metadata</h3>
+    <p>Read <code>metadata.json</code>, embedded EPUB/MP3/M4B metadata, and Audiobookshelf metadata before changing files.</p>
+  </article>
+  <article>
+    <h3>Work safely</h3>
+    <p>Use dry-run previews, reviewed execution, skip/error summaries, and undo logs for organization and rename runs.</p>
+  </article>
+  <article>
+    <h3>Coordinate with ABS</h3>
+    <p>Discover Audiobookshelf libraries, test container-to-host path mappings, organize from ABS metadata, and trigger scans.</p>
+  </article>
+  <article>
+    <h3>Pick your interface</h3>
+    <p>Use the local web UI, scriptable CLI, keyboard-first TUI, rename flows, metadata tools, or ABS command group.</p>
+  </article>
+</section>

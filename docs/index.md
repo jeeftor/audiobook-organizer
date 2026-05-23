@@ -44,7 +44,7 @@ Audiobook Organizer is for audiobook libraries that have drifted into inconsiste
 
 ## Audiobookshelf Users
 
-If Audiobookshelf is your metadata source, enable **Store metadata with item** before the first organize run. This writes a `metadata.json` sidecar beside each book so Audiobook Organizer can preview and organize from the same metadata ABS uses.
+If you use Audiobookshelf, enable **Store metadata with item** before the first organize run. This makes ABS save a `metadata.json` file beside each book, and Audiobook Organizer reads that file when it previews folder changes.
 
 ![Audiobookshelf setting for storing metadata.json files](store_metadata.jpg)
 
@@ -89,7 +89,7 @@ After a non-dry-run organization, trigger an Audiobookshelf scan and clean up an
 | Organize audiobooks | [Organize](organize.md) |
 | Rename files from metadata templates | [Rename Files](RENAME_FEATURE.md) |
 | Explore metadata before changing files | [Explore Metadata](explore-metadata.md) |
-| Configure Audiobookshelf `metadata.json` sidecars | [Audiobookshelf](audiobookshelf.md) |
+| Configure Audiobookshelf `metadata.json` files | [Audiobookshelf](audiobookshelf.md) |
 | Use the browser workflow | [Local Web UI](GUI.md) |
 | Work interactively in a terminal | [TUI](TUI.md) |
 | Organize with Audiobookshelf metadata | [Audiobookshelf](audiobookshelf.md) |

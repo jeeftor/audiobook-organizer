@@ -1,4 +1,7 @@
-# Installation Guide
+---
+title: "Installation"
+description: "Install Audiobook Organizer from releases, Homebrew, Go, Docker, or source."
+---
 
 Audiobook Organizer ships as one binary named `audiobook-organizer`. Install the binary first, then make sure your audiobook folders contain metadata that the organizer can read.
 
@@ -6,7 +9,7 @@ Audiobook Organizer ships as one binary named `audiobook-organizer`. Install the
 
 <section class="media-callout">
   <a class="media-callout-image" href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/store_metadata.jpg" target="_blank" rel="noopener">
-    <img src="store_metadata.jpg" alt="Audiobookshelf setting for storing metadata.json files">
+    <img src="/audiobook-organizer/assets/docs/store_metadata.jpg" alt="Audiobookshelf setting for storing metadata.json files">
   </a>
   <div class="media-callout-copy">
     <p>If you use Audiobookshelf, do this before the first organize run. Configure ABS to write <code>metadata.json</code> files into the same directories as your books.</p>
@@ -24,9 +27,9 @@ After Audiobookshelf saves metadata with each book, a folder should look like th
   02 - Chapter 2.mp3
 ```
 
-Audiobook Organizer reads that `metadata.json` file to get the book title, author, series, narrator, and year before it plans folder names. If your library does not have `metadata.json` files, use embedded metadata mode instead. See [Audiobookshelf](audiobookshelf.md) for the full ABS setup and cleanup flow, or [Explore Metadata](explore-metadata.md) to inspect what metadata the organizer can read.
+Audiobook Organizer reads that `metadata.json` file to get the book title, author, series, narrator, and year before it plans folder names. If your library does not have `metadata.json` files, use embedded metadata mode instead. See [Audiobookshelf](/audiobook-organizer/audiobookshelf/) for the full ABS setup and cleanup flow, or [Explore Metadata](/audiobook-organizer/explore-metadata/) to inspect what metadata the organizer can read.
 
-After a real organize run, Audiobookshelf may show old paths as missing until it scans and reconciles moved files. The **Enable folder watcher for library** setting may help, but you should still trigger a scan and clean up stale missing-book entries when needed. See [After Organizing: Scan And Clean Up Missing Items](audiobookshelf.md#after-organizing-scan-and-clean-up-missing-items).
+After a real organize run, Audiobookshelf may show old paths as missing until it scans and reconciles moved files. The **Enable folder watcher for library** setting may help, but you should still trigger a scan and clean up stale missing-book entries when needed. See [After Organizing: Scan And Clean Up Missing Items](/audiobook-organizer/audiobookshelf/#after-organizing-scan-and-clean-up-missing-items).
 
 ## Install Audiobook Organizer
 
@@ -127,9 +130,9 @@ audiobook-organizer --help
 
 After installation and metadata setup:
 
-- Use [Getting Started](getting-started.md) for a safe dry-run first pass.
-- Use [Choose An Interface](interfaces.md) to pick web UI, CLI, TUI, rename, metadata, or ABS workflows.
-- Use [Audiobookshelf](audiobookshelf.md) when ABS metadata, path mapping, scans, or missing-item cleanup are involved.
+- Use [Getting Started](/audiobook-organizer/getting-started/) for a safe dry-run first pass.
+- Use [Choose An Interface](/audiobook-organizer/interfaces/) to pick web UI, CLI, TUI, rename, metadata, or ABS workflows.
+- Use [Audiobookshelf](/audiobook-organizer/audiobookshelf/) when ABS metadata, path mapping, scans, or missing-item cleanup are involved.
 
 ## Troubleshooting
 
@@ -163,8 +166,8 @@ audiobook-organizer --dir=/books --out=/organized --dry-run
 
 ## See Also
 
-- [Getting Started](getting-started.md) - Safe first run
-- [Audiobookshelf](audiobookshelf.md) - ABS metadata setup, scans, and cleanup
-- [Choose An Interface](interfaces.md) - Web UI, CLI, TUI, rename, metadata, and ABS workflows
-- [Configuration](CONFIGURATION.md) - Configuration file setup
-- [Main README](../README.md) - Project overview
+- [Getting Started](/audiobook-organizer/getting-started/) - Safe first run
+- [Audiobookshelf](/audiobook-organizer/audiobookshelf/) - ABS metadata setup, scans, and cleanup
+- [Choose An Interface](/audiobook-organizer/interfaces/) - Web UI, CLI, TUI, rename, metadata, and ABS workflows
+- [Configuration](/audiobook-organizer/configuration/) - Configuration file setup
+- [Main README](/audiobook-organizer/) - Project overview

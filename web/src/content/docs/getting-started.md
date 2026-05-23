@@ -1,4 +1,7 @@
-# Getting Started
+---
+title: "Getting Started"
+description: "A safe first organization run using preview, dry-run, scan, cleanup, and undo."
+---
 
 This guide walks through a safe first organization run. It uses a separate output directory so you can inspect the result before changing your source library.
 
@@ -6,7 +9,7 @@ This guide walks through a safe first organization run. It uses a separate outpu
 
 For Audiobookshelf-managed libraries, use this cycle: configure ABS to write `metadata.json` files, preview, organize, scan ABS, clean up old missing paths if ABS still reports them, and keep the undo log until the library is verified.
 
-![Audiobookshelf organize lifecycle](abs-organize-lifecycle.svg)
+![Audiobookshelf organize lifecycle](/audiobook-organizer/assets/docs/abs-organize-lifecycle.svg)
 
 ## Install
 
@@ -21,13 +24,13 @@ brew install audiobook-organizer
 go install github.com/jeeftor/audiobook-organizer@latest
 ```
 
-See [Installation](INSTALLATION.md) for platform-specific options and package notes.
+See [Installation](/audiobook-organizer/installation/) for platform-specific options and package notes.
 
 ## 1. Configure Audiobookshelf
 
 <section class="media-callout">
   <a class="media-callout-image" href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/store_metadata.jpg" target="_blank" rel="noopener">
-    <img src="store_metadata.jpg" alt="Audiobookshelf setting for storing metadata.json files">
+    <img src="/audiobook-organizer/assets/docs/store_metadata.jpg" alt="Audiobookshelf setting for storing metadata.json files">
   </a>
   <div class="media-callout-copy">
     <p>Before organizing an Audiobookshelf-managed library, enable <strong>Store metadata with item</strong> in the Audiobookshelf library settings.</p>
@@ -89,7 +92,7 @@ The organizer writes `.abook-org.log` so the operation can be undone.
 
 After a non-dry-run organization, run or trigger an Audiobookshelf library scan so ABS can discover the organized paths and reconcile moved files.
 
-See [Audiobookshelf](audiobookshelf.md) for path mapping checks and scan commands.
+See [Audiobookshelf](/audiobook-organizer/audiobookshelf/) for path mapping checks and scan commands.
 
 ## 5. Clean Missing Items
 
@@ -98,13 +101,13 @@ After the scan, ABS may still list old filesystem paths as missing. That is a no
 <section class="image-pair cleanup-pair" aria-label="Audiobookshelf missing item cleanup screenshots">
   <figure>
     <a href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/issues.jpg" target="_blank" rel="noopener">
-      <img src="issues.jpg" alt="Audiobookshelf issues view showing missing books">
+      <img src="/audiobook-organizer/assets/docs/issues.jpg" alt="Audiobookshelf issues view showing missing books">
     </a>
     <figcaption>Review missing old paths in the ABS Issues view.</figcaption>
   </figure>
   <figure>
     <a href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/remove_books.jpg" target="_blank" rel="noopener">
-      <img src="remove_books.jpg" alt="Audiobookshelf remove missing books action">
+      <img src="/audiobook-organizer/assets/docs/remove_books.jpg" alt="Audiobookshelf remove missing books action">
     </a>
     <figcaption>Remove missing entries after ABS has found the organized files.</figcaption>
   </figure>
@@ -126,11 +129,11 @@ Rename operations use a separate `.abook-rename.log` file:
 audiobook-organizer rename --dir=/books/source --undo
 ```
 
-See [Safety And Undo](safety-and-undo.md) for the invariants and log behavior.
+See [Safety And Undo](/audiobook-organizer/safety-and-undo/) for the invariants and log behavior.
 
 ## Next Steps
 
-- Use [Layouts](LAYOUTS.md) to choose a directory structure.
-- Use [Metadata Sources](METADATA.md) if metadata is missing or stored in custom fields.
-- Use [Rename](RENAME_FEATURE.md) to standardize filenames after metadata is correct.
-- Use [Audiobookshelf](audiobookshelf.md) when your source of truth is an ABS server.
+- Use [Layouts](/audiobook-organizer/layouts/) to choose a directory structure.
+- Use [Metadata Sources](/audiobook-organizer/metadata/) if metadata is missing or stored in custom fields.
+- Use [Rename](/audiobook-organizer/rename/) to standardize filenames after metadata is correct.
+- Use [Audiobookshelf](/audiobook-organizer/audiobookshelf/) when your source of truth is an ABS server.

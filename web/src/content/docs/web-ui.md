@@ -1,4 +1,7 @@
-# Local Web UI Guide
+---
+title: "Local Web UI"
+description: "Use the local browser interface for Audiobook Organizer."
+---
 
 The Audiobook Organizer web UI is served by the same `audiobook-organizer` binary as the CLI and TUI. It runs on localhost, opens in your browser, and reuses the existing organizer, rename, metadata, and Audiobookshelf code paths through an internal API layer.
 
@@ -91,7 +94,7 @@ make web-dev
 
 The production build embeds `internal/server/static` into the Go binary. The Vite dev server proxies `/api` to `http://127.0.0.1:8080`.
 
-See [GUI_TESTING.md](GUI_TESTING.md) for the Playwright-based GUI test framework.
+See [GUI_TESTING.md](/audiobook-organizer/development/web-ui-testing/) for the Playwright-based GUI test framework.
 
 ## Related Commands
 

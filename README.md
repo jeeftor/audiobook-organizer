@@ -25,17 +25,17 @@ Use it when you want to:
 - preview filesystem changes before moving or renaming audiobook files;
 - organize messy folders into predictable layouts such as `Author/Series/Title`;
 - rename files from metadata templates;
-- inspect and map metadata from sidecar JSON, embedded tags, and Audiobookshelf;
+- inspect and map metadata from `metadata.json`, embedded tags, and Audiobookshelf;
 - trigger Audiobookshelf scans after filesystem changes;
 - undo organization and rename operations from generated logs.
 
 ## Audiobookshelf `metadata.json` Workflow
 
-If Audiobookshelf is your metadata source, configure ABS to store metadata beside each book before organizing. In the Audiobookshelf library settings, enable **Store metadata with item**. When ABS metadata is generated or updated, Audiobookshelf writes a `metadata.json` sidecar into each book directory.
+If Audiobookshelf is your metadata source, configure ABS to store metadata beside each book before organizing. In the Audiobookshelf library settings, enable **Store metadata with item**. When ABS metadata is generated or updated, Audiobookshelf writes a `metadata.json` file into each book directory.
 
 ![Audiobookshelf setting for storing metadata.json files](docs/store_metadata.jpg)
 
-That sidecar is the safest first metadata source for local organization because it keeps the book-level title, author, series, narrator, and year data next to the audio files:
+That `metadata.json` file is the safest first metadata source for local organization because it keeps the book-level title, author, series, narrator, and year data next to the audio files:
 
 ```text
 /audiobooks/The Case of Charles Dexter Ward/
@@ -44,7 +44,7 @@ That sidecar is the safest first metadata source for local organization because 
   02 - Chapter 2.mp3
 ```
 
-Preview the organizer against those sidecars before moving files:
+Preview the organizer against those `metadata.json` files before moving files:
 
 ```bash
 audiobook-organizer \
@@ -54,7 +54,7 @@ audiobook-organizer \
   --verbose
 ```
 
-When `metadata.json` exists beside MP3 or M4B files, Audiobook Organizer can use hybrid metadata: book-level fields come from `metadata.json`, while track-level fields can come from embedded audio tags. If your library does not have sidecar metadata, use embedded metadata mode instead:
+When `metadata.json` exists beside MP3 or M4B files, Audiobook Organizer can use hybrid metadata: book-level fields come from `metadata.json`, while track-level fields can come from embedded audio tags. If your library does not have `metadata.json` files, use embedded metadata mode instead:
 
 ```bash
 audiobook-organizer \
