@@ -139,6 +139,12 @@ func runMetadataText(cmd *cobra.Command, inputDir string) error {
 		return err
 	}
 
+	verbose, _ := cmd.Flags().GetBool("verbose")
+	if verbose {
+		writeMetadataVerbose(cmd.OutOrStdout(), inputDir, output)
+		return nil
+	}
+
 	out := cmd.OutOrStdout()
 	fmt.Fprintf(out, "Metadata scan: %s\n", inputDir)
 	fmt.Fprintf(out, "Files scanned: %d\n", output.Summary.FilesScanned)
@@ -169,6 +175,37 @@ func runMetadataText(cmd *cobra.Command, inputDir string) error {
 	}
 
 	return nil
+}
+
+func writeMetadataVerbose(out io.Writer, inputDir string, output metadataJSONOutput) {
+	fmt.Fprintln(out, "🎧 Metadata scan")
+	fmt.Fprintf(out, "  📁 Directory: %s\n", inputDir)
+	fmt.Fprintf(out, "  📄 Files scanned: %d\n", output.Summary.FilesScanned)
+	fmt.Fprintf(out, "  ⚠️ Errors: %d\n\n", output.Summary.Errors)
+
+	for i, file := range output.Files {
+		if i > 0 {
+			fmt.Fprintln(out)
+		}
+		fmt.Fprintf(out, "📄 %s\n", file.Path)
+		fmt.Fprintf(out, "  🧭 Source: %s\n", valueOrDash(file.SourceType))
+		fmt.Fprintf(out, "  📖 Title: %s\n", valueOrDash(file.Title))
+		fmt.Fprintf(out, "  ✍️ Authors: %s\n", joinedOrDash(file.Authors))
+		fmt.Fprintf(out, "  📚 Series: %s\n", joinedOrDash(file.Series))
+		if file.TrackNumber > 0 {
+			fmt.Fprintf(out, "  🔢 Track: %d\n", file.TrackNumber)
+		} else {
+			fmt.Fprintln(out, "  🔢 Track: -")
+		}
+		if file.TrackTitle != "" {
+			fmt.Fprintf(out, "  🎙️ Track Title: %s\n", file.TrackTitle)
+		}
+		fmt.Fprintf(out, "  💿 Album: %s\n", valueOrDash(file.Album))
+		if file.Error != "" {
+			fmt.Fprintf(out, "  ⚠️ Error: %s\n", file.Error)
+		}
+		writeAdditionalMetadataFieldsVerbose(out, file.RawData)
+	}
 }
 
 func scanMetadataJSON(
@@ -357,6 +394,18 @@ func writeAdditionalMetadataFields(out io.Writer, rawData map[string]interface{}
 	}
 
 	fmt.Fprintln(out, "  Additional Fields:")
+	for _, field := range fields {
+		fmt.Fprintf(out, "    %s: %s\n", field.key, formatMetadataValue(field.value))
+	}
+}
+
+func writeAdditionalMetadataFieldsVerbose(out io.Writer, rawData map[string]interface{}) {
+	fields := additionalMetadataFields(rawData)
+	if len(fields) == 0 {
+		return
+	}
+
+	fmt.Fprintln(out, "  🔎 Additional Fields:")
 	for _, field := range fields {
 		fmt.Fprintf(out, "    %s: %s\n", field.key, formatMetadataValue(field.value))
 	}

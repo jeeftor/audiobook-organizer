@@ -127,6 +127,8 @@ export const requiredGeneratedAssets = [
   'web-ui/web-ui-metadata-json-review.png',
   'web-ui/web-ui-metadata-json-review.webp',
   'cli/cli-help.png',
+  'cli/cli-metadata-inspect.png',
+  'cli/cli-metadata-inspect.webp',
   'cli/cli-help.webp',
   'cli/cli-organize-run.gif',
   'cli/cli-rename-preview.gif',

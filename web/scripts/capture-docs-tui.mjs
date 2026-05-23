@@ -296,16 +296,39 @@ async function findChromeHeadlessShell(root) {
 }
 
 async function extractFinalFrame(capture) {
+  const gifPath = join(captureDir, capture.gif)
+  const pngPath = join(captureDir, capture.png)
   await runCommand('ffmpeg', [
     '-y',
     '-sseof',
     '-0.2',
     '-i',
-    join(captureDir, capture.gif),
+    gifPath,
     '-frames:v',
     '1',
-    join(captureDir, capture.png),
+    pngPath,
   ])
+  if (await fileExists(pngPath)) {
+    return
+  }
+
+  await runCommand('ffmpeg', [
+    '-y',
+    '-i',
+    gifPath,
+    '-frames:v',
+    '1',
+    pngPath,
+  ])
+}
+
+async function fileExists(path) {
+  try {
+    const fileStat = await stat(path)
+    return fileStat.isFile() && fileStat.size > 0
+  } catch {
+    return false
+  }
 }
 
 async function waitForStableFile(path) {

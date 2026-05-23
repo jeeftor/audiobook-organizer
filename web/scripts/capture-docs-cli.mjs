@@ -39,7 +39,7 @@ const captures = [
     name: 'metadata-inspect',
     filename: 'cli-metadata-inspect.png',
     title: 'Metadata Inspection',
-    command: ['metadata', '--dir=output/docs-cli-sample/metadata-json/source'],
+    command: ['metadata', '--dir=output/docs-cli-sample/metadata-json/source', '--verbose'],
   },
   {
     name: 'rename-preview',
