@@ -15,7 +15,7 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, `references/abo-assistan
 
 1. Run `$abo-issue-verify` logic first: issue criteria, branch diff, tests, docs, changelog, and ABS matrix.
 2. Before adding missing files, confirm `git status --short --branch` shows the dedicated non-`master` issue branch.
-3. Add missing `CHANGELOG.md`, docs, or `test/abs/test-matrix.md` updates when required.
+3. Add missing `CHANGELOG.md`, docs, or `test/abs/test-matrix.md` updates when required. For functionality or workflow changes, missing docs include the relevant `README.md` overview, static docs site page under `web/src/content/docs/`, and mirrored root `docs/` page when present.
 4. Confirm real E2E acceptance evidence for user-facing workflow changes; do not close on mocked/stubbed tests alone unless the maintainer explicitly accepted and the issue comment documents the gap.
 5. Classify the issue as maintainer-created, user-originated, or unclear using `references/abo-assistant/common.md`.
 6. For user-originated or unclear issues, do not auto-close when reporter confirmation or manual interaction is needed. Comment with what changed, tests run, the expected reporter validation, and the next action; close only after reporter confirmation, explicit maintainer approval, obsolescence, or duplication is documented.
