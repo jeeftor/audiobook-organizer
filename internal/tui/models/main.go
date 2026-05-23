@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/jeeftor/audiobook-organizer/internal/tui/terminalimage"
 )
 
 // Screen represents different screens in the TUI
@@ -24,6 +25,7 @@ const (
 type MainModel struct {
 	inputDir  string
 	outputDir string
+	logo      *terminalimage.StartupLogo
 	screen    Screen
 	width     int
 	height    int
@@ -45,6 +47,14 @@ type MainModel struct {
 
 // NewMainModel creates a new main model
 func NewMainModel(inputDir, outputDir string) *MainModel {
+	return NewMainModelWithLogo(inputDir, outputDir, nil)
+}
+
+// NewMainModelWithLogo creates a new main model with an optional startup logo.
+func NewMainModelWithLogo(
+	inputDir, outputDir string,
+	logo *terminalimage.StartupLogo,
+) *MainModel {
 	// If no directories provided, start with directory picker
 	startScreen := ScanScreen
 	if inputDir == "" || outputDir == "" {
@@ -54,6 +64,7 @@ func NewMainModel(inputDir, outputDir string) *MainModel {
 	return &MainModel{
 		inputDir:  inputDir,
 		outputDir: outputDir,
+		logo:      logo,
 		screen:    startScreen,
 	}
 }
@@ -67,7 +78,7 @@ func (m *MainModel) Init() tea.Cmd {
 	}
 
 	// Initialize the scan model
-	m.scanModel = NewScanModel(m.inputDir)
+	m.scanModel = NewScanModelWithLogo(m.inputDir, m.logo)
 	return m.scanModel.Init()
 }
 
@@ -145,7 +156,7 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.inputDir = m.dirPickerModel.inputDir
 					m.outputDir = m.dirPickerModel.outputDir
 					m.screen = ScanScreen
-					m.scanModel = NewScanModel(m.inputDir)
+					m.scanModel = NewScanModelWithLogo(m.inputDir, m.logo)
 					return m, m.scanModel.Init()
 				}
 			}
@@ -320,7 +331,7 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.previewModel = nil
 				m.processModel = nil
 				m.commandOutputModel = nil
-				m.scanModel = NewScanModel(m.inputDir)
+				m.scanModel = NewScanModelWithLogo(m.inputDir, m.logo)
 				m.screen = ScanScreen
 				return m, m.scanModel.Init()
 			}

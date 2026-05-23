@@ -6,15 +6,17 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jeeftor/audiobook-organizer/internal/organizer"
+	"github.com/jeeftor/audiobook-organizer/internal/tui/terminalimage"
 )
 
 // RenameScanModel handles scanning directories and extracting metadata
 type RenameScanModel struct {
-	inputDir   string
-	scanning   bool
-	complete   bool
-	candidates []organizer.RenameCandidate
-	err        error
+	inputDir    string
+	startupLogo *terminalimage.StartupLogo
+	scanning    bool
+	complete    bool
+	candidates  []organizer.RenameCandidate
+	err         error
 
 	// Progress tracking
 	filesScanned      int
@@ -24,10 +26,19 @@ type RenameScanModel struct {
 
 // NewRenameScanModel creates a new scan model
 func NewRenameScanModel(inputDir string) *RenameScanModel {
+	return NewRenameScanModelWithLogo(inputDir, nil)
+}
+
+// NewRenameScanModelWithLogo creates a new scan model with an optional startup logo.
+func NewRenameScanModelWithLogo(
+	inputDir string,
+	startupLogo *terminalimage.StartupLogo,
+) *RenameScanModel {
 	return &RenameScanModel{
-		inputDir: inputDir,
-		scanning: false,
-		complete: false,
+		inputDir:    inputDir,
+		startupLogo: startupLogo,
+		scanning:    false,
+		complete:    false,
 	}
 }
 
@@ -104,7 +115,11 @@ func (m *RenameScanModel) View() string {
 		content = "Starting scan..."
 	}
 
-	return style.Render(content)
+	rendered := style.Render(content)
+	if logo := m.startupLogo.ViewWithReservedSpace(); logo != "" {
+		return logo + "\n\n" + rendered
+	}
+	return rendered
 }
 
 // scanFiles performs the actual scanning

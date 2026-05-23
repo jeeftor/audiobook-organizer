@@ -1,0 +1,4 @@
+interface:
+  display_name: "ASCII Art"
+  short_description: "Design plain ASCII art"
+  default_prompt: "Use $ascii-art to design or review this plain text art."

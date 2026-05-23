@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Web UI docs screenshots**: Added a local-only Playwright workflow for generating web UI metadata.json preview, review-plan, and embedded-metadata preview screenshots under ignored `output/docs-visuals/web-ui/`, plus a CI artifact workflow for docs visuals.
 - **CLI docs captures**: Added a local-only docs workflow for generating terminal-style CLI help, dry-run organization, metadata inspection, and rename preview PNG captures, plus VHS animated GIFs for short CLI demos, under ignored `output/docs-visuals/cli/`.
 - **TUI docs captures**: Added a VHS workflow for generating animated organize and rename TUI captures plus static final-frame PNGs under ignored `output/docs-visuals/tui/`.
+- **Progressive terminal logo**: CLI help and the `tui`, `rename-tui`, and `metadata-tui` startup scan screens can render the embedded project logo in terminals with Kitty, iTerm2, or Sixel image support while preserving text-only fallback for unsupported and non-interactive terminals.
 - **Docs site publishing**: Added a lightweight generated documentation site, GitHub Pages publishing path for generated visuals, docs link verification, and a concise README landing page.
 
 ### Fixed

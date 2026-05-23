@@ -7,6 +7,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/jeeftor/audiobook-organizer/internal/organizer"
+	"github.com/jeeftor/audiobook-organizer/internal/tui/terminalimage"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -244,6 +245,7 @@ func getEnvValue(key string) string {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+	configureTerminalImageHelp(rootCmd)
 
 	// Config file flag
 	rootCmd.PersistentFlags().
@@ -346,6 +348,16 @@ func init() {
 		}
 		return nil
 	}
+}
+
+func configureTerminalImageHelp(cmd *cobra.Command) {
+	defaultHelpFunc := cmd.HelpFunc()
+	cmd.SetHelpFunc(func(helpCmd *cobra.Command, args []string) {
+		if logo := terminalimage.NewAutoStartupLogo().ViewWithReservedSpace(); logo != "" {
+			fmt.Fprint(helpCmd.OutOrStdout(), logo)
+		}
+		defaultHelpFunc(helpCmd, args)
+	})
 }
 
 func initConfig() {

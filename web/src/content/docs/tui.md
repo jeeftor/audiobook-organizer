@@ -15,10 +15,21 @@ The TUI offers a middle ground between the visual GUI and the scriptable CLI:
 - **Visual progress** - Color-coded output and progress tracking
 - **SSH-friendly** - Works over remote connections
 - **No X11 required** - Pure terminal-based interface
+- **Progressive terminal logo** - Startup scan screens show the embedded project logo when the terminal safely supports Kitty, iTerm2, or Sixel images
 
 **Best for:** Power users who prefer keyboard navigation, SSH/remote sessions, interactive workflow without GUI overhead
 
 **Not ideal for:** Automation, batch processing, users unfamiliar with terminals (use GUI or CLI instead)
+
+---
+
+## Terminal Logo
+
+CLI help and the `tui`, `rename-tui`, and `metadata-tui` startup scan screens can display the embedded Audiobook Organizer logo in terminals that support inline image protocols. Detection is automatic and conservative: non-interactive output, CI, `TERM=dumb`, unsupported terminals, and tmux sessions default to the existing text-only header so raw image escape sequences are not printed.
+
+Set `AUDIOBOOK_ORGANIZER_NO_TERMINAL_IMAGES=1` to force the text-only fallback. For manual terminal testing or terminal-specific workarounds, set `AUDIOBOOK_ORGANIZER_TERMINAL_IMAGE_PROTOCOL` to `kitty`, `iterm2`, `sixel`, `halfblocks`, `auto`, or `off`.
+
+The application does not shell out to terminal image helper commands such as `imgcat`, `kitty +kitten icat`, `chafa`, or `viu`; those tools are only useful for manual terminal smoke checks.
 
 ---
 

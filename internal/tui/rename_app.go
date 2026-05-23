@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jeeftor/audiobook-organizer/internal/tui/models"
+	"github.com/jeeftor/audiobook-organizer/internal/tui/terminalimage"
 	"github.com/spf13/viper"
 )
 
@@ -14,7 +15,11 @@ func RunRenameMode(inputDir string) error {
 	useEmbedded := viper.GetBool("use-embedded-metadata") || viper.GetBool("flat")
 
 	// Create the main model
-	m := models.NewRenameMainModel(inputDir, useEmbedded)
+	m := models.NewRenameMainModelWithLogo(
+		inputDir,
+		useEmbedded,
+		terminalimage.NewAutoStartupLogo(),
+	)
 
 	// Create the Bubble Tea program
 	p := tea.NewProgram(m, tea.WithAltScreen())

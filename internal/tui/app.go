@@ -5,12 +5,13 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jeeftor/audiobook-organizer/internal/tui/models"
+	"github.com/jeeftor/audiobook-organizer/internal/tui/terminalimage"
 )
 
 // Run initializes and starts the TUI application
 func Run(inputDir, outputDir string) error {
 	// Create the initial model
-	m := models.NewMainModel(inputDir, outputDir)
+	m := models.NewMainModelWithLogo(inputDir, outputDir, terminalimage.NewAutoStartupLogo())
 
 	// Initialize the program
 	p := tea.NewProgram(m, tea.WithAltScreen())

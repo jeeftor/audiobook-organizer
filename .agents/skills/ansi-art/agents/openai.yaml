@@ -1,0 +1,4 @@
+interface:
+  display_name: "ANSI Art"
+  short_description: "Design terminal ANSI/ASCII art"
+  default_prompt: "Use $ansi-art to design or review this terminal logo asset."

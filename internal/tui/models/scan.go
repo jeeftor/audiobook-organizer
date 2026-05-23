@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jeeftor/audiobook-organizer/internal/organizer"
+	"github.com/jeeftor/audiobook-organizer/internal/tui/terminalimage"
 )
 
 // ScanMsg is sent when a new audiobook is found
@@ -36,6 +37,7 @@ type AudioBook struct {
 // ScanModel represents the scanning screen
 type ScanModel struct {
 	inputDir     string
+	startupLogo  *terminalimage.StartupLogo
 	scanning     bool
 	complete     bool
 	books        []AudioBook
@@ -47,12 +49,18 @@ type ScanModel struct {
 
 // NewScanModel creates a new scan model
 func NewScanModel(inputDir string) *ScanModel {
+	return NewScanModelWithLogo(inputDir, nil)
+}
+
+// NewScanModelWithLogo creates a new scan model with an optional startup logo.
+func NewScanModelWithLogo(inputDir string, startupLogo *terminalimage.StartupLogo) *ScanModel {
 	return &ScanModel{
-		inputDir:  inputDir,
-		scanning:  false,
-		complete:  false,
-		books:     []AudioBook{},
-		startTime: time.Now(),
+		inputDir:    inputDir,
+		startupLogo: startupLogo,
+		scanning:    false,
+		complete:    false,
+		books:       []AudioBook{},
+		startTime:   time.Now(),
 	}
 }
 
@@ -315,6 +323,11 @@ func (m *ScanModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View renders the UI
 func (m *ScanModel) View() string {
 	var content strings.Builder
+
+	if logo := m.startupLogo.ViewWithReservedSpace(); logo != "" {
+		content.WriteString(logo)
+		content.WriteString("\n\n")
+	}
 
 	// Title
 	title := lipgloss.NewStyle().

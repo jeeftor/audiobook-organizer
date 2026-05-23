@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jeeftor/audiobook-organizer/internal/organizer"
+	"github.com/jeeftor/audiobook-organizer/internal/tui/terminalimage"
 )
 
 // RenameScreen represents different screens in the rename TUI
@@ -23,6 +24,7 @@ const (
 // RenameMainModel is the main coordinator for the rename TUI
 type RenameMainModel struct {
 	inputDir string
+	logo     *terminalimage.StartupLogo
 	screen   RenameScreen
 	width    int
 	height   int
@@ -46,8 +48,18 @@ type RenameMainModel struct {
 
 // NewRenameMainModel creates a new rename main model
 func NewRenameMainModel(inputDir string, useEmbeddedMetadata bool) *RenameMainModel {
+	return NewRenameMainModelWithLogo(inputDir, useEmbeddedMetadata, nil)
+}
+
+// NewRenameMainModelWithLogo creates a new rename main model with an optional startup logo.
+func NewRenameMainModelWithLogo(
+	inputDir string,
+	useEmbeddedMetadata bool,
+	logo *terminalimage.StartupLogo,
+) *RenameMainModel {
 	return &RenameMainModel{
 		inputDir: inputDir,
+		logo:     logo,
 		screen:   RenameScanScreen,
 		config: &organizer.RenamerConfig{
 			BaseDir:             inputDir,
@@ -69,7 +81,7 @@ func NewRenameMainModel(inputDir string, useEmbeddedMetadata bool) *RenameMainMo
 // Init initializes the model
 func (m *RenameMainModel) Init() tea.Cmd {
 	// Start with scan screen
-	m.scanModel = NewRenameScanModel(m.inputDir)
+	m.scanModel = NewRenameScanModelWithLogo(m.inputDir, m.logo)
 	return m.scanModel.Init()
 }
 
