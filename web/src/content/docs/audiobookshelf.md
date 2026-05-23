@@ -1,4 +1,7 @@
-# Audiobookshelf
+---
+title: "Audiobookshelf"
+description: "Configure Audiobookshelf metadata and cleanup workflows."
+---
 
 Audiobookshelf workflows are for libraries where ABS already knows the book metadata or where ABS needs to rescan after filesystem changes.
 
@@ -6,13 +9,13 @@ Audiobookshelf workflows are for libraries where ABS already knows the book meta
 
 ABS organization is a full cycle: configure ABS to write `metadata.json` files, preview, organize, scan ABS, clean up old missing paths if ABS still reports them, and keep the undo log until the library is verified.
 
-![Audiobookshelf organize lifecycle](abs-organize-lifecycle.svg)
+![Audiobookshelf organize lifecycle](/audiobook-organizer/assets/docs/abs-organize-lifecycle.svg)
 
 ## Configure `metadata.json` Sidecars
 
 For the standard local-folder organize workflow, configure Audiobookshelf to store metadata alongside your books. When this ABS setting is enabled, Audiobookshelf writes a `metadata.json` file into each book directory whenever metadata is generated or updated. Audiobook Organizer can then use those files as the default metadata source.
 
-![Audiobookshelf setting for storing metadata.json files](store_metadata.jpg)
+![Audiobookshelf setting for storing metadata.json files](/audiobook-organizer/assets/docs/store_metadata.jpg)
 
 After this is enabled, a book directory can look like this:
 
@@ -32,7 +35,7 @@ audiobook-organizer \
   --dry-run
 ```
 
-Use [Explore Metadata](explore-metadata.md) if you want to inspect what the tool reads from `metadata.json` before organizing.
+Use [Explore Metadata](/audiobook-organizer/explore-metadata/) if you want to inspect what the tool reads from `metadata.json` before organizing.
 
 ## Common Scenarios
 
@@ -92,7 +95,7 @@ The local web UI can test the ABS URL/token, load libraries, validate path mappi
 audiobook-organizer web
 ```
 
-See [Local Web UI](GUI.md) for the browser workflow.
+See [Local Web UI](/audiobook-organizer/web-ui/) for the browser workflow.
 
 ## Safety Notes
 
@@ -108,10 +111,10 @@ Audiobook Organizer moves files on disk; it does not directly rewrite Audiobooks
 
 First trigger an Audiobookshelf library scan so ABS can discover moved files. If the library still shows issues like missing books after the scan, open the ABS **Issues** view:
 
-![Audiobookshelf issues view showing missing books](issues.jpg)
+![Audiobookshelf issues view showing missing books](/audiobook-organizer/assets/docs/issues.jpg)
 
 Then use the missing-books cleanup action:
 
-![Audiobookshelf remove missing books action](remove_books.jpg)
+![Audiobookshelf remove missing books action](/audiobook-organizer/assets/docs/remove_books.jpg)
 
 If you enable the ABS library folder watcher, ABS may detect some path changes automatically. Even with the watcher enabled, a deliberate scan after filesystem moves is still the safer habit.

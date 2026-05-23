@@ -1,4 +1,7 @@
-# Explore Metadata
+---
+title: "Explore Metadata"
+description: "Inspect metadata before changing files."
+---
 
 Use metadata exploration before organizing or renaming when titles, authors, series, tracks, discs, or narrators are missing or inconsistent.
 
@@ -65,10 +68,10 @@ audiobook-organizer \
   --dry-run
 ```
 
-See [Metadata Sources](METADATA.md) for extraction details and [Metadata Command](METADATA_COMMAND.md) for command reference.
+See [Metadata Sources](/audiobook-organizer/metadata/) for extraction details and [Metadata Command](/audiobook-organizer/metadata-command/) for command reference.
 
 ## Next Steps
 
-- [Organize Audiobooks](organize.md)
-- [Rename Files](RENAME_FEATURE.md)
-- [Audiobookshelf](audiobookshelf.md)
+- [Organize Audiobooks](/audiobook-organizer/organize/)
+- [Rename Files](/audiobook-organizer/rename/)
+- [Audiobookshelf](/audiobook-organizer/audiobookshelf/)

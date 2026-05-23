@@ -1,4 +1,7 @@
-# Organize Audiobooks
+---
+title: "Organize"
+description: "Move or copy audiobook libraries into clean folder layouts."
+---
 
 Organize is the main Audiobook Organizer workflow. It previews and then moves or copies audiobook folders into consistent layouts using `metadata.json` files, embedded metadata, or Audiobookshelf metadata.
 
@@ -44,7 +47,7 @@ audiobook-organizer \
   --dry-run
 ```
 
-See [Layouts](LAYOUTS.md) for built-in layouts and template fields.
+See [Layouts](/audiobook-organizer/layouts/) for built-in layouts and template fields.
 
 ## Metadata Sources
 
@@ -56,11 +59,11 @@ Organize can read:
 - embedded M4B metadata
 - Audiobookshelf metadata
 
-See [Explore Metadata](explore-metadata.md) when the preview shows missing or incorrect fields.
+See [Explore Metadata](/audiobook-organizer/explore-metadata/) when the preview shows missing or incorrect fields.
 
 ## Interfaces
 
-- Browser workflow: [Local Web UI](GUI.md)
-- Scriptable workflow: [CLI](CLI.md)
-- Interactive terminal workflow: [TUI](TUI.md)
-- ABS metadata workflow: [Audiobookshelf](audiobookshelf.md)
+- Browser workflow: [Local Web UI](/audiobook-organizer/web-ui/)
+- Scriptable workflow: [CLI](/audiobook-organizer/cli/)
+- Interactive terminal workflow: [TUI](/audiobook-organizer/tui/)
+- ABS metadata workflow: [Audiobookshelf](/audiobook-organizer/audiobookshelf/)

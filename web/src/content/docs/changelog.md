@@ -1,4 +1,7 @@
-# Changelog
+---
+title: "Changelog"
+description: "Release notes and unreleased changes."
+---
 
 All notable changes to this project will be documented in this file.
 

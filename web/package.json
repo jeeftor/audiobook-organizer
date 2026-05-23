@@ -9,10 +9,13 @@
     "preview": "vite preview --host 127.0.0.1",
     "docs:cli": "node scripts/capture-docs-cli.mjs",
     "docs:cli:gifs": "node scripts/capture-docs-cli-gifs.mjs",
-    "docs:site": "node scripts/build-docs-site.mjs",
+    "docs:site": "ASTRO_TELEMETRY_DISABLED=1 astro build && node scripts/copy-docs-generated-assets.mjs",
+    "docs:starlight:build": "ASTRO_TELEMETRY_DISABLED=1 astro build",
+    "docs:starlight:dev": "ASTRO_TELEMETRY_DISABLED=1 node scripts/copy-docs-generated-assets.mjs && ASTRO_TELEMETRY_DISABLED=1 astro dev --host 127.0.0.1 --port 4321",
+    "docs:starlight:preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview --host 127.0.0.1 --port 4322",
     "docs:screenshots": "node scripts/capture-docs-screenshots.mjs",
     "docs:tui": "node scripts/capture-docs-tui.mjs",
-    "docs:verify": "node scripts/verify-docs.mjs",
+    "docs:verify": "node scripts/verify-starlight-docs.mjs",
     "install:browsers": "playwright install chromium",
     "test:e2e": "npm run build && playwright test",
     "test:e2e:headed": "npm run build && playwright test --headed",
@@ -25,8 +28,9 @@
     "vue": "^3.5.26"
   },
   "devDependencies": {
+    "@astrojs/starlight": "^0.39.2",
     "@playwright/test": "^1.60.0",
-    "marked": "^18.0.4",
+    "astro": "^6.3.7",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.1.8"
   }

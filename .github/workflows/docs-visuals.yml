@@ -110,7 +110,7 @@ jobs:
         run: find output/docs-visuals -maxdepth 3 -type f -print
 
       - name: List generated docs site
-        run: find output/docs-site -maxdepth 4 -type f -print
+        run: find output/docs-starlight -maxdepth 4 -type f -print
 
       - name: Upload docs visuals
         uses: actions/upload-artifact@v7
@@ -124,7 +124,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: docs-site
-          path: output/docs-site/**
+          path: output/docs-starlight/**
           if-no-files-found: error
           retention-days: 14
 
@@ -136,7 +136,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: actions/upload-pages-artifact@v5
         with:
-          path: output/docs-site
+          path: output/docs-starlight
 
       - name: Deploy GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'

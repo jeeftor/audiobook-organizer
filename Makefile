@@ -141,7 +141,7 @@ docs-web-screenshots: web-build
 # Generate all local documentation visuals.
 docs-visuals: docs-web-screenshots docs-cli-captures docs-cli-gifs docs-tui-captures
 
-# Build the static documentation site from Markdown.
+# Build the Starlight documentation site.
 docs-site:
 	cd web && npm run docs:site
 

@@ -14,6 +14,8 @@ gui-books/
 devbooks/
 output/
 web/node_modules/
+web/.astro/
+web/public/assets/generated/
 web/playwright-report/
 web/test-results/
 test_output/
