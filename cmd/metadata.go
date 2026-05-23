@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -14,28 +12,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-type metadataJSONOutput struct {
-	Files   []metadataJSONFile  `json:"files"`
-	Summary metadataJSONSummary `json:"summary"`
-}
-
-type metadataJSONFile struct {
-	Path        string                 `json:"path"`
-	SourceType  string                 `json:"source_type"`
-	Title       string                 `json:"title"`
-	Authors     []string               `json:"authors"`
-	Series      []string               `json:"series"`
-	TrackNumber int                    `json:"track_number"`
-	TrackTitle  string                 `json:"track_title,omitempty"`
-	Album       string                 `json:"album"`
-	RawData     map[string]interface{} `json:"raw_data,omitempty"`
-	Error       string                 `json:"error,omitempty"`
-}
-
-type metadataJSONSummary struct {
-	FilesScanned int `json:"files_scanned"`
-	Errors       int `json:"errors"`
-}
+type (
+	metadataJSONOutput  = organizer.MetadataInspectionOutput
+	metadataJSONFile    = organizer.MetadataInspectionFile
+	metadataJSONSummary = organizer.MetadataInspectionSummary
+)
 
 var metadataCmd = &cobra.Command{
 	Use:   "metadata",
@@ -44,7 +25,8 @@ var metadataCmd = &cobra.Command{
 
 The metadata command scans directories and prints extracted metadata in the
 terminal. Use --json for machine-readable output, or metadata-tui for the guided
-terminal workflow.
+terminal workflow. Use --pretty for the same formatter-backed metadata display
+used by verbose organize output.
 
 The output includes each file path, metadata source type, title, authors,
 series, track number, album, and extraction errors when present.
@@ -55,6 +37,9 @@ Examples:
 
   # Inspect metadata as JSON for scripts and CI
   audiobook-organizer metadata --dir=/path/to/books --json
+
+  # Inspect metadata with the organizer pretty formatter
+  audiobook-organizer metadata --dir=/path/to/books --pretty
 
   # Force embedded metadata (ignore metadata.json)
   audiobook-organizer metadata --dir=/path --use-embedded-metadata
@@ -98,6 +83,7 @@ func init() {
 		Bool("use-embedded-metadata", false, "Force use of embedded metadata (ignore metadata.json)")
 	metadataCmd.Flags().Bool("flat", false, "Flat mode (implies --use-embedded-metadata)")
 	metadataCmd.Flags().Bool("json", false, "Write metadata scan results as JSON")
+	metadataCmd.Flags().Bool("pretty", false, "Write formatter-backed pretty metadata output")
 	metadataCmd.Flags().BoolP("verbose", "v", false, "Verbose output")
 
 	// Field mapping flags (for metadata.json customization)
@@ -115,6 +101,7 @@ func init() {
 	viper.BindPFlag("use-embedded-metadata", metadataCmd.Flags().Lookup("use-embedded-metadata"))
 	viper.BindPFlag("flat", metadataCmd.Flags().Lookup("flat"))
 	viper.BindPFlag("json", metadataCmd.Flags().Lookup("json"))
+	viper.BindPFlag("pretty", metadataCmd.Flags().Lookup("pretty"))
 	viper.BindPFlag("verbose", metadataCmd.Flags().Lookup("verbose"))
 	viper.BindPFlag("title-field", metadataCmd.Flags().Lookup("title-field"))
 	viper.BindPFlag("series-field", metadataCmd.Flags().Lookup("series-field"))
@@ -140,8 +127,9 @@ func runMetadataText(cmd *cobra.Command, inputDir string) error {
 	}
 
 	verbose, _ := cmd.Flags().GetBool("verbose")
-	if verbose {
-		writeMetadataVerbose(cmd.OutOrStdout(), inputDir, output)
+	pretty, _ := cmd.Flags().GetBool("pretty")
+	if pretty || verbose {
+		writeMetadataPretty(cmd.OutOrStdout(), inputDir, output, metadataFieldMapping(cmd))
 		return nil
 	}
 
@@ -177,7 +165,12 @@ func runMetadataText(cmd *cobra.Command, inputDir string) error {
 	return nil
 }
 
-func writeMetadataVerbose(out io.Writer, inputDir string, output metadataJSONOutput) {
+func writeMetadataPretty(
+	out io.Writer,
+	inputDir string,
+	output metadataJSONOutput,
+	fieldMapping organizer.FieldMapping,
+) {
 	fmt.Fprintln(out, "🎧 Metadata scan")
 	fmt.Fprintf(out, "  📁 Directory: %s\n", inputDir)
 	fmt.Fprintf(out, "  📄 Files scanned: %d\n", output.Summary.FilesScanned)
@@ -187,24 +180,15 @@ func writeMetadataVerbose(out io.Writer, inputDir string, output metadataJSONOut
 		if i > 0 {
 			fmt.Fprintln(out)
 		}
-		fmt.Fprintf(out, "📄 %s\n", file.Path)
-		fmt.Fprintf(out, "  🧭 Source: %s\n", valueOrDash(file.SourceType))
-		fmt.Fprintf(out, "  📖 Title: %s\n", valueOrDash(file.Title))
-		fmt.Fprintf(out, "  ✍️ Authors: %s\n", joinedOrDash(file.Authors))
-		fmt.Fprintf(out, "  📚 Series: %s\n", joinedOrDash(file.Series))
-		if file.TrackNumber > 0 {
-			fmt.Fprintf(out, "  🔢 Track: %d\n", file.TrackNumber)
-		} else {
-			fmt.Fprintln(out, "  🔢 Track: -")
-		}
-		if file.TrackTitle != "" {
-			fmt.Fprintf(out, "  🎙️ Track Title: %s\n", file.TrackTitle)
-		}
-		fmt.Fprintf(out, "  💿 Album: %s\n", valueOrDash(file.Album))
 		if file.Error != "" {
+			fmt.Fprintf(out, "📄 %s\n", file.Path)
+			fmt.Fprintf(out, "  🧭 Source: %s\n", valueOrDash(file.SourceType))
 			fmt.Fprintf(out, "  ⚠️ Error: %s\n", file.Error)
+			continue
 		}
-		writeAdditionalMetadataFieldsVerbose(out, file.RawData)
+		fmt.Fprintf(out, "📄 %s\n", file.Path)
+		formatter := organizer.NewMetadataFormatter(file.Metadata, fieldMapping)
+		fmt.Fprint(out, formatter.FormatMetadataWithMapping())
 	}
 }
 
@@ -213,74 +197,10 @@ func scanMetadataJSON(
 	useEmbedded bool,
 	fieldMapping organizer.FieldMapping,
 ) (metadataJSONOutput, error) {
-	info, err := os.Stat(inputDir)
-	if err != nil {
-		return metadataJSONOutput{}, fmt.Errorf(
-			"error accessing metadata directory %s: %w",
-			inputDir,
-			err,
-		)
-	}
-	if !info.IsDir() {
-		return metadataJSONOutput{}, fmt.Errorf("%s is not a directory", inputDir)
-	}
-
-	output := metadataJSONOutput{
-		Files: []metadataJSONFile{},
-	}
-
-	err = filepath.Walk(inputDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-		if !organizer.IsSupportedFile(filepath.Ext(path)) {
-			return nil
-		}
-
-		output.Summary.FilesScanned++
-		file := metadataJSONFile{
-			Path:       path,
-			SourceType: metadataSourceTypeForPath(path),
-			Authors:    []string{},
-			Series:     []string{},
-		}
-
-		provider := organizer.NewMetadataProvider(path, useEmbedded)
-		metadata, err := provider.GetMetadata()
-		if err != nil {
-			file.Error = fmt.Sprintf("failed to extract metadata: %v", err)
-			output.Summary.Errors++
-			output.Files = append(output.Files, file)
-			return nil
-		}
-
-		if !fieldMapping.IsEmpty() {
-			metadata.ApplyFieldMapping(fieldMapping)
-		}
-
-		file.SourceType = metadata.SourceType
-		file.Title = metadata.Title
-		file.Authors = nonNilStrings(metadata.Authors)
-		file.Series = nonNilStrings(metadata.Series)
-		file.TrackNumber = metadata.TrackNumber
-		file.TrackTitle = metadata.TrackTitle
-		file.Album = metadata.Album
-		file.RawData = metadata.RawData
-		output.Files = append(output.Files, file)
-		return nil
+	return organizer.InspectMetadataDirectory(inputDir, organizer.MetadataInspectionConfig{
+		UseEmbeddedMetadata: useEmbedded,
+		FieldMapping:        fieldMapping,
 	})
-	if err != nil {
-		return metadataJSONOutput{}, fmt.Errorf(
-			"error scanning metadata directory %s: %w",
-			inputDir,
-			err,
-		)
-	}
-
-	return output, nil
 }
 
 func metadataInputDir(cmd *cobra.Command) string {
@@ -307,10 +227,12 @@ func syncMetadataFlagsToViper(cmd *cobra.Command, inputDir string) {
 	useEmbedded, _ := cmd.Flags().GetBool("use-embedded-metadata")
 	flat, _ := cmd.Flags().GetBool("flat")
 	verbose, _ := cmd.Flags().GetBool("verbose")
+	pretty, _ := cmd.Flags().GetBool("pretty")
 
 	viper.Set("use-embedded-metadata", useEmbedded)
 	viper.Set("flat", flat)
 	viper.Set("verbose", verbose)
+	viper.Set("pretty", pretty)
 
 	if titleField, _ := cmd.Flags().GetString("title-field"); titleField != "" {
 		viper.Set("title-field", titleField)
@@ -353,24 +275,6 @@ func metadataFieldMapping(cmd *cobra.Command) organizer.FieldMapping {
 		AuthorFields: authorFields,
 		TrackField:   trackField,
 	}
-}
-
-func metadataSourceTypeForPath(path string) string {
-	switch strings.ToLower(filepath.Ext(path)) {
-	case ".epub":
-		return "epub"
-	case ".mp3", ".m4b", ".m4a", ".ogg", ".flac":
-		return "audio"
-	default:
-		return "unknown"
-	}
-}
-
-func nonNilStrings(values []string) []string {
-	if values == nil {
-		return []string{}
-	}
-	return values
 }
 
 func joinedOrDash(values []string) string {

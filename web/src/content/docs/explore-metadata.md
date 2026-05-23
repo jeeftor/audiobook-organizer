@@ -19,6 +19,12 @@ JSON output:
 audiobook-organizer metadata --dir=/books/source --json
 ```
 
+Pretty output:
+
+```bash
+audiobook-organizer metadata --dir=/books/source --pretty
+```
+
 Interactive exploration:
 
 ```bash
@@ -27,10 +33,10 @@ audiobook-organizer metadata-tui --dir=/books/source
 
 ## What The CLI Shows
 
-Use `--verbose` when you want a readable terminal inspection before choosing an organize or rename strategy:
+Use `--pretty` when you want a readable terminal inspection before choosing an organize or rename strategy:
 
 ```bash
-audiobook-organizer metadata --dir=/books/source --verbose
+audiobook-organizer metadata --dir=/books/source --pretty
 ```
 
 <section class="media-feature">
@@ -39,11 +45,12 @@ audiobook-organizer metadata --dir=/books/source --verbose
       <source srcset="/audiobook-organizer/assets/generated/cli/cli-metadata-inspect.webp" type="image/webp">
       <img src="/audiobook-organizer/assets/generated/cli/cli-metadata-inspect.png" alt="Verbose metadata command output showing source, title, author, series, track, album, and additional fields">
     </picture>
-    <figcaption>Verbose metadata inspection before changing files</figcaption>
+    <figcaption>Pretty metadata inspection before changing files</figcaption>
   </figure>
   <div>
     <p>The output shows the metadata source and the fields Audiobook Organizer can read before it plans any filesystem changes.</p>
     <p>Use this when a dry-run preview looks wrong, when files do not have <code>metadata.json</code>, or when you need to decide whether field mapping is required.</p>
+    <p><code>--verbose</code> is kept as an alias for the same formatter-backed output.</p>
   </div>
 </section>
 
