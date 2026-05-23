@@ -961,7 +961,7 @@ const absCleanConfirmed = ref(false)
 const events = ref<ActivityEvent[]>([
   { time: now(), level: 'info', event: 'Local UI ready', detail: 'No workflow request has run yet.' },
 ])
-let autoPreviewTimer: ReturnType<typeof window.setTimeout> | null = null
+let autoPreviewTimer: number | null = null
 
 const currentWorkflow = computed(() => workflows.find((workflow) => workflow.id === activeWorkflow.value) ?? workflows[0])
 const currentStage = computed(() => stageText[activeStage.value])
