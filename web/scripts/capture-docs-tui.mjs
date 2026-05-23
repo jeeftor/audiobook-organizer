@@ -4,6 +4,7 @@ import { access, copyFile, mkdir, readdir, rm, stat, symlink, writeFile } from '
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createWebP, optimizeGIF } from './docs-image-optimizer.mjs'
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const webRoot = resolve(scriptDir, '..')
@@ -52,9 +53,12 @@ async function main() {
 
     try {
       await runVHS(capture, { env: vhsEnv, mode })
+      await optimizeGIF(join(captureDir, capture.gif))
       await extractFinalFrame(capture)
+      await createWebP(join(captureDir, capture.png))
       generated.push(`  output/docs-visuals/tui/${capture.gif}`)
       generated.push(`  output/docs-visuals/tui/${capture.png}`)
+      generated.push(`  output/docs-visuals/tui/${capture.png.replace(/\.png$/, '.webp')}`)
     } finally {
       await removeTUISampleLibrary()
     }

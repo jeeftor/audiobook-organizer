@@ -69,10 +69,12 @@ jobs:
       - name: Install VHS runtime dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg gifsicle webp
           curl -fsSL -o /tmp/ttyd https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64
           sudo install -m 755 /tmp/ttyd /usr/local/bin/ttyd
           ffmpeg -version
+          gifsicle --version
+          cwebp -version
           ttyd --version
 
       - name: Install VHS

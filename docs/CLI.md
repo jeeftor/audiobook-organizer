@@ -79,7 +79,7 @@ Current GIF capture names are `organize-run`, `metadata-inspect`, and `rename-pr
 ABO_DOCS_CLI_GIFS=organize-run,rename-preview make docs-cli-gifs
 ```
 
-You can also point the PNG workflow at an existing Chrome or Chrome Headless Shell binary with `ABO_DOCS_BROWSER_EXECUTABLE_PATH=/path/to/chrome make docs-cli-captures`. The aggregate `make docs-visuals` target includes web UI screenshots, static CLI PNG captures, and animated CLI GIF captures, and CI uploads the generated files as docs visual artifacts.
+You can also point the PNG workflow at an existing Chrome or Chrome Headless Shell binary with `ABO_DOCS_BROWSER_EXECUTABLE_PATH=/path/to/chrome make docs-cli-captures`. Static PNG captures require `cwebp` and generate WebP companions. Animated GIF captures are optimized with `gifsicle -O3` when `gifsicle` is available; set `ABO_DOCS_GIF_OPTIMIZE=0` to skip that pass. The aggregate `make docs-visuals` target includes web UI screenshots, static CLI PNG captures, and animated CLI GIF captures, and CI uploads the generated files as docs visual artifacts.
 
 ---
 
