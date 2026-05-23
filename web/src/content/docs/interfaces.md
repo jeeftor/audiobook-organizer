@@ -12,7 +12,7 @@ Audiobook Organizer ships one binary with browser, terminal, scriptable CLI, and
 | Organization TUI | `audiobook-organizer tui` | Keyboard-first interactive organization | Good when you want terminal review without browser setup |
 | Rename Files | `audiobook-organizer rename --dir=/books` | Scripted rename previews and execution | Template-driven |
 | Rename TUI | `audiobook-organizer rename-tui --dir=/books` | Interactive rename review | Supports field mapping and template preview |
-| Explore Metadata | `audiobook-organizer metadata --dir=/books` | Text-only metadata inspection | Use `--json` for machine-readable output |
+| Explore Metadata | `audiobook-organizer metadata --dir=/books` | Text and pretty metadata inspection | Use `--json` for machine-readable output |
 | Explore Metadata TUI | `audiobook-organizer metadata-tui --dir=/books` | Interactive metadata exploration | Useful before writing templates |
 | Audiobookshelf CLI | `audiobook-organizer abs ...` | ABS library discovery, path mapping, metadata organization, scans | Requires ABS URL/token |
 

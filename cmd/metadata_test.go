@@ -24,6 +24,9 @@ func TestMetadataCmd_HasJSONFlag(t *testing.T) {
 	if flag := metadataCmd.Flags().Lookup("json"); flag == nil {
 		t.Fatal("metadataCmd missing json flag")
 	}
+	if flag := metadataCmd.Flags().Lookup("pretty"); flag == nil {
+		t.Fatal("metadataCmd missing pretty flag")
+	}
 }
 
 func TestMetadataTuiCmd_Registered(t *testing.T) {
@@ -308,15 +311,65 @@ func TestRunMetadataTextVerbose_WritesVisualTerminalOutput(t *testing.T) {
 		"📁 Directory: " + tmpDir,
 		"📄 Files scanned: 1",
 		"📄 " + audioPath,
-		"🧭 Source: json",
-		"📖 Title: The Visual Book",
-		"✍️ Authors: Example Author",
-		"📚 Series: Example Series",
-		"🔎 Additional Fields:",
-		"narrator: Example Narrator",
+		"JSON Metadata",
+		"Hybrid Mode:",
+		"Title: The Visual Book",
+		"Authors: Example Author",
+		"Series: Example Series",
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("verbose terminal output missing %q:\n%s", want, output)
+		}
+	}
+}
+
+func TestRunMetadataTextPretty_UsesFormatterBackedOutput(t *testing.T) {
+	tmpDir := t.TempDir()
+	fixturePath := filepath.Join(
+		"..",
+		"testdata",
+		"mp3flat",
+		"charlesdexterward_01_lovecraft_64kb.mp3",
+	)
+	fixtureBytes, err := os.ReadFile(fixturePath)
+	if err != nil {
+		t.Fatalf("failed to read MP3 fixture %s: %v", fixturePath, err)
+	}
+	audioPath := filepath.Join(tmpDir, "book.mp3")
+	if err := os.WriteFile(audioPath, fixtureBytes, 0o644); err != nil {
+		t.Fatalf("failed to write test audio file: %v", err)
+	}
+	metadataPath := filepath.Join(tmpDir, "metadata.json")
+	metadataContent := `{
+		"title": "The Pretty Book",
+		"authors": ["Example Author"],
+		"series": ["Example Series"]
+	}`
+	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0o644); err != nil {
+		t.Fatalf("failed to write metadata.json: %v", err)
+	}
+
+	cmd := newMetadataJSONTestCommand(t)
+	cmd.Flags().Set("dir", tmpDir)
+	cmd.Flags().Set("pretty", "true")
+
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	if err := runMetadataText(cmd, tmpDir); err != nil {
+		t.Fatalf("runMetadataText() error = %v", err)
+	}
+
+	output := buf.String()
+	for _, want := range []string{
+		"🎧 Metadata scan",
+		"📄 " + audioPath,
+		"JSON Metadata",
+		"Hybrid Mode:",
+		"Title: The Pretty Book",
+		"Authors: Example Author",
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("pretty terminal output missing %q:\n%s", want, output)
 		}
 	}
 }
@@ -384,6 +437,7 @@ func newMetadataJSONTestCommand(t *testing.T) *cobra.Command {
 	cmd.Flags().Bool("use-embedded-metadata", false, "Force use of embedded metadata")
 	cmd.Flags().Bool("flat", false, "Flat mode")
 	cmd.Flags().Bool("json", false, "Write metadata scan results as JSON")
+	cmd.Flags().Bool("pretty", false, "Write formatter-backed pretty metadata output")
 	cmd.Flags().BoolP("verbose", "v", false, "Verbose output")
 	cmd.Flags().String("title-field", "", "Field to use for title")
 	cmd.Flags().String("series-field", "", "Field to use for series")

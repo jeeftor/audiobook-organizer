@@ -383,12 +383,10 @@ func (o *Organizer) OrganizeAudiobook(sourcePath string, provider MetadataProvid
 // prepareMetadata extracts metadata from a provider and applies field mapping
 // configuration to ensure proper title, author, and series assignment.
 func (o *Organizer) prepareMetadata(provider MetadataProvider) (Metadata, error) {
-	metadata, err := provider.GetMetadata()
+	metadata, err := ExtractMappedMetadata(provider, o.config.FieldMapping)
 	if err != nil {
 		return Metadata{}, fmt.Errorf("error getting metadata: %w", err)
 	}
-
-	metadata.ApplyFieldMapping(o.config.FieldMapping)
 
 	return metadata, nil
 }
