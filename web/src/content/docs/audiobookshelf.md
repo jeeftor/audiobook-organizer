@@ -15,7 +15,10 @@ ABS organization is a full cycle: configure ABS to write `metadata.json` files, 
 
 For the standard local-folder organize workflow, configure Audiobookshelf to store metadata alongside your books. When this ABS setting is enabled, Audiobookshelf writes a `metadata.json` file into each book directory whenever metadata is generated or updated. Audiobook Organizer can then use those files as the default metadata source.
 
-![Audiobookshelf setting for storing metadata.json files](/audiobook-organizer/assets/docs/store_metadata.jpg)
+<picture>
+  <source srcset="/audiobook-organizer/assets/docs/store_metadata.webp" type="image/webp">
+  <img src="/audiobook-organizer/assets/docs/store_metadata.jpg" alt="Audiobookshelf setting for storing metadata.json files" width="1038" height="408" loading="lazy" decoding="async">
+</picture>
 
 After this is enabled, a book directory can look like this:
 
@@ -111,10 +114,16 @@ Audiobook Organizer moves files on disk; it does not directly rewrite Audiobooks
 
 First trigger an Audiobookshelf library scan so ABS can discover moved files. If the library still shows issues like missing books after the scan, open the ABS **Issues** view:
 
-![Audiobookshelf issues view showing missing books](/audiobook-organizer/assets/docs/issues.jpg)
+<picture>
+  <source srcset="/audiobook-organizer/assets/docs/issues.webp" type="image/webp">
+  <img src="/audiobook-organizer/assets/docs/issues.jpg" alt="Audiobookshelf issues view showing missing books" width="190" height="374" loading="lazy" decoding="async">
+</picture>
 
 Then use the missing-books cleanup action:
 
-![Audiobookshelf remove missing books action](/audiobook-organizer/assets/docs/remove_books.jpg)
+<picture>
+  <source srcset="/audiobook-organizer/assets/docs/remove_books.webp" type="image/webp">
+  <img src="/audiobook-organizer/assets/docs/remove_books.jpg" alt="Audiobookshelf remove missing books action" width="372" height="90" loading="lazy" decoding="async">
+</picture>
 
 If you enable the ABS library folder watcher, ABS may detect some path changes automatically. Even with the watcher enabled, a deliberate scan after filesystem moves is still the safer habit.

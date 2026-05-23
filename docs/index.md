@@ -8,7 +8,10 @@
     </div>
   </div>
   <figure class="hero-media">
-    <img src="assets/generated/web-ui/web-ui-metadata-json-preview.png" alt="Local web UI showing a metadata.json organize preview">
+    <picture>
+      <source srcset="assets/generated/web-ui/web-ui-metadata-json-preview.webp" type="image/webp">
+      <img src="assets/generated/web-ui/web-ui-metadata-json-preview.png" alt="Local web UI showing a metadata.json organize preview" width="1440" height="1200" loading="eager" decoding="async" fetchpriority="high">
+    </picture>
     <figcaption>Browser review before files move</figcaption>
   </figure>
 </section>
@@ -17,15 +20,15 @@ Audiobook Organizer is for audiobook libraries that have drifted into inconsiste
 
 <section class="visual-grid" aria-label="Generated workflow demos">
   <figure>
-    <img src="assets/generated/cli/cli-organize-run.gif" alt="Animated CLI organize run showing a full-cycle non-dry-run workflow">
+    <img src="assets/generated/cli/cli-organize-run.gif" alt="Animated CLI organize run showing a full-cycle non-dry-run workflow" width="1400" height="760" loading="lazy" decoding="async" fetchpriority="low">
     <figcaption>Full-cycle CLI organization</figcaption>
   </figure>
   <figure>
-    <img src="assets/generated/tui/tui-organize-preview.gif" alt="Animated TUI organize preview workflow">
+    <img src="assets/generated/tui/tui-organize-preview.gif" alt="Animated TUI organize preview workflow" width="1440" height="860" loading="lazy" decoding="async" fetchpriority="low">
     <figcaption>Interactive terminal preview</figcaption>
   </figure>
   <figure>
-    <img src="assets/generated/cli/cli-rename-preview.gif" alt="Animated CLI rename preview workflow">
+    <img src="assets/generated/cli/cli-rename-preview.gif" alt="Animated CLI rename preview workflow" width="1400" height="480" loading="lazy" decoding="async" fetchpriority="low">
     <figcaption>Template rename preview</figcaption>
   </figure>
 </section>

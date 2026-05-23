@@ -7,6 +7,7 @@ import {
   removeCLISampleLibrary,
   selectedNamesFromEnv,
 } from './docs-cli-fixtures.mjs'
+import { optimizeGIF } from './docs-image-optimizer.mjs'
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const webRoot = resolve(scriptDir, '..')
@@ -47,6 +48,7 @@ async function main() {
     await createCLISampleLibrary(repoRoot, sampleRoot)
     try {
       await runVHS(capture)
+      await optimizeGIF(join(captureDir, capture.filename))
       generated.push(`  output/docs-visuals/cli/${capture.filename}`)
     } finally {
       await removeCLISampleLibrary(sampleRoot)

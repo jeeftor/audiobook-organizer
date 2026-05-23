@@ -9,7 +9,10 @@ Audiobook Organizer ships as one binary named `audiobook-organizer`. Install the
 
 <section class="media-callout">
   <a class="media-callout-image" href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/store_metadata.jpg" target="_blank" rel="noopener">
-    <img src="/audiobook-organizer/assets/docs/store_metadata.jpg" alt="Audiobookshelf setting for storing metadata.json files">
+    <picture>
+      <source srcset="/audiobook-organizer/assets/docs/store_metadata.webp" type="image/webp">
+      <img src="/audiobook-organizer/assets/docs/store_metadata.jpg" alt="Audiobookshelf setting for storing metadata.json files" width="1038" height="408" loading="lazy" decoding="async">
+    </picture>
   </a>
   <div class="media-callout-copy">
     <p>If you use Audiobookshelf, do this before the first organize run. Configure ABS to write <code>metadata.json</code> files into the same directories as your books.</p>
