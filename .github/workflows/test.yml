@@ -93,7 +93,7 @@ jobs:
 
     - name: Install frontend dependencies
       working-directory: web
-      run: npm ci
+      run: npm install --no-audit --fund=false
 
     - name: Install Playwright Chromium
       working-directory: web
@@ -177,7 +177,7 @@ jobs:
 
     - name: Install frontend dependencies
       working-directory: web
-      run: npm ci
+      run: npm install --no-audit --fund=false
 
     - name: Install Playwright Chromium
       working-directory: web
