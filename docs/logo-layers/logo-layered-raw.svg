@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 510" width="512" height="510" role="img" aria-labelledby="title desc">
+  <title id="title">Audiobook Organizer raw layered logo</title>
+  <desc id="desc">Raw restart of the logo layer extraction with the original image and broad uncleaned wordmark layer.</desc>
+  <g id="source-reference" style="display:none">
+    <image href="logo-source.png" x="0" y="0" width="512" height="510"/>
+  </g>
+  <g id="raw-wordmark-layer">
+    <image href="logo-text-layer-raw.png" x="0" y="0" width="512" height="510"/>
+  </g>
+</svg>

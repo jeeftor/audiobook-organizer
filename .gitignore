@@ -33,8 +33,10 @@ meta_init/
 coverage.out
 test-picker
 test_output.txt
+.cache/
 
 # Local scratch/debug helpers
+ai/
 debug*.go
 test_debug.go
 tui_test.go

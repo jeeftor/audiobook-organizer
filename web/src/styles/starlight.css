@@ -106,6 +106,28 @@
 }
 
 @media (min-width: 72rem) {
+  body::before {
+    content: "";
+    position: fixed;
+    right: max(2rem, calc((100vw - var(--sl-content-width)) / 2 - 5rem));
+    bottom: 7.25rem;
+    z-index: 0;
+    pointer-events: none;
+    width: clamp(26rem, 36vw, 42rem);
+    aspect-ratio: 510 / 190;
+    background: url("/audiobook-organizer/assets/docs/logo-text-trace-raw.svg") center / contain no-repeat;
+    opacity: 0.055;
+    filter:
+      drop-shadow(0 0 22px rgb(232 31 147 / 42%))
+      drop-shadow(0 0 30px rgb(45 156 170 / 22%));
+  }
+
+  .main-frame,
+  .header {
+    position: relative;
+    z-index: 1;
+  }
+
   html[data-has-toc]::after {
     --abo-floating-logo-size: clamp(8.5rem, 8.8vw, 9.75rem);
 
