@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Custom organization layout templates**: Added `--layout-template` and web UI support for template-driven directory layouts such as `{author}/{series}/{series-count} - {title} ({narrator})`.
 - **Layout template CLI help**: Added `audiobook-organizer layout-template` for an in-terminal field reference, fallback syntax, examples, and path safety rules.
 - **Text-only metadata inspection**: `audiobook-organizer metadata` now prints non-interactive metadata scan results, `metadata --json` writes machine-readable output, and `metadata-tui` keeps the old interactive metadata exploration workflow explicit.
+- **Verbose metadata inspection**: `audiobook-organizer metadata --verbose` now prints human-friendly visual labels for docs and manual metadata review.
 - **Web UI docs screenshots**: Added a local-only Playwright workflow for generating web UI metadata.json preview, review-plan, and embedded-metadata preview screenshots under ignored `output/docs-visuals/web-ui/`, plus a CI artifact workflow for docs visuals.
 - **CLI docs captures**: Added a local-only docs workflow for generating terminal-style CLI help, dry-run organization, metadata inspection, and rename preview PNG captures, plus VHS animated GIFs for short CLI demos, under ignored `output/docs-visuals/cli/`.
 - **TUI docs captures**: Added a VHS workflow for generating animated organize and rename TUI captures plus static final-frame PNGs under ignored `output/docs-visuals/tui/`.

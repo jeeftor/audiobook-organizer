@@ -264,6 +264,63 @@ func TestRunMetadataText_WritesTerminalOutput(t *testing.T) {
 	}
 }
 
+func TestRunMetadataTextVerbose_WritesVisualTerminalOutput(t *testing.T) {
+	tmpDir := t.TempDir()
+	fixturePath := filepath.Join(
+		"..",
+		"testdata",
+		"mp3flat",
+		"charlesdexterward_01_lovecraft_64kb.mp3",
+	)
+	fixtureBytes, err := os.ReadFile(fixturePath)
+	if err != nil {
+		t.Fatalf("failed to read MP3 fixture %s: %v", fixturePath, err)
+	}
+	audioPath := filepath.Join(tmpDir, "book.mp3")
+	if err := os.WriteFile(audioPath, fixtureBytes, 0o644); err != nil {
+		t.Fatalf("failed to write test audio file: %v", err)
+	}
+	metadataPath := filepath.Join(tmpDir, "metadata.json")
+	metadataContent := `{
+		"title": "The Visual Book",
+		"authors": ["Example Author"],
+		"series": ["Example Series"],
+		"publishedYear": 2024,
+		"narrator": "Example Narrator"
+	}`
+	if err := os.WriteFile(metadataPath, []byte(metadataContent), 0o644); err != nil {
+		t.Fatalf("failed to write metadata.json: %v", err)
+	}
+
+	cmd := newMetadataJSONTestCommand(t)
+	cmd.Flags().Set("dir", tmpDir)
+	cmd.Flags().Set("verbose", "true")
+
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	if err := runMetadataText(cmd, tmpDir); err != nil {
+		t.Fatalf("runMetadataText() error = %v", err)
+	}
+
+	output := buf.String()
+	for _, want := range []string{
+		"🎧 Metadata scan",
+		"📁 Directory: " + tmpDir,
+		"📄 Files scanned: 1",
+		"📄 " + audioPath,
+		"🧭 Source: json",
+		"📖 Title: The Visual Book",
+		"✍️ Authors: Example Author",
+		"📚 Series: Example Series",
+		"🔎 Additional Fields:",
+		"narrator: Example Narrator",
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("verbose terminal output missing %q:\n%s", want, output)
+		}
+	}
+}
+
 func TestScanMetadataJSON_ReportsExtractionErrors(t *testing.T) {
 	tmpDir := t.TempDir()
 	audioPath := filepath.Join(tmpDir, "broken.mp3")

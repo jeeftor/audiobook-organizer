@@ -15,6 +15,6 @@ Set WindowBar Colorful
 Set BorderRadius 8
 Env NO_COLOR "1"
 
-Type "bin/audiobook-organizer metadata --dir=output/docs-cli-sample/metadata-json/source"
+Type "bin/audiobook-organizer metadata --dir=output/docs-cli-sample/metadata-json/source --verbose"
 Enter
 Sleep 3s
