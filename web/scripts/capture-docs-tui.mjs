@@ -4,6 +4,7 @@ import { access, copyFile, mkdir, readdir, rm, stat, symlink, writeFile } from '
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createWebP, optimizeGIF } from './docs-image-optimizer.mjs'
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const webRoot = resolve(scriptDir, '..')
@@ -52,9 +53,12 @@ async function main() {
 
     try {
       await runVHS(capture, { env: vhsEnv, mode })
+      await optimizeGIF(join(captureDir, capture.gif))
       await extractFinalFrame(capture)
+      await createWebP(join(captureDir, capture.png))
       generated.push(`  output/docs-visuals/tui/${capture.gif}`)
       generated.push(`  output/docs-visuals/tui/${capture.png}`)
+      generated.push(`  output/docs-visuals/tui/${capture.png.replace(/\.png$/, '.webp')}`)
     } finally {
       await removeTUISampleLibrary()
     }
@@ -292,16 +296,39 @@ async function findChromeHeadlessShell(root) {
 }
 
 async function extractFinalFrame(capture) {
+  const gifPath = join(captureDir, capture.gif)
+  const pngPath = join(captureDir, capture.png)
   await runCommand('ffmpeg', [
     '-y',
     '-sseof',
     '-0.2',
     '-i',
-    join(captureDir, capture.gif),
+    gifPath,
     '-frames:v',
     '1',
-    join(captureDir, capture.png),
+    pngPath,
   ])
+  if (await fileExists(pngPath)) {
+    return
+  }
+
+  await runCommand('ffmpeg', [
+    '-y',
+    '-i',
+    gifPath,
+    '-frames:v',
+    '1',
+    pngPath,
+  ])
+}
+
+async function fileExists(path) {
+  try {
+    const fileStat = await stat(path)
+    return fileStat.isFile() && fileStat.size > 0
+  } catch {
+    return false
+  }
 }
 
 async function waitForStableFile(path) {

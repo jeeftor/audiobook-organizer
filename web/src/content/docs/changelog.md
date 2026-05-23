@@ -81,6 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Surfaced the Audiobookshelf lifecycle and missing-item cleanup screenshots on Getting Started and made the ABS metadata settings screenshot a compact side-by-side callout.
 - Clarified the README as a compact project landing page and added a prominent link to the generated documentation site.
 - Added an Astro Starlight documentation site proof of concept with local preview and static build scripts.
+- Improved generated docs media delivery with homepage image sizing/lazy loading, WebP companions for static captures, and optional `gifsicle` optimization for animated GIF captures.
 
 ---
 

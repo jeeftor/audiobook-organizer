@@ -209,6 +209,13 @@
   box-shadow: 0 14px 36px var(--abo-shadow-strong);
 }
 
+.hero-media picture,
+.visual-grid picture,
+.media-callout-image picture,
+.image-pair picture {
+  display: block;
+}
+
 .hero-media img,
 .visual-grid img {
   display: block;

@@ -9,11 +9,14 @@ Generated assets are not committed to git.
 - Pull requests upload `output/docs-visuals/**` as a short-lived GitHub Actions artifact for review.
 - `master` publishes the generated site and generated visuals to GitHub Pages.
 - Published visual URLs are deterministic under `assets/generated/`.
+- Static generated PNG captures also get WebP companions for lighter browser delivery.
+- Animated GIFs are post-processed with `gifsicle -O3` when `gifsicle` is available.
 
 Example stable paths after a `master` publish:
 
 ```text
 https://jeeftor.github.io/audiobook-organizer/assets/generated/web-ui/web-ui-metadata-json-preview.png
+https://jeeftor.github.io/audiobook-organizer/assets/generated/web-ui/web-ui-metadata-json-preview.webp
 https://jeeftor.github.io/audiobook-organizer/assets/generated/cli/cli-organize-run.gif
 https://jeeftor.github.io/audiobook-organizer/assets/generated/tui/tui-organize-preview.gif
 ```
@@ -71,6 +74,8 @@ make docs-tui-captures
 ```
 
 On macOS, `make docs-tui-captures` builds and uses `audiobook-organizer-vhs:local` so VHS runs in Linux instead of launching the local Chrome app.
+
+The static WebP pass requires the WebP tools package (`cwebp`). GIF optimization is optional locally; install `gifsicle` to match CI output, or set `ABO_DOCS_GIF_OPTIMIZE=0` to skip that pass explicitly.
 
 ## GitHub Pages
 

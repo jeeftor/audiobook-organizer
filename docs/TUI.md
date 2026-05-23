@@ -61,7 +61,7 @@ Current capture names are `organize-preview` and `rename-field-mapping`. Each ca
 ABO_DOCS_TUI_CAPTURES=organize-preview make docs-tui-captures
 ```
 
-The TUI capture workflow requires [VHS](https://github.com/charmbracelet/vhs) and `ffmpeg` on Linux. On macOS, `make docs-tui-captures` builds and uses the local `audiobook-organizer-vhs:local` Docker image so VHS runs in Linux instead of launching the local Chrome app. Use `make docs-tui-image` to rebuild that image directly. Set `ABO_DOCS_TUI_VHS_IMAGE` to use a different local or mirrored image. Set `ABO_DOCS_TUI_VHS_MODE=native` only on hosts where native VHS is known to use a safe headless browser.
+The TUI capture workflow requires [VHS](https://github.com/charmbracelet/vhs), `ffmpeg`, and `cwebp` on Linux. Animated GIF captures are optimized with `gifsicle -O3` when `gifsicle` is available; set `ABO_DOCS_GIF_OPTIMIZE=0` to skip that pass. On macOS, `make docs-tui-captures` builds and uses the local `audiobook-organizer-vhs:local` Docker image so VHS runs in Linux instead of launching the local Chrome app. Use `make docs-tui-image` to rebuild that image directly. Set `ABO_DOCS_TUI_VHS_IMAGE` to use a different local or mirrored image. Set `ABO_DOCS_TUI_VHS_MODE=native` only on hosts where native VHS is known to use a safe headless browser.
 
 The aggregate `make docs-visuals` target includes these TUI captures, and CI uploads the generated files as docs visual artifacts.
 

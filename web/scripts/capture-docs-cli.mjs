@@ -8,6 +8,7 @@ import {
   removeCLISampleLibrary,
   selectedNamesFromEnv,
 } from './docs-cli-fixtures.mjs'
+import { createWebP } from './docs-image-optimizer.mjs'
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const webRoot = resolve(scriptDir, '..')
@@ -78,7 +79,9 @@ async function main() {
 
       const path = join(captureDir, capture.filename)
       await renderCapture(page, capture, result.output, path)
+      await createWebP(path)
       generated.push(`  output/docs-visuals/cli/${capture.filename}`)
+      generated.push(`  output/docs-visuals/cli/${capture.filename.replace(/\.png$/, '.webp')}`)
     }
 
     console.log('Wrote local CLI docs captures:')

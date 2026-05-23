@@ -35,7 +35,10 @@ audiobook-organizer metadata --dir=/books/source --verbose
 
 <section class="media-feature">
   <figure>
-    <img src="/audiobook-organizer/assets/generated/cli/cli-metadata-inspect.png" alt="Verbose metadata command output showing source, title, author, series, track, album, and additional fields">
+    <picture>
+      <source srcset="/audiobook-organizer/assets/generated/cli/cli-metadata-inspect.webp" type="image/webp">
+      <img src="/audiobook-organizer/assets/generated/cli/cli-metadata-inspect.png" alt="Verbose metadata command output showing source, title, author, series, track, album, and additional fields">
+    </picture>
     <figcaption>Verbose metadata inspection before changing files</figcaption>
   </figure>
   <div>

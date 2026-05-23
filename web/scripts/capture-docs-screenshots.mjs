@@ -4,6 +4,7 @@ import { copyFile, mkdir, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
+import { createWebP } from './docs-image-optimizer.mjs'
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const webRoot = resolve(scriptDir, '..')
@@ -43,17 +44,11 @@ async function main() {
       metadataFound: 2,
       plannedMoves: 2,
     })
-    await page.screenshot({
-      path: join(screenshotDir, 'web-ui-metadata-json-preview.png'),
-      fullPage: false,
-    })
+    await captureScreenshot(page, 'web-ui-metadata-json-preview.png')
 
     await page.getByRole('button', { name: 'Review & Run', exact: true }).click()
     await page.getByRole('heading', { name: 'Reviewed Organize Plan' }).waitFor({ timeout: 10_000 })
-    await page.screenshot({
-      path: join(screenshotDir, 'web-ui-metadata-json-review.png'),
-      fullPage: false,
-    })
+    await captureScreenshot(page, 'web-ui-metadata-json-review.png')
 
     await page.goto(server.url, { waitUntil: 'networkidle' })
     await disableMotion(page)
@@ -67,10 +62,7 @@ async function main() {
       metadataFound: 3,
       plannedMoves: 3,
     })
-    await page.screenshot({
-      path: join(screenshotDir, 'web-ui-embedded-metadata-preview.png'),
-      fullPage: false,
-    })
+    await captureScreenshot(page, 'web-ui-embedded-metadata-preview.png')
   } finally {
     await browser?.close()
     await server.stop()
@@ -79,10 +71,21 @@ async function main() {
 
   console.log('Wrote local docs screenshots:')
   console.log('  output/docs-visuals/web-ui/web-ui-metadata-json-preview.png')
+  console.log('  output/docs-visuals/web-ui/web-ui-metadata-json-preview.webp')
   console.log('  output/docs-visuals/web-ui/web-ui-metadata-json-review.png')
+  console.log('  output/docs-visuals/web-ui/web-ui-metadata-json-review.webp')
   console.log('  output/docs-visuals/web-ui/web-ui-embedded-metadata-preview.png')
+  console.log('  output/docs-visuals/web-ui/web-ui-embedded-metadata-preview.webp')
 }
 
+async function captureScreenshot(page, filename) {
+  const path = join(screenshotDir, filename)
+  await page.screenshot({
+    path,
+    fullPage: false,
+  })
+  await createWebP(path)
+}
 
 async function waitForOrganizePreview(page, { sourceText, destinationText, metadataFound, plannedMoves }) {
   await page.getByRole('heading', { name: 'Organize preview ready' }).waitFor({ timeout: 30_000 })

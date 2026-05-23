@@ -30,7 +30,10 @@ See [Installation](/audiobook-organizer/installation/) for platform-specific opt
 
 <section class="media-callout">
   <a class="media-callout-image" href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/store_metadata.jpg" target="_blank" rel="noopener">
-    <img src="/audiobook-organizer/assets/docs/store_metadata.jpg" alt="Audiobookshelf setting for storing metadata.json files">
+    <picture>
+      <source srcset="/audiobook-organizer/assets/docs/store_metadata.webp" type="image/webp">
+      <img src="/audiobook-organizer/assets/docs/store_metadata.jpg" alt="Audiobookshelf setting for storing metadata.json files" width="1038" height="408" loading="lazy" decoding="async">
+    </picture>
   </a>
   <div class="media-callout-copy">
     <p>Before organizing an Audiobookshelf-managed library, enable <strong>Store metadata with item</strong> in the Audiobookshelf library settings.</p>
@@ -101,13 +104,19 @@ After the scan, ABS may still list old filesystem paths as missing. That is a no
 <section class="image-pair cleanup-pair" aria-label="Audiobookshelf missing item cleanup screenshots">
   <figure>
     <a href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/issues.jpg" target="_blank" rel="noopener">
-      <img src="/audiobook-organizer/assets/docs/issues.jpg" alt="Audiobookshelf issues view showing missing books">
+      <picture>
+        <source srcset="/audiobook-organizer/assets/docs/issues.webp" type="image/webp">
+        <img src="/audiobook-organizer/assets/docs/issues.jpg" alt="Audiobookshelf issues view showing missing books" width="190" height="374" loading="lazy" decoding="async">
+      </picture>
     </a>
     <figcaption>Review missing old paths in the ABS Issues view.</figcaption>
   </figure>
   <figure>
     <a href="https://github.com/jeeftor/audiobook-organizer/blob/master/docs/remove_books.jpg" target="_blank" rel="noopener">
-      <img src="/audiobook-organizer/assets/docs/remove_books.jpg" alt="Audiobookshelf remove missing books action">
+      <picture>
+        <source srcset="/audiobook-organizer/assets/docs/remove_books.webp" type="image/webp">
+        <img src="/audiobook-organizer/assets/docs/remove_books.jpg" alt="Audiobookshelf remove missing books action" width="372" height="90" loading="lazy" decoding="async">
+      </picture>
     </a>
     <figcaption>Remove missing entries after ABS has found the organized files.</figcaption>
   </figure>

@@ -123,16 +123,22 @@ export const pages = [
 
 export const requiredGeneratedAssets = [
   'web-ui/web-ui-metadata-json-preview.png',
+  'web-ui/web-ui-metadata-json-preview.webp',
   'web-ui/web-ui-metadata-json-review.png',
+  'web-ui/web-ui-metadata-json-review.webp',
   'cli/cli-help.png',
   'cli/cli-metadata-inspect.png',
+  'cli/cli-metadata-inspect.webp',
+  'cli/cli-help.webp',
   'cli/cli-organize-run.gif',
   'cli/cli-rename-preview.gif',
   'tui/tui-organize-preview.gif',
   'tui/tui-organize-preview.png',
+  'tui/tui-organize-preview.webp',
 ]
 
 export const requiredHomepageGeneratedAssets = [
+  'assets/generated/web-ui/web-ui-metadata-json-preview.webp',
   'assets/generated/web-ui/web-ui-metadata-json-preview.png',
   'assets/generated/cli/cli-organize-run.gif',
   'assets/generated/cli/cli-rename-preview.gif',
