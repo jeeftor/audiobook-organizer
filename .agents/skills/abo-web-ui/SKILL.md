@@ -21,7 +21,8 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, `references/abo-assistan
 6. Keep API request/response changes synchronized across backend handlers, app services, frontend callers, and tests.
 7. For user-facing workflow acceptance, use Playwright or equivalent browser automation against the real local server and real filesystem or service fixtures for the endpoint under test.
 8. Do not mock or intercept the primary workflow endpoint being accepted, such as organize preview/run, rename preview, or ABS operation endpoints; mocked browser routes are allowed only as supplemental UI-contract or error-state checks.
-9. Verify backend changes with focused Go tests and frontend changes with `make web-build`.
-10. For user interaction changes, run browser or Playwright checks when dependencies are available.
+9. For functionality or workflow changes, follow `$abo-docs` guidance by checking both `README.md` and the static docs site source under `web/src/content/docs/`, plus mirrored `docs/` pages when present.
+10. Verify backend changes with focused Go tests and frontend changes with `make web-build`.
+11. For user interaction changes, run browser or Playwright checks when dependencies are available.
 
 Keep this skill focused on the current local browser UI paths only.

@@ -16,6 +16,8 @@ Use this shared reference for Audiobook Organizer repo-local skills.
 - Keep edits focused on the issue.
 - Keep the issue updated with decisions, blockers, test results, and follow-up work.
 - User-visible features, fixes, behavior changes, Docker/runtime changes, and documentation changes need a `CHANGELOG.md` entry under `Unreleased`.
+- Functionality or workflow changes need a docs impact check across both `README.md` and the static docs site source under `web/src/content/docs/`; update both when the quick-start overview and detailed workflow/reference guidance are affected.
+- When a user-facing docs page exists in both root `docs/` and `web/src/content/docs/`, keep the mirrored content synchronized unless the task explicitly changes that documentation model.
 - ABS-facing behavior changes must update `test/abs/test-matrix.md` unless explicitly not applicable.
 - PRs target `master`; prefer Squash and merge; issues normally close through PR merge.
 - Repository auto-merge and delete-branch-on-merge are enabled. When required checks are green and the PR is otherwise mergeable, enable auto-merge. If GitHub reports `REVIEW_REQUIRED`, report the branch protection mismatch instead of trying to self-approve.
@@ -53,7 +55,9 @@ For web UI audit work, parent closeout usually comes before new implementation: 
 - `internal/app/`: app service layer used by the web API.
 - `internal/server/`: local HTTP server, token checks, JSON routes, and embedded static assets.
 - `web/`: current Vue/Vite local browser UI.
-- `docs/`: user-facing docs.
+- `README.md`: compact GitHub landing page and quick-start overview.
+- `docs/`: repository-facing Markdown docs and assets that may mirror static site pages.
+- `web/src/content/docs/`: Astro/Starlight static documentation site source.
 - `testdata/`: audio and metadata fixtures.
 - `test/abs/`: Audiobookshelf harness and E2E tests.
 

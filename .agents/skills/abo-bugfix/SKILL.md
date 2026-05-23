@@ -19,7 +19,7 @@ Read `AGENTS.md`, `references/abo-assistant/common.md`, and `references/abo-assi
 4. Locate the smallest responsible package boundary.
 5. Fix the root cause without unrelated cleanup.
 6. Add or update regression coverage.
-7. Update docs, `CHANGELOG.md`, or `test/abs/test-matrix.md` when the fix changes user-visible or ABS-facing behavior.
+7. Update docs, `CHANGELOG.md`, or `test/abs/test-matrix.md` when the fix changes user-visible or ABS-facing behavior. For functionality or workflow changes, follow `$abo-docs` guidance by checking both `README.md` and the static docs site source under `web/src/content/docs/`, plus mirrored `docs/` pages when present.
 8. Run the focused failing check, then the relevant repo-native checks.
 
 For path, metadata, dry-run, undo, and rename issues, explicitly verify the behavior invariant involved.

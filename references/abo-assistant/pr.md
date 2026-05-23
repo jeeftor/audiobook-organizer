@@ -14,6 +14,7 @@ Use this shared reference for PR writing, creation, watching, and closeout.
 - User-originated or unclear issues that need reporter confirmation or manual interaction have a documented confirmation path before the PR uses closing keywords.
 - Pre-commit hooks have been run with `prek run --all-files` when hook config exists, or their absence is documented.
 - User-visible changes have a `CHANGELOG.md` entry under `Unreleased`.
+- Functionality or workflow changes have documented docs status for `README.md`, `web/src/content/docs/`, and mirrored `docs/` pages when present.
 - ABS-facing changes update `test/abs/test-matrix.md` when relevant.
 - `master` branch protection requires all configured checks to pass before merge. Repository auto-merge is enabled for the single-maintainer workflow, so a separate approving review is not required unless branch protection is intentionally changed.
 
@@ -26,7 +27,7 @@ Include:
 - Tests run, with exact commands.
 - Real E2E evidence for user-facing workflow changes, or the maintainer-accepted reason it is blocked.
 - Issue origin and reporter-confirmation status when the issue is user-originated or unclear.
-- Docs/changelog status.
+- Docs/changelog status, including whether `README.md`, `web/src/content/docs/`, and mirrored `docs/` pages were updated or determined not applicable.
 - Follow-up issues or known gaps, if any.
 
 Prefer concise reviewer-oriented text. Do not hide unrun tests.
