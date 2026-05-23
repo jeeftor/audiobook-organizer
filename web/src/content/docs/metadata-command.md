@@ -5,7 +5,7 @@ description: "Text and JSON metadata inspection command."
 
 ## Overview
 
-The `metadata` command inspects audiobook metadata non-interactively and writes text-only output to the terminal. Add `--verbose` for a more readable human inspection with visual labels, or add `--json` when scripts, tests, or CI need machine-readable output.
+The `metadata` command inspects audiobook metadata non-interactively and writes text-only output to the terminal. Add `--pretty` for the same human-friendly metadata formatter used by verbose organize output, or add `--json` when scripts, tests, or CI need machine-readable output.
 
 Use `metadata-tui` when you want the interactive terminal workflow for exploring fields, mappings, and rename templates before organizing or renaming files.
 
@@ -18,8 +18,8 @@ audiobook-organizer metadata --dir=/path/to/audiobooks
 # Short form
 audiobook-organizer metadata -d /path/to/audiobooks
 
-# Human-readable inspection
-audiobook-organizer metadata --dir=/path/to/audiobooks --verbose
+# Human-readable pretty output
+audiobook-organizer metadata --dir=/path/to/audiobooks --pretty
 
 # Force embedded metadata
 audiobook-organizer metadata --dir=/path --use-embedded-metadata
@@ -36,7 +36,7 @@ audiobook-organizer metadata-tui --dir=/path/to/audiobooks
 
 ## Text Output
 
-`metadata` recursively scans supported files and prints a text-only summary plus one block per file. The default output stays plain for copy/paste and scripts that read terminal output. Use `--verbose` when you want friendlier labels while inspecting fields manually.
+`metadata` recursively scans supported files and prints a text-only summary plus one block per file. The default output stays plain for copy/paste and scripts that read terminal output. Use `--pretty` when you want formatter-backed output while inspecting fields manually.
 
 Each file block includes:
 
@@ -49,6 +49,8 @@ Each file block includes:
 - album
 - extraction error, when extraction fails for that file
 - additional metadata fields, when the metadata source exposes fields beyond the core display
+
+`metadata --pretty` uses the same formatter as verbose organize output, including source indicators for hybrid `metadata.json` plus embedded audio metadata and field mapping context when mapping flags are set. `metadata --verbose` is kept as an alias for the same pretty inspection mode.
 
 ## JSON Output
 

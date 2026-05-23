@@ -16,6 +16,12 @@ JSON output:
 audiobook-organizer metadata --dir=/books/source --json
 ```
 
+Pretty output:
+
+```bash
+audiobook-organizer metadata --dir=/books/source --pretty
+```
+
 Interactive exploration:
 
 ```bash

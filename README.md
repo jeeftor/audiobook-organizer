@@ -128,7 +128,7 @@ Organization writes `.abook-org.log`; rename writes `.abook-rename.log`. Keep th
 | Organization TUI | `audiobook-organizer tui` | Keyboard-first interactive organization |
 | Rename Files | `audiobook-organizer rename --dir=/books` | Scriptable filename cleanup |
 | Rename TUI | `audiobook-organizer rename-tui --dir=/books` | Interactive rename previews and field mapping |
-| Explore Metadata | `audiobook-organizer metadata --dir=/books` | Text or JSON metadata inspection |
+| Explore Metadata | `audiobook-organizer metadata --dir=/books` | Text, pretty, or JSON metadata inspection |
 | Audiobookshelf CLI | `audiobook-organizer abs ...` | ABS library discovery, path mapping, organization, and scan workflows |
 
 Full comparison: [Choose An Interface](docs/interfaces.md).
@@ -173,6 +173,7 @@ Inspect metadata:
 
 ```bash
 audiobook-organizer metadata --dir=/books/source
+audiobook-organizer metadata --dir=/books/source --pretty
 ```
 
 Check Audiobookshelf path mapping:

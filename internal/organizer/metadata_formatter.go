@@ -151,6 +151,8 @@ func (mf *MetadataFormatter) FormatMetadataWithMapping() string {
 
 func (mf *MetadataFormatter) getFileTypeDisplay() (string, string) {
 	switch mf.metadata.SourceType {
+	case "json":
+		return IconColor("📋"), IconColor("JSON")
 	case "audio":
 		ext := strings.ToLower(filepath.Ext(mf.metadata.SourcePath))
 		switch ext {
