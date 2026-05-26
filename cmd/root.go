@@ -24,6 +24,8 @@ const ( // This makes sonar pass
 	dryRunKey          = "dry-run"
 )
 
+const terminalImageHelpConfiguredAnnotation = "audiobook-organizer/terminal-image-help-configured"
+
 var (
 	inputDir            string // Combined input from --dir and --input
 	outputDir           string // Combined output from --out and --output
@@ -198,16 +200,34 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() error {
+	configureTerminalImageHelp(rootCmd)
 	if shouldPrintStartupBanner(os.Args[1:]) {
-		color.Cyan("🎧 Audiobook Organizer")
-		color.Cyan("=====================")
+		printStartupBanner()
 	}
 	return rootCmd.Execute()
 }
 
+func printStartupBanner() {
+	logo := terminalimage.NewAutoStartupLogo()
+	if rendered := logo.ViewWithReservedSpace(); rendered != "" {
+		fmt.Print(rendered)
+		if !strings.HasSuffix(rendered, "\n") {
+			fmt.Println()
+		}
+		fmt.Println()
+		return
+	}
+
+	color.Cyan("🎧 Audiobook Organizer")
+	color.Cyan("=====================")
+}
+
 func shouldPrintStartupBanner(args []string) bool {
 	for _, arg := range args {
-		if arg == "metadata" || arg == "layout-template" {
+		if arg == "-h" || arg == "--help" || arg == "help" {
+			return false
+		}
+		if arg == "metadata" || arg == "layout-template" || arg == "term" {
 			return false
 		}
 	}
@@ -245,7 +265,6 @@ func getEnvValue(key string) string {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	configureTerminalImageHelp(rootCmd)
 
 	// Config file flag
 	rootCmd.PersistentFlags().
@@ -351,10 +370,30 @@ func init() {
 }
 
 func configureTerminalImageHelp(cmd *cobra.Command) {
+	if cmd == nil {
+		return
+	}
+	configureTerminalImageHelpCommand(cmd)
+}
+
+func configureTerminalImageHelpCommand(cmd *cobra.Command) {
+	if cmd.Annotations != nil && cmd.Annotations[terminalImageHelpConfiguredAnnotation] == "true" {
+		return
+	}
 	defaultHelpFunc := cmd.HelpFunc()
+	if cmd.Annotations == nil {
+		cmd.Annotations = map[string]string{}
+	}
+	cmd.Annotations[terminalImageHelpConfiguredAnnotation] = "true"
 	cmd.SetHelpFunc(func(helpCmd *cobra.Command, args []string) {
-		if logo := terminalimage.NewAutoStartupLogo().ViewWithReservedSpace(); logo != "" {
-			fmt.Fprint(helpCmd.OutOrStdout(), logo)
+		logo := terminalimage.NewAutoStartupLogo()
+		if rendered := logo.ViewWithReservedSpace(); rendered != "" {
+			out := helpCmd.OutOrStdout()
+			fmt.Fprint(out, rendered)
+			if !strings.HasSuffix(rendered, "\n") {
+				fmt.Fprintln(out)
+			}
+			fmt.Fprintln(out)
 		}
 		defaultHelpFunc(helpCmd, args)
 	})

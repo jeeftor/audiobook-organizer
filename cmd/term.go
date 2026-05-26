@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
-	"github.com/blacktop/go-termimg"
 	"github.com/jeeftor/audiobook-organizer/internal/tui/terminalimage"
 	"github.com/spf13/cobra"
 )
@@ -17,11 +15,9 @@ var termCmd = &cobra.Command{
 	Hidden: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		out := cmd.OutOrStdout()
-		detected := termimg.DetectProtocol()
-		protocols := termimg.DetermineProtocols()
 		startupProtocol := terminalimage.DetectTerminalImageProtocol()
 
-		fmt.Fprintln(out, "Terminal image diagnostics")
+		fmt.Fprintln(out, "Terminal logo diagnostics")
 		fmt.Fprintf(out, "  executable: %s\n", os.Args[0])
 		fmt.Fprintf(
 			out,
@@ -33,6 +29,8 @@ var termCmd = &cobra.Command{
 			"  no images: %s\n",
 			valueOrUnset(os.Getenv("AUDIOBOOK_ORGANIZER_NO_TERMINAL_IMAGES")),
 		)
+		fmt.Fprintf(out, "  NO_COLOR: %s\n", valueOrUnset(os.Getenv("NO_COLOR")))
+		fmt.Fprintf(out, "  CI: %s\n", valueOrUnset(os.Getenv("CI")))
 		fmt.Fprintf(out, "  TERM: %s\n", valueOrUnset(os.Getenv("TERM")))
 		fmt.Fprintf(out, "  TERM_PROGRAM: %s\n", valueOrUnset(os.Getenv("TERM_PROGRAM")))
 		fmt.Fprintf(
@@ -42,19 +40,16 @@ var termCmd = &cobra.Command{
 		)
 		fmt.Fprintf(out, "  TERM_SESSION_ID: %s\n", valueOrUnset(os.Getenv("TERM_SESSION_ID")))
 		fmt.Fprintf(out, "  LC_TERMINAL: %s\n", valueOrUnset(os.Getenv("LC_TERMINAL")))
+		fmt.Fprintf(out, "  COLORTERM: %s\n", valueOrUnset(os.Getenv("COLORTERM")))
 		fmt.Fprintf(out, "  TERM_FEATURES: %s\n", valueOrUnset(os.Getenv("TERM_FEATURES")))
-		fmt.Fprintf(out, "  KITTY_WINDOW_ID: %s\n", valueOrUnset(os.Getenv("KITTY_WINDOW_ID")))
-		fmt.Fprintf(out, "  WEZTERM_PANE: %s\n", valueOrUnset(os.Getenv("WEZTERM_PANE")))
 		fmt.Fprintf(out, "  TMUX: %s\n", valueOrUnset(os.Getenv("TMUX")))
 		fmt.Fprintf(out, "  stdin TTY: %t\n", fileIsCharDevice(os.Stdin))
 		fmt.Fprintf(out, "  stdout TTY: %t\n", fileIsCharDevice(os.Stdout))
-		fmt.Fprintf(out, "  termimg DetectProtocol: %s\n", detected)
-		fmt.Fprintf(out, "  termimg DetermineProtocols: %s\n", formatTermProtocols(protocols))
 		fmt.Fprintf(out, "  startup protocol: %s\n", startupProtocol)
 		fmt.Fprintln(out)
 
 		if startupProtocol == terminalimage.ProtocolANSI {
-			printANSILogoOptions(out)
+			printANSILogoSamples(out)
 			printLogoHelpPreview(out, cmd.Root(), startupProtocol)
 			return nil
 		}
@@ -68,22 +63,7 @@ var termCmd = &cobra.Command{
 			printRootHelpPreview(out, cmd.Root())
 			return nil
 		}
-		if startupProtocol == terminalimage.ProtocolHalfblocks {
-			fmt.Fprintln(
-				out,
-				"Halfblocks detected; image payload skipped while reviewing ANSI text logo prototypes.",
-			)
-			printRootHelpPreview(out, cmd.Root())
-			return nil
-		}
-
-		rendered := terminalimage.NewStartupLogo(startupProtocol).ViewWithReservedSpace()
-		fmt.Fprintf(out, "Rendered payload bytes: %d\n", len(rendered))
-		fmt.Fprintf(out, "Rendered payload prefix: %q\n", firstRunes(rendered, 80))
-		fmt.Fprintln(out, "Image output follows:")
-		fmt.Fprint(out, rendered)
-		fmt.Fprintln(out, "Image output ended.")
-		printRootHelpPreview(out, cmd.Root())
+		printLogoHelpPreview(out, cmd.Root(), startupProtocol)
 		return nil
 	},
 }
@@ -107,334 +87,22 @@ func printLogoHelpPreview(
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Root help preview with selected logo")
 	fmt.Fprintln(out)
-	fmt.Fprint(out, terminalimage.NewStartupLogo(protocol).ViewWithReservedSpace())
-	fmt.Fprint(out, root.UsageString())
+	fmt.Fprint(out, terminalimage.NewStartupLogo(protocol).ViewBesideText(root.UsageString()))
 }
 
-type ansiLogoOption struct {
-	name string
-	body string
-}
-
-func printANSILogoOptions(out io.Writer) {
-	fmt.Fprintln(out, "ANSI text logo prototypes")
+func printANSILogoSamples(out io.Writer) {
+	const samples = 4
+	fmt.Fprintln(out, "ANSI rotating logo samples")
 	fmt.Fprintln(out)
-	for i, option := range ansiLogoOptions() {
-		fmt.Fprintf(out, "%sOption %02d: %s%s\n", ansiDim(), i+1, option.name, ansiReset())
-		fmt.Fprintln(out, option.body)
+	for i := range samples {
+		fmt.Fprintf(out, "%sSample %02d%s\n", ansiDim(), i+1, ansiReset())
+		fmt.Fprintln(
+			out,
+			terminalimage.NewStartupLogo(
+				terminalimage.ProtocolANSI,
+			).ViewWithReservedSpace(),
+		)
 		fmt.Fprintln(out)
-	}
-}
-
-func ansiLogoOptions() []ansiLogoOption {
-	return []ansiLogoOption{
-		{
-			name: "plasma board",
-			body: ansiBG(16, strings.Repeat(" ", 68)) + "\n" +
-				ansiBG(
-					16,
-					"  ",
-				) + ansiFG(201, "█████  █   █ ████  ███  ████  ████  ████  ████  █  █") + ansiBG(16, "  ") + "\n" +
-				ansiBG(
-					16,
-					"  ",
-				) + ansiFG(207, "█   █  █   █ █   █  █  █    █ █   █ █    █ █    █ █ ") + ansiBG(16, "  ") + "\n" +
-				ansiBG(
-					16,
-					"  ",
-				) + ansiFG(93, "█████  █   █ █   █  █  █    █ ████  █    █ █    ██  ") + ansiBG(16, "  ") + "\n" +
-				ansiBG(
-					16,
-					"  ",
-				) + ansiFG(57, "█   █  █   █ █   █  █  █    █ █   █ █    █ █    █ █ ") + ansiBG(16, "  ") + "\n" +
-				ansiBG(
-					16,
-					"  ",
-				) + ansiFG(45, "█   █  █████ ████  ███  ████  ████  ████  ████  █  █") + ansiBG(16, "  ") + "\n" +
-				ansiBG(53, "                       -- organizer --                       "),
-		},
-		{
-			name: "ice draw",
-			body: ansiFG(
-				45,
-				"╔══════════════════════════════════════════════════════════════╗",
-			) + "\n" +
-				ansiFG(
-					45,
-					"║",
-				) + ansiFG(
-				201,
-				" ▄▄▄· ▄• ▄▌ ·▄▄▄▄  ▪        ▄▄▄▄·             ▄ •▄ ",
-			) + ansiFG(
-				45,
-				" ║",
-			) + "\n" +
-				ansiFG(
-					45,
-					"║",
-				) + ansiFG(
-				207,
-				"▐█ ▀█ █▪██▌██▪ ██ ██ ▪     ▐█ ▀█▪▪     ▪     █▌▄▌▪",
-			) + ansiFG(
-				45,
-				" ║",
-			) + "\n" +
-				ansiFG(
-					45,
-					"║",
-				) + ansiFG(
-				93,
-				"▄█▀▀█ █▌▐█▌▐█· ▐█▌▐█· ▄█▀▄ ▐█▀▀█▄ ▄█▀▄  ▄█▀▄ ▐▀▀▄·",
-			) + ansiFG(
-				45,
-				" ║",
-			) + "\n" +
-				ansiFG(
-					45,
-					"║",
-				) + ansiFG(
-				57,
-				"▐█ ▪▐▌▐█▄█▌██. ██ ▐█▌▐█▌.▐▌██▄▪▐█▐█▌.▐▌▐█▌.▐▌▐█.█▌",
-			) + ansiFG(
-				45,
-				" ║",
-			) + "\n" +
-				ansiFG(
-					45,
-					"║",
-				) + ansiFG(
-				45,
-				" ▀  ▀  ▀▀▀ ▀▀▀▀▀• ▀▀▀ ▀█▄▀▪·▀▀▀▀  ▀█▄▀▪ ▀█▄▀▪·▀  ▀",
-			) + ansiFG(
-				45,
-				" ║",
-			) + "\n" +
-				ansiFG(
-					45,
-					"╚══════════════════════ -- organizer -- ══════════════════════╝",
-				),
-		},
-		{
-			name: "neon wall",
-			body: ansiBG(
-				17,
-				"                                                                      ",
-			) + "\n" +
-				ansiBG(
-					17,
-					"  ",
-				) + ansiBG(
-				53,
-				"  ",
-			) + ansiFG(
-				201,
-				"  ██   ██ ██  ██ ████  ██  ████  ████   ████   ████  ██  ██  ",
-			) + ansiBG(
-				53,
-				"  ",
-			) + "\n" +
-				ansiBG(
-					17,
-					"  ",
-				) + ansiBG(
-				53,
-				"  ",
-			) + ansiFG(
-				207,
-				" ████  ██  ██ ██  ██  ██  ██  ██ ██  ██ ██  ██ ██  ██ ██ ██   ",
-			) + ansiBG(
-				53,
-				"  ",
-			) + "\n" +
-				ansiBG(
-					17,
-					"  ",
-				) + ansiBG(
-				53,
-				"  ",
-			) + ansiFG(
-				93,
-				"██  ██ ██  ██ ████   ██  ██  ██ ████  ██  ██ ██  ██ ███     ",
-			) + ansiBG(
-				53,
-				"  ",
-			) + "\n" +
-				ansiBG(
-					17,
-					"  ",
-				) + ansiBG(
-				53,
-				"  ",
-			) + ansiFG(
-				45,
-				"██  ██  ████  ██    ████  ████  ████   ████   ████  ██ ██   ",
-			) + ansiBG(
-				53,
-				"  ",
-			) + "\n" +
-				ansiBG(
-					17,
-					"                      ",
-				) + ansiFG(
-				45,
-				"-- organizer --",
-			) + ansiBG(
-				17,
-				"                      ",
-			),
-		},
-		{
-			name: "color blocks",
-			body: ansiBlockRow(16, 53, 89, 125, 161, 197, 201, 207, 213, 219) + "\n" +
-				ansiFG(231, "     AUDIOBOOK   AUDIOBOOK   AUDIOBOOK   AUDIOBOOK") + "\n" +
-				ansiBlockRow(17, 18, 19, 20, 21, 27, 33, 39, 45, 51) + "\n" +
-				ansiFG(45, "                   -- organizer --"),
-		},
-		{
-			name: "old board ad",
-			body: ansiBG(
-				17,
-				"                                                                  ",
-			) + "\n" +
-				ansiBG(
-					17,
-					"  ",
-				) + ansiCyan(
-				" A U D I O B O O K  //  A U D I O B O O K  //  AUDIOBOOK ",
-			) + ansiBG(
-				17,
-				" ",
-			) + "\n" +
-				ansiBG(
-					17,
-					"  ",
-				) + ansiPink(
-				"   uploads sorted / series stacked / metadata cleaned    ",
-			) + ansiBG(
-				17,
-				"  ",
-			) + "\n" +
-				ansiBG(
-					17,
-					"                                                                  ",
-				) + "\n" +
-				ansiGray(
-					"                         -- organizer --",
-				),
-		},
-		{
-			name: "shade stack",
-			body: ansiFG(
-				201,
-				"  ░█████╗ ██╗   ██╗██████╗ ██╗ ██████╗ ██████╗  ██████╗  ██████╗ ██╗  ██╗",
-			) + "\n" +
-				ansiFG(
-					207,
-					"  ██╔══██╗██║   ██║██╔══██╗██║██╔═══██╗██╔══██╗██╔═══██╗██╔═══██╗██║ ██╔╝",
-				) + "\n" +
-				ansiFG(
-					93,
-					"  ███████║██║   ██║██║  ██║██║██║   ██║██████╔╝██║   ██║██║   ██║█████╔╝ ",
-				) + "\n" +
-				ansiFG(
-					57,
-					"  ██╔══██║██║   ██║██║  ██║██║██║   ██║██╔══██╗██║   ██║██║   ██║██╔═██╗ ",
-				) + "\n" +
-				ansiFG(
-					45,
-					"  ██║  ██║╚██████╔╝██████╔╝██║╚██████╔╝██████╔╝╚██████╔╝╚██████╔╝██║  ██╗",
-				) + "\n" +
-				ansiFG(
-					45,
-					"                         -- organizer --",
-				),
-		},
-		{
-			name: "checker glass",
-			body: ansiBG(
-				53,
-				"    ",
-			) + ansiBG(
-				16,
-				"    ",
-			) + ansiBG(
-				53,
-				"    ",
-			) + ansiBG(
-				16,
-				"    ",
-			) + ansiBG(
-				53,
-				"    ",
-			) + ansiBG(
-				16,
-				"    ",
-			) + ansiBG(
-				53,
-				"    ",
-			) + "\n" +
-				ansiFG(
-					201,
-					"  A U D I O B O O K",
-				) + ansiFG(
-				45,
-				"  A U D I O B O O K",
-			) + "\n" +
-				ansiFG(
-					207,
-					"  ▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄",
-				) + "\n" +
-				ansiFG(
-					45,
-					"          -- organizer --",
-				) + "\n" +
-				ansiBG(
-					16,
-					"    ",
-				) + ansiBG(
-				53,
-				"    ",
-			) + ansiBG(
-				16,
-				"    ",
-			) + ansiBG(
-				53,
-				"    ",
-			) + ansiBG(
-				16,
-				"    ",
-			) + ansiBG(
-				53,
-				"    ",
-			) + ansiBG(
-				16,
-				"    ",
-			),
-		},
-		{
-			name: "cassette wall",
-			body: ansiFG(45, "  ╔════════════════════════════════════════════════════╗") + "\n" +
-				ansiFG(
-					45,
-					"  ║",
-				) + ansiBG(17, "  ") + ansiFG(201, "AUDIOBOOK") + ansiBG(17, "          ") + ansiFG(207, "◉       ◉") + ansiBG(17, "          ") + ansiFG(201, "AUDIOBOOK") + ansiBG(17, "  ") + ansiFG(45, "║") + "\n" +
-				ansiFG(
-					45,
-					"  ║",
-				) + ansiBG(17, "  ") + ansiFG(93, "████████████████████████████████████████") + ansiBG(17, "  ") + ansiFG(45, "║") + "\n" +
-				ansiFG(45, "  ╚════════════════════ -- organizer -- ══════════════╝"),
-		},
-		{
-			name: "scanlines",
-			body: ansiFG(201, " ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄") + "\n" +
-				ansiFG(207, " █ A U D I O B O O K  ░▒▓  A U D I O B O O K  ▓▒░ █") + "\n" +
-				ansiFG(93, " ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀") + "\n" +
-				ansiFG(45, "                    -- organizer --"),
-		},
-		{
-			name: "ansi logo candidate",
-			body: terminalimage.NewStartupLogo(terminalimage.ProtocolANSI).ViewWithReservedSpace(),
-		},
 	}
 }
 
@@ -451,57 +119,6 @@ func fileIsCharDevice(file *os.File) bool {
 		return false
 	}
 	return info.Mode()&os.ModeCharDevice != 0
-}
-
-func formatTermProtocols(protocols []termimg.Protocol) string {
-	if len(protocols) == 0 {
-		return "<none>"
-	}
-	values := make([]string, 0, len(protocols))
-	for _, protocol := range protocols {
-		values = append(values, protocol.String())
-	}
-	return strings.Join(values, ", ")
-}
-
-func firstRunes(value string, limit int) string {
-	runes := []rune(value)
-	if len(runes) <= limit {
-		return value
-	}
-	return string(runes[:limit])
-}
-
-func ansiPink(value string) string {
-	return "\x1b[38;5;207m" + value + ansiReset()
-}
-
-func ansiBlue(value string) string {
-	return "\x1b[38;5;81m" + value + ansiReset()
-}
-
-func ansiCyan(value string) string {
-	return "\x1b[38;5;45m" + value + ansiReset()
-}
-
-func ansiGray(value string) string {
-	return "\x1b[38;5;245m" + value + ansiReset()
-}
-
-func ansiFG(color int, value string) string {
-	return fmt.Sprintf("\x1b[38;5;%dm%s%s", color, value, ansiReset())
-}
-
-func ansiBG(color int, value string) string {
-	return fmt.Sprintf("\x1b[48;5;%dm%s%s", color, value, ansiReset())
-}
-
-func ansiBlockRow(colors ...int) string {
-	var b strings.Builder
-	for _, color := range colors {
-		b.WriteString(ansiBG(color, "      "))
-	}
-	return b.String()
 }
 
 func ansiDim() string {

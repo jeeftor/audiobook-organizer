@@ -13,9 +13,9 @@ import (
 
 const (
 	defaultLogoWidthCells  = 20
-	defaultLogoHeightCells = 10
-	defaultLogoPixels      = 144
-	nativeLogoReservedRows = 8
+	defaultLogoHeightCells = 5
+	defaultLogoPixels      = 80
+	nativeLogoReservedRows = defaultLogoHeightCells
 )
 
 // StartupLogo renders the embedded Audiobook Organizer logo for supported terminals.
@@ -73,6 +73,19 @@ func (l *StartupLogo) ViewWithReservedSpace() string {
 		return view
 	}
 	return view + strings.Repeat("\n", nativeLogoReservedRows)
+}
+
+// ViewBesideText returns the logo followed by text.
+func (l *StartupLogo) ViewBesideText(text string) string {
+	view := l.View()
+	if view == "" {
+		return text
+	}
+	if l.protocol == ProtocolANSI || l.protocol == ProtocolASCII ||
+		l.protocol == ProtocolHalfblocks {
+		return view + "\n" + text
+	}
+	return view + strings.Repeat("\n", nativeLogoReservedRows) + text
 }
 
 func renderLogo(protocol ImageProtocol, width, height int) (string, error) {

@@ -3,8 +3,6 @@ package terminalimage
 import (
 	"os"
 	"strings"
-
-	"github.com/blacktop/go-termimg"
 )
 
 const (
@@ -12,7 +10,7 @@ const (
 	imageProtocolEnv = "AUDIOBOOK_ORGANIZER_TERMINAL_IMAGE_PROTOCOL"
 )
 
-// ImageProtocol names the terminal image protocol selected for startup logos.
+// ImageProtocol names the terminal logo renderer selected for startup logos.
 type ImageProtocol string
 
 const (
@@ -29,7 +27,6 @@ const (
 type protocolDetectionConfig struct {
 	getenv      func(string) string
 	interactive func() bool
-	detect      func() termimg.Protocol
 }
 
 // DetectTerminalImageProtocol detects whether the current terminal should render startup logos.
@@ -46,13 +43,15 @@ func detectTerminalImageProtocol(cfg protocolDetectionConfig) ImageProtocol {
 	if interactive == nil {
 		interactive = isInteractiveTTY
 	}
-	detect := cfg.detect
-	if detect == nil {
-		detect = termimg.DetectProtocol
-	}
-
 	if getenv(noImagesEnv) != "" {
 		return ProtocolOff
+	}
+	rawOverride := strings.TrimSpace(getenv(imageProtocolEnv))
+	if rawOverride != "" {
+		override := normalizeProtocol(rawOverride)
+		if override != ProtocolAuto {
+			return override
+		}
 	}
 	if !interactive() {
 		return ProtocolOff
@@ -61,38 +60,18 @@ func detectTerminalImageProtocol(cfg protocolDetectionConfig) ImageProtocol {
 		return ProtocolOff
 	}
 
-	rawOverride := strings.TrimSpace(getenv(imageProtocolEnv))
-	if rawOverride != "" {
-		override := normalizeProtocol(rawOverride)
-		if override == ProtocolAuto {
-			return detectAutoProtocol(getenv, detect)
-		}
-		return override
-	}
-
 	// tmux image passthrough varies by terminal and configuration. Fall back to
 	// text art unless the user explicitly opts into a native protocol above.
 	if getenv("TMUX") != "" {
 		return detectTextProtocol(getenv)
 	}
 
-	return detectAutoProtocol(getenv, detect)
+	return detectAutoProtocol(getenv)
 }
 
-func detectAutoProtocol(getenv func(string) string, detect func() termimg.Protocol) ImageProtocol {
-	if isITerm2Environment(getenv) {
-		return ProtocolITerm2
-	}
+func detectAutoProtocol(getenv func(string) string) ImageProtocol {
 	if strings.EqualFold(getenv("TERM"), "dumb") {
 		return ProtocolASCII
-	}
-
-	detected := detect()
-	if detected == termimg.Halfblocks {
-		return detectTextProtocol(getenv)
-	}
-	if detected := detectProtocol(detected); detected != ProtocolOff {
-		return detected
 	}
 	return detectTextProtocol(getenv)
 }
@@ -104,23 +83,15 @@ func detectTextProtocol(getenv func(string) string) ImageProtocol {
 	return ProtocolASCII
 }
 
-func isITerm2Environment(getenv func(string) string) bool {
-	if strings.EqualFold(getenv("TERM_PROGRAM"), "iTerm.app") {
-		return true
-	}
-	if strings.EqualFold(getenv("LC_TERMINAL"), "iTerm2") {
-		return true
-	}
-
-	termSessionID := getenv("TERM_SESSION_ID")
-	return strings.HasPrefix(termSessionID, "w") && strings.Contains(termSessionID, ":")
-}
-
 func supportsANSI(getenv func(string) string) bool {
 	if getenv("NO_COLOR") != "" {
 		return false
 	}
-	if getenv("TERM_PROGRAM") != "" || getenv("COLORTERM") != "" || getenv("TMUX") != "" {
+	if getenv("TERM_PROGRAM") != "" ||
+		getenv("LC_TERMINAL") != "" ||
+		getenv("TERM_SESSION_ID") != "" ||
+		getenv("COLORTERM") != "" ||
+		getenv("TMUX") != "" {
 		return true
 	}
 
@@ -131,19 +102,6 @@ func supportsANSI(getenv func(string) string) bool {
 		strings.Contains(term, "screen") ||
 		strings.Contains(term, "tmux") ||
 		strings.Contains(term, "rxvt")
-}
-
-func detectProtocol(protocol termimg.Protocol) ImageProtocol {
-	switch protocol {
-	case termimg.Kitty:
-		return ProtocolKitty
-	case termimg.ITerm2:
-		return ProtocolITerm2
-	case termimg.Sixel:
-		return ProtocolSixel
-	default:
-		return ProtocolOff
-	}
 }
 
 func normalizeProtocol(value string) ImageProtocol {

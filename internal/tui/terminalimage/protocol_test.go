@@ -3,8 +3,6 @@ package terminalimage
 import (
 	"strings"
 	"testing"
-
-	"github.com/blacktop/go-termimg"
 )
 
 func TestDetectTerminalImageProtocolGuards(t *testing.T) {
@@ -47,45 +45,44 @@ func TestDetectTerminalImageProtocolGuards(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			called := false
 			got := detectTerminalImageProtocol(protocolDetectionConfig{
 				getenv:      envGetter(tt.env),
 				interactive: func() bool { return tt.interactive },
-				detect: func() termimg.Protocol {
-					called = true
-					return termimg.Kitty
-				},
 			})
 
 			if got != tt.want {
 				t.Fatalf("detectTerminalImageProtocol() = %q, want %q", got, tt.want)
 			}
-			if called {
-				t.Fatal("terminal detector was called after a guard disabled images")
-			}
 		})
 	}
 }
 
-func TestDetectTerminalImageProtocolMapsNativeProtocols(t *testing.T) {
+func TestDetectTerminalImageProtocolAutoUsesTextFallbacks(t *testing.T) {
 	tests := []struct {
-		name     string
-		detected termimg.Protocol
-		want     ImageProtocol
+		name string
+		env  map[string]string
+		want ImageProtocol
 	}{
-		{name: "kitty", detected: termimg.Kitty, want: ProtocolKitty},
-		{name: "iterm2", detected: termimg.ITerm2, want: ProtocolITerm2},
-		{name: "sixel", detected: termimg.Sixel, want: ProtocolSixel},
-		{name: "halfblocks is ansi fallback", detected: termimg.Halfblocks, want: ProtocolANSI},
-		{name: "unsupported with ansi terminal", detected: termimg.Unsupported, want: ProtocolANSI},
+		{name: "xterm color", env: map[string]string{"TERM": "xterm-256color"}, want: ProtocolANSI},
+		{name: "kitty terminal", env: map[string]string{"TERM": "xterm-kitty"}, want: ProtocolANSI},
+		{
+			name: "iterm terminal",
+			env:  map[string]string{"TERM_PROGRAM": "iTerm.app"},
+			want: ProtocolANSI,
+		},
+		{
+			name: "truecolor terminal",
+			env:  map[string]string{"COLORTERM": "truecolor"},
+			want: ProtocolANSI,
+		},
+		{name: "plain vt terminal", env: map[string]string{"TERM": "vt52"}, want: ProtocolASCII},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := detectTerminalImageProtocol(protocolDetectionConfig{
-				getenv:      envGetter(map[string]string{"TERM": "xterm-256color"}),
+				getenv:      envGetter(tt.env),
 				interactive: func() bool { return true },
-				detect:      func() termimg.Protocol { return tt.detected },
 			})
 
 			if got != tt.want {
@@ -99,7 +96,6 @@ func TestDetectTerminalImageProtocolUnsupportedWithoutANSIGetsASCII(t *testing.T
 	got := detectTerminalImageProtocol(protocolDetectionConfig{
 		getenv:      envGetter(map[string]string{"TERM": "vt52"}),
 		interactive: func() bool { return true },
-		detect:      func() termimg.Protocol { return termimg.Unsupported },
 	})
 
 	if got != ProtocolASCII {
@@ -114,7 +110,6 @@ func TestDetectTerminalImageProtocolNoColorUsesASCIIFallback(t *testing.T) {
 			"TERM":     "xterm-256color",
 		}),
 		interactive: func() bool { return true },
-		detect:      func() termimg.Protocol { return termimg.Unsupported },
 	})
 
 	if got != ProtocolASCII {
@@ -122,7 +117,7 @@ func TestDetectTerminalImageProtocolNoColorUsesASCIIFallback(t *testing.T) {
 	}
 }
 
-func TestDetectTerminalImageProtocolPrefersITerm2Environment(t *testing.T) {
+func TestDetectTerminalImageProtocolIgnoresITerm2GraphicsInAutoMode(t *testing.T) {
 	tests := []struct {
 		name string
 		env  map[string]string
@@ -145,21 +140,13 @@ func TestDetectTerminalImageProtocolPrefersITerm2Environment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			called := false
 			got := detectTerminalImageProtocol(protocolDetectionConfig{
 				getenv:      envGetter(tt.env),
 				interactive: func() bool { return true },
-				detect: func() termimg.Protocol {
-					called = true
-					return termimg.Kitty
-				},
 			})
 
-			if got != ProtocolITerm2 {
-				t.Fatalf("detectTerminalImageProtocol() = %q, want %q", got, ProtocolITerm2)
-			}
-			if called {
-				t.Fatal("terminal detector was called instead of preferring the iTerm2 environment")
+			if got != ProtocolANSI {
+				t.Fatalf("detectTerminalImageProtocol() = %q, want %q", got, ProtocolANSI)
 			}
 		})
 	}
@@ -186,10 +173,6 @@ func TestDetectTerminalImageProtocolOverride(t *testing.T) {
 			got := detectTerminalImageProtocol(protocolDetectionConfig{
 				getenv:      envGetter(map[string]string{imageProtocolEnv: tt.value}),
 				interactive: func() bool { return true },
-				detect: func() termimg.Protocol {
-					t.Fatal("forced protocol should not call auto detection")
-					return termimg.Unsupported
-				},
 			})
 
 			if got != tt.want {
@@ -199,21 +182,28 @@ func TestDetectTerminalImageProtocolOverride(t *testing.T) {
 	}
 }
 
-func TestDetectTerminalImageProtocolAutoOverridePrefersITerm2Environment(t *testing.T) {
+func TestDetectTerminalImageProtocolForcedOverrideBypassesTTYGuard(t *testing.T) {
+	got := detectTerminalImageProtocol(protocolDetectionConfig{
+		getenv:      envGetter(map[string]string{imageProtocolEnv: "ansi"}),
+		interactive: func() bool { return false },
+	})
+
+	if got != ProtocolANSI {
+		t.Fatalf("detectTerminalImageProtocol() = %q, want %q", got, ProtocolANSI)
+	}
+}
+
+func TestDetectTerminalImageProtocolAutoOverrideUsesTextFallback(t *testing.T) {
 	got := detectTerminalImageProtocol(protocolDetectionConfig{
 		getenv: envGetter(map[string]string{
 			imageProtocolEnv: "auto",
 			"TERM_PROGRAM":   "iTerm.app",
 		}),
 		interactive: func() bool { return true },
-		detect: func() termimg.Protocol {
-			t.Fatal("terminal detector was called instead of preferring the iTerm2 environment")
-			return termimg.Unsupported
-		},
 	})
 
-	if got != ProtocolITerm2 {
-		t.Fatalf("detectTerminalImageProtocol() = %q, want %q", got, ProtocolITerm2)
+	if got != ProtocolANSI {
+		t.Fatalf("detectTerminalImageProtocol() = %q, want %q", got, ProtocolANSI)
 	}
 }
 
@@ -224,10 +214,6 @@ func TestDetectTerminalImageProtocolForcedOverrideWinsOverITerm2Environment(t *t
 			"TERM_PROGRAM":   "iTerm.app",
 		}),
 		interactive: func() bool { return true },
-		detect: func() termimg.Protocol {
-			t.Fatal("forced protocol should not call auto detection")
-			return termimg.Unsupported
-		},
 	})
 
 	if got != ProtocolKitty {
@@ -318,6 +304,33 @@ func TestStartupLogoViewWithReservedSpaceHalfblocks(t *testing.T) {
 
 	if got := logo.ViewWithReservedSpace(); got != "rendered-halfblocks" {
 		t.Fatalf("ViewWithReservedSpace() = %q, want no extra reserved lines", got)
+	}
+}
+
+func TestStartupLogoViewBesideTextNativeProtocol(t *testing.T) {
+	logo := NewStartupLogo(ProtocolKitty)
+	logo.render = func(ImageProtocol, int, int) (string, error) {
+		return "rendered-logo", nil
+	}
+
+	got := logo.ViewBesideText("Usage:\n  audiobook-organizer")
+	want := "rendered-logo" + strings.Repeat("\n", nativeLogoReservedRows) +
+		"Usage:\n  audiobook-organizer"
+	if got != want {
+		t.Fatalf("ViewBesideText() = %q, want %q", got, want)
+	}
+}
+
+func TestStartupLogoViewBesideTextTextProtocol(t *testing.T) {
+	logo := NewStartupLogo(ProtocolANSI)
+	logo.render = func(ImageProtocol, int, int) (string, error) {
+		return "rendered-ansi", nil
+	}
+
+	got := logo.ViewBesideText("Usage:")
+	want := "rendered-ansi\nUsage:"
+	if got != want {
+		t.Fatalf("ViewBesideText() = %q, want %q", got, want)
 	}
 }
 

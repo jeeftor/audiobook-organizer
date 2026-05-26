@@ -81,6 +81,11 @@ func TestShouldPrintStartupBanner_MetadataJSON(t *testing.T) {
 			args: []string{"metadata-tui", "--dir", "testdata/mp3flat"},
 			want: true,
 		},
+		{
+			name: "term diagnostics suppress banner",
+			args: []string{"term"},
+			want: false,
+		},
 	}
 
 	for _, tt := range tests {
