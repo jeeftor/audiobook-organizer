@@ -55,7 +55,6 @@ func TestLayoutTemplateCommandOutputCoversFieldsAndSafety(t *testing.T) {
 	got := output.String()
 	for _, want := range []string{
 		"{author}",
-		"{book_title}",
 		"{series-count}",
 		"{narrators}",
 		"{publisher-name}",

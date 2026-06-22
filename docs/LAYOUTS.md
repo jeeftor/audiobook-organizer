@@ -95,7 +95,7 @@ audiobook-organizer layout-template
 audiobook-organizer \
   --dir=/books \
   --out=/organized \
-  --layout-template="{author}/{series|Standalone}/{Vol series_number:02 - }{book_title}{ [narrator]}"
+  --layout-template="{author}/{series|Standalone}/{Vol series_number:02 - }{title}{ [narrator]}"
 ```
 
 Template fields use the same renderer as rename templates. Both `{field}` and `${field}` are accepted, and fallback values use `|`:
@@ -103,7 +103,7 @@ Template fields use the same renderer as rename templates. Both `{field}` and `$
 | Field | Example value |
 | --- | --- |
 | `{author}` | `L. Frank Baum` |
-| `{title}` or `{book_title}` | `Ozma of Oz` |
+| `{title}` | `Ozma of Oz` |
 | `{series}` | `Oz` |
 | `{series_full}` | `Oz #3` |
 | `{series_number}` or `{series-count}` | `3` |

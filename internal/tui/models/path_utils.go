@@ -8,7 +8,7 @@ import (
 )
 
 // DefaultCustomLayoutTemplate is the default organize layout template used by the TUI.
-const DefaultCustomLayoutTemplate = "{author}/{series|Standalone}/{Vol series_number:02 - }{book_title}{ [narrator]}"
+const DefaultCustomLayoutTemplate = "{author}/{series|Standalone}/{Vol series_number:02 - }{title}{ [narrator]}"
 
 // GenerateOutputPath generates a preview of the output path based on metadata and layout.
 // This is the universal function used by both settings preview and the actual preview screen.

@@ -23,7 +23,7 @@ func layoutTemplateHelpText() string {
 
 USAGE
   audiobook-organizer --dir=/books --out=/organized \
-    --layout-template="{author}/{series|Standalone}/{Vol series_number:02 - }{book_title}{ [narrator]}"
+    --layout-template="{author}/{series|Standalone}/{Vol series_number:02 - }{title}{ [narrator]}"
 
 PLACEHOLDER SYNTAX
   {field}              Render a metadata field
@@ -36,7 +36,6 @@ COMMON FIELDS
   {author}             First author, formatted with the organizer author format
   {authors}            All authors, comma-separated
   {title}              Book title
-  {book_title}         Alias for title
   {series}             Series name without number
   {series_full}        Series name with number when available
   {series_number}      Series number only, such as 1 or 2.5
@@ -53,7 +52,7 @@ RAW METADATA FIELDS
 
 EXAMPLES
   Author / Series / Vol NN - Title with optional narrator brackets
-    {author}/{series|Standalone}/{Vol series_number:02 - }{book_title}{ [narrator]}
+    {author}/{series|Standalone}/{Vol series_number:02 - }{title}{ [narrator]}
 
   Standalone fallback for books without a series
     {author}/{series|Standalone}/{title}

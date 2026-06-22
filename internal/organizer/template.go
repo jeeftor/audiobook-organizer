@@ -62,7 +62,6 @@ var knownTemplateFields = []string{
 	"series_number",
 	"series_count",
 	"series_full",
-	"book_title",
 	"narrators",
 	"narrator",
 	"authors",
@@ -328,7 +327,7 @@ func (tr *TemplateRenderer) resolveField(fieldName string, metadata Metadata) st
 		}
 		return strings.Join(formatted, ", ")
 
-	case "title", "book_title":
+	case "title":
 		return metadata.Title
 
 	case "series":
@@ -453,11 +452,6 @@ func GetAvailableFields() []TemplateField {
 		{
 			Name:        "title",
 			Description: "Book title",
-			Example:     "The Final Empire",
-		},
-		{
-			Name:        "book_title",
-			Description: "Alias for title",
 			Example:     "The Final Empire",
 		},
 		{

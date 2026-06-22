@@ -71,13 +71,13 @@ func TestCompositeOptionalSegmentRender(t *testing.T) {
 		},
 		{
 			name:     "composite narrator brackets render when present",
-			template: "{book_title}{ [narrator]}",
+			template: "{title}{ [narrator]}",
 			metadata: seriesBookMetadata(),
 			want:     "Book Title [Test Narrator]",
 		},
 		{
 			name:     "composite narrator brackets omit when narrator missing",
-			template: "{book_title}{ [narrator]}",
+			template: "{title}{ [narrator]}",
 			metadata: Metadata{
 				Title:   "Book Title",
 				Authors: []string{"Test Author"},
@@ -86,7 +86,7 @@ func TestCompositeOptionalSegmentRender(t *testing.T) {
 		},
 		{
 			name:     "composite trailing literal preserved before next token",
-			template: "{Vol series_number:02 - }{book_title}",
+			template: "{Vol series_number:02 - }{title}",
 			metadata: seriesBookMetadata(),
 			want:     "Vol 02 - Book Title",
 		},
@@ -101,12 +101,6 @@ func TestCompositeOptionalSegmentRender(t *testing.T) {
 			template: "{series_number:02}",
 			metadata: standaloneBookMetadata(),
 			want:     "",
-		},
-		{
-			name:     "book_title alias resolves title",
-			template: "{book_title}",
-			metadata: seriesBookMetadata(),
-			want:     "Book Title",
 		},
 		{
 			name:     "fallback behavior unchanged",
@@ -189,7 +183,7 @@ func TestCustomLayoutTemplatePathSegmentOmission(t *testing.T) {
 		},
 		{
 			name:     "full user example with series book",
-			template: "{author}/{series|Standalone}/{Vol series_number:02 - }{book_title}{ [narrator]}",
+			template: "{author}/{series|Standalone}/{Vol series_number:02 - }{title}{ [narrator]}",
 			metadata: seriesBookMetadata(),
 			expected: filepath.Join(
 				"testbase",
@@ -200,7 +194,7 @@ func TestCustomLayoutTemplatePathSegmentOmission(t *testing.T) {
 		},
 		{
 			name:     "full user example with standalone book",
-			template: "{author}/{series|Standalone}/{Vol series_number:02 - }{book_title}{ [narrator]}",
+			template: "{author}/{series|Standalone}/{Vol series_number:02 - }{title}{ [narrator]}",
 			metadata: standaloneBookMetadata(),
 			expected: filepath.Join(
 				"testbase",
