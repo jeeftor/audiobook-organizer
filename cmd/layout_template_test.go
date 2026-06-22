@@ -55,11 +55,14 @@ func TestLayoutTemplateCommandOutputCoversFieldsAndSafety(t *testing.T) {
 	got := output.String()
 	for _, want := range []string{
 		"{author}",
+		"{book_title}",
 		"{series-count}",
 		"{narrators}",
 		"{publisher-name}",
 		"{series|Standalone}",
+		"{Vol series_number:02 - }",
 		"${field}",
+		"Composite optional segment",
 		"Absolute templates",
 		"https://github.com/jeeftor/audiobook-organizer/blob/master/docs/LAYOUTS.md",
 	} {

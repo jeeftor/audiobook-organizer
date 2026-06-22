@@ -3,6 +3,8 @@ package organizer
 import (
 	"fmt"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -12,11 +14,28 @@ type Template struct {
 	tokens []templateToken
 }
 
+type templateTokenKind int
+
+const (
+	tokenLiteral templateTokenKind = iota
+	tokenSimple
+	tokenComposite
+)
+
 // templateToken represents a parsed component (literal text or placeholder)
 type templateToken struct {
-	isPlaceholder bool
-	value         string
-	fallback      string // Optional fallback for missing fields
+	kind      templateTokenKind
+	value     string
+	fallback  string
+	format    string
+	composite []templatePart
+}
+
+type templatePart struct {
+	isField bool
+	literal string
+	field   string
+	format  string
 }
 
 // TemplateRenderer handles rendering templates with metadata
@@ -36,49 +55,196 @@ type TemplateField struct {
 var (
 	templateRegex       = regexp.MustCompile(`\{([^}]+)\}`)
 	dollarTemplateRegex = regexp.MustCompile(`\$\{([^}]+)\}`)
+	simpleFieldRegex    = regexp.MustCompile(`^([a-zA-Z_][\w-]*)(?::(\d+))?$`)
 )
+
+var knownTemplateFields = []string{
+	"series_number",
+	"series_count",
+	"series_full",
+	"book_title",
+	"narrators",
+	"narrator",
+	"authors",
+	"author",
+	"series",
+	"title",
+	"album",
+	"track",
+	"year",
+}
+
+func init() {
+	sort.Slice(knownTemplateFields, func(i, j int) bool {
+		return len(knownTemplateFields[i]) > len(knownTemplateFields[j])
+	})
+}
 
 // ParseTemplate parses a template string into tokens
 func ParseTemplate(templateStr string) (*Template, error) {
 	templateStr = dollarTemplateRegex.ReplaceAllString(templateStr, `{$1}`)
+	if strings.Contains(templateStr, "{}") {
+		return nil, fmt.Errorf("empty template placeholder")
+	}
+
 	tokens := []templateToken{}
 	lastIdx := 0
 
 	matches := templateRegex.FindAllStringSubmatchIndex(templateStr, -1)
 	for _, match := range matches {
-		// Add literal text before placeholder
 		if match[0] > lastIdx {
 			tokens = append(tokens, templateToken{
-				isPlaceholder: false,
-				value:         templateStr[lastIdx:match[0]],
+				kind:  tokenLiteral,
+				value: templateStr[lastIdx:match[0]],
 			})
 		}
 
-		// Parse placeholder (support fallback: {field|fallback})
-		fieldSpec := templateStr[match[2]:match[3]]
-		parts := strings.Split(fieldSpec, "|")
-
-		token := templateToken{
-			isPlaceholder: true,
-			value:         strings.TrimSpace(parts[0]),
+		rawSpec := templateStr[match[2]:match[3]]
+		if strings.TrimSpace(rawSpec) == "" {
+			return nil, fmt.Errorf("empty template placeholder")
 		}
-		if len(parts) > 1 {
-			token.fallback = strings.TrimSpace(parts[1])
+
+		token, err := parseBraceToken(rawSpec)
+		if err != nil {
+			return nil, err
 		}
 		tokens = append(tokens, token)
 
 		lastIdx = match[1]
 	}
 
-	// Add remaining literal text
 	if lastIdx < len(templateStr) {
 		tokens = append(tokens, templateToken{
-			isPlaceholder: false,
-			value:         templateStr[lastIdx:],
+			kind:  tokenLiteral,
+			value: templateStr[lastIdx:],
 		})
 	}
 
 	return &Template{raw: templateStr, tokens: tokens}, nil
+}
+
+func parseBraceToken(rawSpec string) (templateToken, error) {
+	fallback := ""
+	spec := rawSpec
+	if parts := strings.SplitN(rawSpec, "|", 2); len(parts) == 2 {
+		spec = parts[0]
+		fallback = strings.TrimSpace(parts[1])
+	}
+
+	trimmedSpec := strings.TrimSpace(spec)
+	if isSimpleFieldSpec(trimmedSpec) {
+		name, format := splitFieldNameAndFormat(trimmedSpec)
+		return templateToken{
+			kind:     tokenSimple,
+			value:    name,
+			format:   format,
+			fallback: fallback,
+		}, nil
+	}
+
+	parts, err := parseCompositeContent(spec)
+	if err != nil {
+		return templateToken{}, err
+	}
+	if len(parts) == 0 {
+		return templateToken{}, fmt.Errorf("invalid template placeholder %q", rawSpec)
+	}
+
+	return templateToken{
+		kind:      tokenComposite,
+		composite: parts,
+		fallback:  fallback,
+	}, nil
+}
+
+func isSimpleFieldSpec(spec string) bool {
+	if strings.Contains(spec, " ") {
+		return false
+	}
+	return simpleFieldRegex.MatchString(spec)
+}
+
+func splitFieldNameAndFormat(spec string) (string, string) {
+	matches := simpleFieldRegex.FindStringSubmatch(spec)
+	if len(matches) < 2 {
+		return spec, ""
+	}
+	format := ""
+	if len(matches) > 2 {
+		format = matches[2]
+	}
+	return matches[1], format
+}
+
+func parseCompositeContent(content string) ([]templatePart, error) {
+	parts := []templatePart{}
+	pos := 0
+
+	for pos < len(content) {
+		fieldName, format, start, end, found := findFieldReferenceAt(content, pos)
+		if !found {
+			parts = append(parts, templatePart{
+				isField: false,
+				literal: content[pos:],
+			})
+			break
+		}
+
+		if start > pos {
+			parts = append(parts, templatePart{
+				isField: false,
+				literal: content[pos:start],
+			})
+		}
+
+		parts = append(parts, templatePart{
+			isField: true,
+			field:   fieldName,
+			format:  format,
+		})
+		pos = end
+	}
+
+	return parts, nil
+}
+
+func findFieldReferenceAt(content string, start int) (fieldName, format string, fieldStart, fieldEnd int, found bool) {
+	earliest := -1
+
+	for _, candidate := range knownTemplateFields {
+		idx := strings.Index(content[start:], candidate)
+		if idx == -1 {
+			continue
+		}
+		idx += start
+		if earliest != -1 && idx > earliest {
+			continue
+		}
+
+		end := idx + len(candidate)
+		nextFormat := ""
+		if end < len(content) && content[end] == ':' {
+			formatEnd := end + 1
+			for formatEnd < len(content) && content[formatEnd] >= '0' && content[formatEnd] <= '9' {
+				formatEnd++
+			}
+			if formatEnd > end+1 {
+				nextFormat = content[end+1 : formatEnd]
+				end = formatEnd
+			}
+		}
+
+		if earliest == -1 || idx < earliest {
+			earliest = idx
+			fieldName = candidate
+			format = nextFormat
+			fieldStart = idx
+			fieldEnd = end
+			found = true
+		}
+	}
+
+	return fieldName, format, fieldStart, fieldEnd, found
 }
 
 // NewTemplateRenderer creates a new template renderer
@@ -94,22 +260,52 @@ func (tr *TemplateRenderer) Render(metadata Metadata) (string, error) {
 	var result strings.Builder
 
 	for _, token := range tr.template.tokens {
-		if !token.isPlaceholder {
-			// Literal text
+		switch token.kind {
+		case tokenLiteral:
 			result.WriteString(token.value)
-			continue
+		case tokenSimple:
+			value := tr.resolveFieldFormatted(token.value, token.format, metadata)
+			if value == "" && token.fallback != "" {
+				value = token.fallback
+			}
+			result.WriteString(value)
+		case tokenComposite:
+			value, err := tr.renderCompositeToken(token, metadata)
+			if err != nil {
+				return "", err
+			}
+			result.WriteString(value)
 		}
-
-		// Resolve placeholder
-		value := tr.resolveField(token.value, metadata)
-		if value == "" && token.fallback != "" {
-			value = token.fallback
-		}
-
-		result.WriteString(value)
 	}
 
 	return result.String(), nil
+}
+
+func (tr *TemplateRenderer) renderCompositeToken(token templateToken, metadata Metadata) (string, error) {
+	for _, part := range token.composite {
+		if !part.isField {
+			continue
+		}
+		if tr.resolveFieldFormatted(part.field, part.format, metadata) == "" {
+			return "", nil
+		}
+	}
+
+	var result strings.Builder
+	for _, part := range token.composite {
+		if !part.isField {
+			result.WriteString(part.literal)
+			continue
+		}
+		result.WriteString(tr.resolveFieldFormatted(part.field, part.format, metadata))
+	}
+
+	return result.String(), nil
+}
+
+func (tr *TemplateRenderer) resolveFieldFormatted(fieldName, format string, metadata Metadata) string {
+	value := tr.resolveField(fieldName, metadata)
+	return applyNumericFormat(value, format)
 }
 
 // resolveField resolves a template field name to its value from metadata
@@ -132,11 +328,10 @@ func (tr *TemplateRenderer) resolveField(fieldName string, metadata Metadata) st
 		}
 		return strings.Join(formatted, ", ")
 
-	case "title":
+	case "title", "book_title":
 		return metadata.Title
 
 	case "series":
-		// Return series name without number
 		series := metadata.GetValidSeries()
 		if series == "" {
 			return ""
@@ -176,6 +371,29 @@ func (tr *TemplateRenderer) resolveField(fieldName string, metadata Metadata) st
 	default:
 		return stringifyTemplateValue(rawTemplateValue(metadata, fieldName, normalizedFieldName))
 	}
+}
+
+func applyNumericFormat(value, format string) string {
+	if value == "" || format == "" {
+		return value
+	}
+
+	width, err := strconv.Atoi(format)
+	if err != nil || width <= 0 {
+		return value
+	}
+
+	if intValue, err := strconv.Atoi(value); err == nil {
+		return fmt.Sprintf("%0*d", width, intValue)
+	}
+
+	if floatValue, err := strconv.ParseFloat(value, 64); err == nil {
+		if floatValue == float64(int(floatValue)) {
+			return fmt.Sprintf("%0*d", width, int(floatValue))
+		}
+	}
+
+	return value
 }
 
 func normalizeTemplateFieldName(fieldName string) string {
@@ -238,6 +456,11 @@ func GetAvailableFields() []TemplateField {
 			Example:     "The Final Empire",
 		},
 		{
+			Name:        "book_title",
+			Description: "Alias for title",
+			Example:     "The Final Empire",
+		},
+		{
 			Name:        "series",
 			Description: "Series name (without number)",
 			Example:     "Mistborn",
@@ -277,8 +500,6 @@ func GetAvailableFields() []TemplateField {
 
 // ValidateTemplate checks if template is syntactically valid
 func ValidateTemplate(templateStr string) error {
-	// For now, we're lenient with template validation
-	// Just check that we can parse it
 	_, err := ParseTemplate(templateStr)
 	return err
 }

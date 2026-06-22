@@ -853,13 +853,14 @@ const stageText: Record<StageId, { heading: string; copy: string }> = {
 }
 
 const customLayoutValue = 'custom'
-const defaultCustomLayoutTemplate = '{author}/{series|Standalone}/{series-count} - {title}'
+const defaultCustomLayoutTemplate = '{author}/{series|Standalone}/{Vol series_number:02 - }{book_title}{ [narrator]}'
 const customLayoutOption: Option = { value: customLayoutValue, label: 'Custom' }
 const defaultLayouts: Option[] = [{ value: 'author-series-title', label: 'Author / Series / Title' }]
 const layoutTemplateFields: TemplateField[] = [
   { value: 'author', label: 'Author', kind: 'author' },
   { value: 'authors', label: 'Authors', kind: 'author' },
   { value: 'title', label: 'Title', kind: 'title' },
+  { value: 'book_title', label: 'Book title', kind: 'title' },
   { value: 'series', label: 'Series', kind: 'series' },
   { value: 'series-count', label: 'Series #', kind: 'series' },
   { value: 'narrator', label: 'Narrator', kind: 'other' },

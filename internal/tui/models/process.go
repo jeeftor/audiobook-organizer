@@ -108,12 +108,18 @@ func (m *ProcessModel) startProcessing() tea.Cmd {
 		if layout == "" {
 			layout = "author-series-title"
 		}
+		layoutTemplate := ""
+		if layout == "custom" {
+			layoutTemplate = strings.TrimSpace(m.config["Layout Template"])
+			layout = "author-series-title"
+		}
 
 		// Create configuration from settings
 		config := &organizer.OrganizerConfig{
 			BaseDir:             baseDir,
 			OutputDir:           outputDir,
 			Layout:              layout,
+			LayoutTemplate:      layoutTemplate,
 			UseEmbeddedMetadata: m.config["Use Embedded Metadata"] == "Yes",
 			Flat:                m.config["Flat Mode"] == "Yes",
 			DryRun:              m.config["Dry Run"] == "Yes",

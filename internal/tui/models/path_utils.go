@@ -1,24 +1,43 @@
 package models
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/jeeftor/audiobook-organizer/internal/organizer"
 )
 
-// GenerateOutputPath generates a preview of the output path based on metadata and layout
-// This is the universal function used by both settings preview and the actual preview screen
+// DefaultCustomLayoutTemplate is the default organize layout template used by the TUI.
+const DefaultCustomLayoutTemplate = "{author}/{series|Standalone}/{Vol series_number:02 - }{book_title}{ [narrator]}"
+
+// GenerateOutputPath generates a preview of the output path based on metadata and layout.
+// This is the universal function used by both settings preview and the actual preview screen.
 func GenerateOutputPath(
 	book AudioBook,
 	layout string,
+	layoutTemplate string,
 	fieldMapping organizer.FieldMapping,
 	outputDir string,
 ) string {
-	// Apply field mapping to get updated metadata
 	updatedMetadata := book.Metadata
 	updatedMetadata.ApplyFieldMapping(fieldMapping)
+
+	if outputDir == "" {
+		outputDir = "output"
+	}
+
+	if layout == "custom" && strings.TrimSpace(layoutTemplate) != "" {
+		config := &organizer.OrganizerConfig{
+			BaseDir:        outputDir,
+			OutputDir:      outputDir,
+			LayoutTemplate: layoutTemplate,
+		}
+		lc := organizer.NewLayoutCalculator(config, previewPathSanitizer)
+		targetDir, err := lc.CalculateTargetPathInBaseE(updatedMetadata, outputDir)
+		if err == nil {
+			return filepath.Join(targetDir, filepath.Base(book.Path))
+		}
+	}
 
 	// Get filename for fallback
 	base := filepath.Base(book.Path)
@@ -27,31 +46,21 @@ func GenerateOutputPath(
 	// Get metadata values with fallbacks
 	author := "Unknown"
 	if len(updatedMetadata.Authors) > 0 {
-		// Join all authors with ", " (they're already split by ApplyFieldMapping)
 		author = strings.Join(updatedMetadata.Authors, ", ")
 	}
 
-	// Get title
 	title := fileTitle
 	if updatedMetadata.Title != "" {
 		title = updatedMetadata.Title
 	}
 
-	// Get series
 	series := ""
 	if validSeries := updatedMetadata.GetValidSeries(); validSeries != "" {
 		series = validSeries
 	}
 
-	// Get series number if available
 	seriesNumber := organizer.GetSeriesNumberFromMetadata(updatedMetadata)
 
-	// Use default output dir if not provided
-	if outputDir == "" {
-		outputDir = "output"
-	}
-
-	// Generate path based on layout
 	switch layout {
 	case "author-only":
 		return filepath.Join(outputDir, author, base)
@@ -65,7 +74,7 @@ func GenerateOutputPath(
 	case "author-series-title-number":
 		if series != "" {
 			if seriesNumber != "" {
-				numberedTitle := fmt.Sprintf("#%s - %s", seriesNumber, title)
+				numberedTitle := "#" + seriesNumber + " - " + title
 				return filepath.Join(outputDir, author, series, numberedTitle, base)
 			}
 			return filepath.Join(outputDir, author, series, title, base)
@@ -79,7 +88,7 @@ func GenerateOutputPath(
 	case "series-title-number":
 		if series != "" {
 			if seriesNumber != "" {
-				numberedTitle := fmt.Sprintf("#%s - %s", seriesNumber, title)
+				numberedTitle := "#" + seriesNumber + " - " + title
 				return filepath.Join(outputDir, series, numberedTitle, base)
 			}
 			return filepath.Join(outputDir, series, title, base)
@@ -88,4 +97,19 @@ func GenerateOutputPath(
 	default:
 		return filepath.Join(outputDir, base)
 	}
+}
+
+func previewPathSanitizer(value string) string {
+	for _, char := range []string{"/", "<", ">", ":", "|", "?", "*", "`", "\""} {
+		value = strings.ReplaceAll(value, char, "_")
+	}
+	return strings.Trim(value, " ._")
+}
+
+func truncateLayoutTemplate(template string) string {
+	template = strings.TrimSpace(template)
+	if len(template) <= 42 {
+		return template
+	}
+	return template[:39] + "..."
 }

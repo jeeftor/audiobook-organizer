@@ -60,7 +60,11 @@ func (m *CommandOutputModel) generateCommand() string {
 	}
 
 	// Add layout
-	if layout := m.config["Layout"]; layout != "" && layout != "author-series-title" {
+	if layout := m.config["Layout"]; layout == "custom" {
+		if layoutTemplate := strings.TrimSpace(m.config["Layout Template"]); layoutTemplate != "" {
+			parts = append(parts, fmt.Sprintf("--layout-template=%q", layoutTemplate))
+		}
+	} else if layout := m.config["Layout"]; layout != "" && layout != "author-series-title" {
 		parts = append(parts, fmt.Sprintf("--layout=%s", layout))
 	}
 

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -69,6 +70,10 @@ type SettingsTableModel struct {
 	// Settings values
 	settings      []Setting
 	fieldMappings []FieldMappingSetting
+
+	layoutTemplate      string
+	editingTemplate     bool
+	layoutTemplateInput textinput.Model
 }
 
 // NewSettingsTableModel creates a new table-based settings model
@@ -85,6 +90,7 @@ func NewSettingsTableModel(selectedBooks []AudioBook, showAdvanced bool) *Settin
 				"author-series-title-number",
 				"series-title",
 				"series-title-number",
+				"custom",
 			},
 			Value: 2,
 		},
@@ -120,6 +126,7 @@ func NewSettingsTableModel(selectedBooks []AudioBook, showAdvanced bool) *Settin
 				"author-series-title-number",
 				"series-title",
 				"series-title-number",
+				"custom",
 			},
 			Value: 2,
 		},
@@ -194,8 +201,15 @@ func NewSettingsTableModel(selectedBooks []AudioBook, showAdvanced bool) *Settin
 				"author-series-title-number",
 				"series-title",
 				"series-title-number",
+				"custom",
 			},
 			Value: 2,
+		},
+		{
+			Name:        "Layout Template",
+			Description: "Template for custom layout",
+			Options:     []string{truncateLayoutTemplate(DefaultCustomLayoutTemplate)},
+			Value:       0,
 		},
 		{
 			Name:        "Flat Mode",
@@ -277,7 +291,7 @@ func NewSettingsTableModel(selectedBooks []AudioBook, showAdvanced bool) *Settin
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(10), // Show all 10 rows
+		table.WithHeight(11), // Show all settings rows
 	)
 
 	s := table.DefaultStyles()
@@ -292,14 +306,22 @@ func NewSettingsTableModel(selectedBooks []AudioBook, showAdvanced bool) *Settin
 		BorderForeground(lipgloss.Color("#AA7DFF")).
 		Padding(0, 1)
 
+	layoutTemplateInput := textinput.New()
+	layoutTemplateInput.Placeholder = "Enter layout template..."
+	layoutTemplateInput.CharLimit = 240
+	layoutTemplateInput.Width = 72
+	layoutTemplateInput.SetValue(DefaultCustomLayoutTemplate)
+
 	m := &SettingsTableModel{
-		table:            t,
-		metadataViewport: metadataVp,
-		selectedBooks:    selectedBooks,
-		settings:         settings,
-		fieldMappings:    fieldMappings,
-		showAdvanced:     showAdvanced,
-		focusArea:        TableFocus,
+		table:               t,
+		metadataViewport:    metadataVp,
+		selectedBooks:       selectedBooks,
+		settings:            settings,
+		fieldMappings:       fieldMappings,
+		showAdvanced:        showAdvanced,
+		focusArea:           TableFocus,
+		layoutTemplate:      DefaultCustomLayoutTemplate,
+		layoutTemplateInput: layoutTemplateInput,
 	}
 
 	// Initialize metadata content
@@ -368,6 +390,29 @@ func (m *SettingsTableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if keyStr == "c" || keyStr == "n" {
 			// Don't consume - let main.go handle advancing to next screen
 			// Just continue processing normally (fall through)
+		} else if m.editingTemplate {
+			switch keyStr {
+			case "enter":
+				m.layoutTemplate = strings.TrimSpace(m.layoutTemplateInput.Value())
+				m.editingTemplate = false
+				m.layoutTemplateInput.Blur()
+				for i, fm := range m.fieldMappings {
+					if fm.Name == "Layout Template" {
+						m.updateTableRow(i)
+						break
+					}
+				}
+				m.updateMetadata()
+				return m, nil
+			case "esc":
+				m.editingTemplate = false
+				m.layoutTemplateInput.Blur()
+				m.layoutTemplateInput.SetValue(m.layoutTemplate)
+				return m, nil
+			default:
+				m.layoutTemplateInput, cmd = m.layoutTemplateInput.Update(msg)
+				return m, cmd
+			}
 		} else if m.showPopup {
 			// Handle popup keys - consume ALL other keys when popup is showing
 			switch keyStr {
@@ -483,6 +528,12 @@ func (m *SettingsTableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Show popup picker for complex settings when table is focused
 			if m.focusArea == TableFocus {
 				cursor := m.table.Cursor()
+				if cursor < len(m.fieldMappings) && m.fieldMappings[cursor].Name == "Layout Template" {
+					m.editingTemplate = true
+					m.layoutTemplateInput.SetValue(m.layoutTemplate)
+					m.layoutTemplateInput.Focus()
+					return m, textinput.Blink
+				}
 				if cursor < len(m.fieldMappings) && m.fieldMappings[cursor].Name != "───────────────────" {
 					// Only show popup for settings with 3+ options
 					if len(m.fieldMappings[cursor].Options) >= 3 {
@@ -523,7 +574,11 @@ func (m *SettingsTableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *SettingsTableModel) updateTableRow(index int) {
 	rows := m.table.Rows()
 	if index < len(rows) && index < len(m.fieldMappings) {
-		rows[index][1] = m.fieldMappings[index].Options[m.fieldMappings[index].Value]
+		if m.fieldMappings[index].Name == "Layout Template" {
+			rows[index][1] = truncateLayoutTemplate(m.layoutTemplate)
+		} else {
+			rows[index][1] = m.fieldMappings[index].Options[m.fieldMappings[index].Value]
+		}
 		m.table.SetRows(rows)
 	}
 }
@@ -633,7 +688,7 @@ func (m *SettingsTableModel) generateOutputPreview() string {
 		book := m.selectedBooks[i]
 
 		// Generate output path using universal function
-		outputPath := GenerateOutputPath(book, layout, fieldMapping, "output")
+		outputPath := GenerateOutputPath(book, layout, m.layoutTemplate, fieldMapping, "output")
 
 		// Colorize and format path
 		coloredPath := m.colorizeOutputPath(outputPath, layout)
@@ -1010,7 +1065,11 @@ func (m *SettingsTableModel) renderPopup() string {
 			fieldMapping := m.GetFieldMapping()
 
 			// Generate a preview path for this layout using universal function
-			previewPath := GenerateOutputPath(*currentBook, option, fieldMapping, "output")
+			layoutTemplate := ""
+			if option == "custom" {
+				layoutTemplate = m.layoutTemplate
+			}
+			previewPath := GenerateOutputPath(*currentBook, option, layoutTemplate, fieldMapping, "output")
 
 			// Colorize the preview
 			coloredPreview := m.colorizeOutputPath(previewPath, option)
@@ -1107,13 +1166,30 @@ func (m *SettingsTableModel) View() string {
 		return m.renderPopup()
 	}
 
+	if m.editingTemplate {
+		return m.renderLayoutTemplateEditor(baseView)
+	}
+
 	return baseView
+}
+
+func (m *SettingsTableModel) renderLayoutTemplateEditor(baseView string) string {
+	editorStyle := lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#FFFF00")).
+		Padding(1, 2).
+		Background(lipgloss.Color("#000000"))
+
+	content := "Edit Layout Template\n\n" + m.layoutTemplateInput.View() +
+		"\n\nEnter: Save • Esc: Cancel"
+	editor := editorStyle.Render(content)
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, editor)
 }
 
 // ShouldAdvance returns true if Enter should advance to next screen
 func (m *SettingsTableModel) ShouldAdvance() bool {
 	// Don't advance if popup is showing or was just closed
-	return !m.showPopup && !m.justClosedPopup
+	return !m.showPopup && !m.justClosedPopup && !m.editingTemplate
 }
 
 // GetConfig returns the current configuration
@@ -1127,6 +1203,8 @@ func (m *SettingsTableModel) GetConfig() map[string]string {
 		}
 	}
 
+	config["Layout Template"] = m.layoutTemplate
+
 	return config
 }
 
@@ -1138,16 +1216,17 @@ func (m *SettingsTableModel) GetFieldMapping() organizer.FieldMapping {
 	// 2: Verbose
 	// 3: separator
 	// 4: Layout
-	// 5: Flat Mode
-	// 6: Title Field
-	// 7: Series Field
-	// 8: Author Fields
-	// 9: Track Field
+	// 5: Layout Template
+	// 6: Flat Mode
+	// 7: Title Field
+	// 8: Series Field
+	// 9: Author Fields
+	// 10: Track Field
 
 	// Parse author fields
 	var authorFields []string
-	if len(m.fieldMappings) > 8 {
-		authorFieldsOption := m.fieldMappings[8].Options[m.fieldMappings[8].Value]
+	if len(m.fieldMappings) > 9 {
+		authorFieldsOption := m.fieldMappings[9].Options[m.fieldMappings[9].Value]
 		switch authorFieldsOption {
 		case "authors→artist→album_artist":
 			authorFields = []string{"authors", "artist", "album_artist"}
@@ -1165,9 +1244,9 @@ func (m *SettingsTableModel) GetFieldMapping() organizer.FieldMapping {
 	}
 
 	return organizer.FieldMapping{
-		TitleField:   m.fieldMappings[6].Options[m.fieldMappings[6].Value],
-		SeriesField:  m.fieldMappings[7].Options[m.fieldMappings[7].Value],
+		TitleField:   m.fieldMappings[7].Options[m.fieldMappings[7].Value],
+		SeriesField:  m.fieldMappings[8].Options[m.fieldMappings[8].Value],
 		AuthorFields: authorFields,
-		TrackField:   m.fieldMappings[9].Options[m.fieldMappings[9].Value],
+		TrackField:   m.fieldMappings[10].Options[m.fieldMappings[10].Value],
 	}
 }
