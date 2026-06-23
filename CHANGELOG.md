@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Per-file track prefixes during organize moves**: Multi-chapter book directories now use each audio file's embedded track number instead of applying the first file's track number to every moved file. Single-track audiobooks no longer receive a redundant `01 -` filename prefix.
+- **Template narrator field behavior**: `{narrator}` now renders only the first narrator, while `{narrators}` continues to render the full comma-separated narrator list.
 - Docker image publishing now builds with Go 1.25 so release tags match the toolchain required by `go.mod`.
 - Beta release tags now derive from the latest stable SemVer tag instead of stacking beta suffixes from prior prereleases.
 - Frontend embed path is now stable for goreleaser by building into `internal/server/static`.

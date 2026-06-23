@@ -362,10 +362,10 @@ func (tr *TemplateRenderer) resolveField(fieldName string, metadata Metadata) st
 		return ""
 
 	case "narrator":
-		return stringifyTemplateValue(rawTemplateValue(metadata, "narrator", "narrators"))
+		return resolveFirstNarrator(metadata)
 
 	case "narrators":
-		return stringifyTemplateValue(rawTemplateValue(metadata, fieldName, normalizedFieldName))
+		return resolveAllNarrators(metadata)
 
 	default:
 		return stringifyTemplateValue(rawTemplateValue(metadata, fieldName, normalizedFieldName))
@@ -413,6 +413,74 @@ func rawTemplateValue(metadata Metadata, fieldNames ...string) interface{} {
 		}
 	}
 	return nil
+}
+
+// resolveFirstNarrator returns the first narrator from metadata.
+func resolveFirstNarrator(metadata Metadata) string {
+	values := narratorValuesFromMetadata(metadata)
+	if len(values) == 0 {
+		return ""
+	}
+	return values[0]
+}
+
+// resolveAllNarrators returns all narrators as a comma-separated string.
+func resolveAllNarrators(metadata Metadata) string {
+	values := narratorValuesFromMetadata(metadata)
+	if len(values) == 0 {
+		return ""
+	}
+	return strings.Join(values, ", ")
+}
+
+func narratorValuesFromMetadata(metadata Metadata) []string {
+	if metadata.RawData == nil {
+		return nil
+	}
+
+	if val, ok := metadata.RawData["narrators"]; ok {
+		return templateValuesToStrings(val)
+	}
+	if val, ok := metadata.RawData["narrator"]; ok {
+		if text := stringifyTemplateValue(val); text != "" {
+			return []string{text}
+		}
+	}
+
+	return nil
+}
+
+func templateValuesToStrings(value interface{}) []string {
+	switch typed := value.(type) {
+	case nil:
+		return nil
+	case string:
+		if typed == "" {
+			return nil
+		}
+		return []string{typed}
+	case []string:
+		values := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if strings.TrimSpace(item) != "" {
+				values = append(values, item)
+			}
+		}
+		return values
+	case []interface{}:
+		values := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if text := stringifyTemplateValue(item); text != "" {
+				values = append(values, text)
+			}
+		}
+		return values
+	default:
+		if text := stringifyTemplateValue(typed); text != "" {
+			return []string{text}
+		}
+		return nil
+	}
 }
 
 func stringifyTemplateValue(value interface{}) string {
@@ -486,8 +554,13 @@ func GetAvailableFields() []TemplateField {
 		},
 		{
 			Name:        "narrator",
-			Description: "Narrator (if available)",
+			Description: "First narrator (if available)",
 			Example:     "Michael Kramer",
+		},
+		{
+			Name:        "narrators",
+			Description: "All narrators (comma-separated)",
+			Example:     "Michael Kramer, Kate Reading",
 		},
 	}
 }
