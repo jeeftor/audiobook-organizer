@@ -207,11 +207,19 @@ func parseCompositeContent(content string) ([]templatePart, error) {
 	return parts, nil
 }
 
+// normalizeCompositeContentForFieldScan replaces dashes with underscores so composite
+// field references match known underscore field names. Dash-to-underscore is a
+// one-to-one replacement, so scan indices align with the original content string.
+func normalizeCompositeContentForFieldScan(content string) string {
+	return strings.ReplaceAll(content, "-", "_")
+}
+
 func findFieldReferenceAt(content string, start int) (fieldName, format string, fieldStart, fieldEnd int, found bool) {
+	scanContent := normalizeCompositeContentForFieldScan(content)
 	earliest := -1
 
 	for _, candidate := range knownTemplateFields {
-		idx := strings.Index(content[start:], candidate)
+		idx := strings.Index(scanContent[start:], candidate)
 		if idx == -1 {
 			continue
 		}
@@ -286,6 +294,9 @@ func (tr *TemplateRenderer) renderCompositeToken(token templateToken, metadata M
 			continue
 		}
 		if tr.resolveFieldFormatted(part.field, part.format, metadata) == "" {
+			if token.fallback != "" {
+				return token.fallback, nil
+			}
 			return "", nil
 		}
 	}

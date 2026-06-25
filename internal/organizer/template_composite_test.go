@@ -91,6 +91,24 @@ func TestCompositeOptionalSegmentRender(t *testing.T) {
 			want:     "Vol 02 - Book Title",
 		},
 		{
+			name:     "composite accepts dash-separated field name",
+			template: "{Vol series-number:02}",
+			metadata: seriesBookMetadata(),
+			want:     "Vol 02",
+		},
+		{
+			name:     "composite dash field name omits when missing",
+			template: "{Vol series-number:02}",
+			metadata: standaloneBookMetadata(),
+			want:     "",
+		},
+		{
+			name:     "composite dash field preserves literal dashes",
+			template: "{Vol series-number:02 - }",
+			metadata: seriesBookMetadata(),
+			want:     "Vol 02 - ",
+		},
+		{
 			name:     "simple field format renders padded value",
 			template: "{series_number:02}",
 			metadata: seriesBookMetadata(),
@@ -107,6 +125,18 @@ func TestCompositeOptionalSegmentRender(t *testing.T) {
 			template: "{series|Standalone}",
 			metadata: standaloneBookMetadata(),
 			want:     "Standalone",
+		},
+		{
+			name:     "composite fallback renders when inner field missing",
+			template: "{Vol series_number:02 - |No Volume}",
+			metadata: standaloneBookMetadata(),
+			want:     "No Volume",
+		},
+		{
+			name:     "composite fallback ignored when inner field present",
+			template: "{Vol series_number:02 - |No Volume}",
+			metadata: seriesBookMetadata(),
+			want:     "Vol 02 - ",
 		},
 	}
 
