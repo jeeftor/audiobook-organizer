@@ -580,6 +580,105 @@ func TestIsSubPathOf(t *testing.T) {
 	}
 }
 
+func TestCalculateFileTargetNameUsesPerFileTrackNumbers(t *testing.T) {
+	bookDir := t.TempDir()
+	sourceFiles := []struct {
+		src      string
+		destName string
+		wantName string
+	}{
+		{
+			src:      "../../testdata/mp3/strange_audiobook_1_Mystery_Series_Mystery_of_the_Lost_City_Jane_Doe_Tr1.mp3",
+			destName: "chapter01.mp3",
+			wantName: "01 - chapter01.mp3",
+		},
+		{
+			src:      "../../testdata/mp3/strange_audiobook_2_Mystery_Series_Mystery_of_the_Lost_City_Jane_Doe_Tr2.mp3",
+			destName: "chapter02.mp3",
+			wantName: "02 - chapter02.mp3",
+		},
+		{
+			src:      "../../testdata/mp3/strange_audiobook_3_Mystery_Series_Mystery_of_the_Lost_City_Jane_Doe_Tr3.mp3",
+			destName: "chapter03.mp3",
+			wantName: "03 - chapter03.mp3",
+		},
+	}
+
+	for _, file := range sourceFiles {
+		data, err := os.ReadFile(file.src)
+		if err != nil {
+			t.Fatalf("failed to read fixture %s: %v", file.src, err)
+		}
+		if err := os.WriteFile(filepath.Join(bookDir, file.destName), data, 0o644); err != nil {
+			t.Fatalf("failed to write fixture copy %s: %v", file.destName, err)
+		}
+	}
+
+	org, err := NewOrganizer(&OrganizerConfig{
+		BaseDir:      bookDir,
+		FieldMapping: DefaultFieldMapping(),
+	})
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
+
+	dirMetadata := &Metadata{
+		Title:       "Mystery of the Lost City",
+		Authors:     []string{"Jane Doe"},
+		TrackNumber: 1,
+	}
+
+	for _, file := range sourceFiles {
+		got := org.calculateFileTargetName(bookDir, file.destName, dirMetadata)
+		if got != file.wantName {
+			t.Fatalf(
+				"calculateFileTargetName(%q) = %q, want %q",
+				file.destName,
+				got,
+				file.wantName,
+			)
+		}
+	}
+}
+
+func TestCalculateSingleFileTargetPathSkipsSingleTrackPrefix(t *testing.T) {
+	tempDir := t.TempDir()
+	outputDir := filepath.Join(tempDir, "output")
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		t.Fatalf("Failed to create output directory: %v", err)
+	}
+
+	config := OrganizerConfig{
+		BaseDir:      tempDir,
+		OutputDir:    outputDir,
+		FieldMapping: DefaultFieldMapping(),
+	}
+	org, err := NewOrganizer(&config)
+	if err != nil {
+		t.Fatalf("NewOrganizer() error = %v", err)
+	}
+
+	metadata := Metadata{
+		Title:       "Single Track Audiobook",
+		Authors:     []string{"Test Author"},
+		TrackNumber: 1,
+		RawData: map[string]interface{}{
+			"track_total": 1,
+		},
+	}
+	filePath := filepath.Join(tempDir, "book.m4b")
+
+	targetPath, err := org.calculateSingleFileTargetPathE(filePath, metadata)
+	if err != nil {
+		t.Fatalf("calculateSingleFileTargetPathE() error = %v", err)
+	}
+
+	expected := filepath.Join(outputDir, "Test Author", "Single Track Audiobook", "book.m4b")
+	if targetPath != expected {
+		t.Fatalf("calculateSingleFileTargetPathE() = %q, want %q", targetPath, expected)
+	}
+}
+
 // Helper function to detect Windows (for tests that need to skip on Windows)
 func isWindows() bool {
 	return strings.Contains(strings.ToLower(os.Getenv("OS")), "windows")

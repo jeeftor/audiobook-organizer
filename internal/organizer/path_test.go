@@ -5,6 +5,34 @@ import (
 	"testing"
 )
 
+func TestShouldAddTrackPrefix(t *testing.T) {
+	tests := []struct {
+		name        string
+		trackNumber int
+		trackTotal  int
+		want        bool
+	}{
+		{name: "no track number", trackNumber: 0, trackTotal: 0, want: false},
+		{name: "single track audiobook", trackNumber: 1, trackTotal: 1, want: false},
+		{name: "multi track chapter", trackNumber: 1, trackTotal: 20, want: true},
+		{name: "unknown total keeps prefix", trackNumber: 2, trackTotal: 0, want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ShouldAddTrackPrefix(tt.trackNumber, tt.trackTotal); got != tt.want {
+				t.Fatalf(
+					"ShouldAddTrackPrefix(%d, %d) = %v, want %v",
+					tt.trackNumber,
+					tt.trackTotal,
+					got,
+					tt.want,
+				)
+			}
+		})
+	}
+}
+
 func TestSanitizePath(t *testing.T) {
 	tests := []struct {
 		name         string

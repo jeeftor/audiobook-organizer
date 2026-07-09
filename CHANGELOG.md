@@ -24,7 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Web UI gating coverage**: Hardened Playwright checks for organize confirmation cancellation, failed preview lockouts, retry recovery, and ABS cleanup acknowledgement gating.
 - **ABS metadata organization**: Added `audiobook-organizer abs organize` so already-indexed Audiobookshelf items can be reorganized with ABS API metadata while reusing the normal organizer move, dry-run, undo, layout, logging, and scan follow-up flow.
 - **Custom organization layout templates**: Added `--layout-template` and web UI support for template-driven directory layouts such as `{author}/{series}/{series-count} - {title} ({narrator})`.
+- **Composite layout template segments**: Custom templates now support optional literal+field composites such as `{Vol series_number:02 - }` and `{ [narrator]}`, numeric padding via `{series_number:02}`, and omission of empty slash-separated layout path segments.
 - **Layout template CLI help**: Added `audiobook-organizer layout-template` for an in-terminal field reference, fallback syntax, examples, and path safety rules.
+- **TUI custom layout templates**: The organize TUI settings screen now includes a `custom` layout option and editable layout template field.
 - **Text-only metadata inspection**: `audiobook-organizer metadata` now prints non-interactive metadata scan results, `metadata --json` writes machine-readable output, and `metadata-tui` keeps the old interactive metadata exploration workflow explicit.
 - **Verbose metadata inspection**: `audiobook-organizer metadata --verbose` now prints human-friendly visual labels for docs and manual metadata review.
 - **Pretty metadata inspection**: `audiobook-organizer metadata --pretty` now reuses the organizer metadata formatter for source indicators, field mapping context, and hybrid metadata review while preserving the existing JSON output shape.
@@ -35,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Per-file track prefixes during organize moves**: Multi-chapter book directories now use each audio file's embedded track number instead of applying the first file's track number to every moved file. Single-track audiobooks no longer receive a redundant `01 -` filename prefix.
+- **Template narrator field behavior**: `{narrator}` now renders only the first narrator, while `{narrators}` continues to render the full comma-separated narrator list.
 - Docker image publishing now builds with Go 1.25 so release tags match the toolchain required by `go.mod`.
 - Beta release tags now derive from the latest stable SemVer tag instead of stacking beta suffixes from prior prereleases.
 - Frontend embed path is now stable for goreleaser by building into `internal/server/static`.

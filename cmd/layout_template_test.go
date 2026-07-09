@@ -59,7 +59,9 @@ func TestLayoutTemplateCommandOutputCoversFieldsAndSafety(t *testing.T) {
 		"{narrators}",
 		"{publisher-name}",
 		"{series|Standalone}",
+		"{Vol series_number:02 - }",
 		"${field}",
+		"Composite optional segment",
 		"Absolute templates",
 		"https://github.com/jeeftor/audiobook-organizer/blob/master/docs/LAYOUTS.md",
 	} {

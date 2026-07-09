@@ -110,6 +110,30 @@ func IsSupportedAudioFile(ext string) bool {
 	return SupportedAudioExtensions[strings.ToLower(ext)]
 }
 
+// ShouldAddTrackPrefix reports whether a track number prefix should be added to a filename.
+// Single-track audiobooks (track_total == 1) keep their original filename.
+func ShouldAddTrackPrefix(trackNumber, trackTotal int) bool {
+	if trackNumber <= 0 {
+		return false
+	}
+	return trackTotal != 1
+}
+
+// TrackTotalFromMetadata returns the total track count from metadata raw data.
+func TrackTotalFromMetadata(metadata Metadata) int {
+	if metadata.RawData == nil {
+		return 0
+	}
+	switch value := metadata.RawData["track_total"].(type) {
+	case int:
+		return value
+	case float64:
+		return int(value)
+	default:
+		return 0
+	}
+}
+
 // AddTrackPrefix adds a track number prefix to a filename if not already present.
 // Returns the original filename if track number is 0 or prefix already exists.
 func AddTrackPrefix(filename string, trackNumber int) string {

@@ -853,7 +853,7 @@ const stageText: Record<StageId, { heading: string; copy: string }> = {
 }
 
 const customLayoutValue = 'custom'
-const defaultCustomLayoutTemplate = '{author}/{series|Standalone}/{series-count} - {title}'
+const defaultCustomLayoutTemplate = '{author}/{series|Standalone}/{Vol series_number:02 - }{title}{ [narrator]}'
 const customLayoutOption: Option = { value: customLayoutValue, label: 'Custom' }
 const defaultLayouts: Option[] = [{ value: 'author-series-title', label: 'Author / Series / Title' }]
 const layoutTemplateFields: TemplateField[] = [

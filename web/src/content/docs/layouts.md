@@ -100,7 +100,7 @@ audiobook-organizer layout-template
 audiobook-organizer \
   --dir=/books \
   --out=/organized \
-  --layout-template="{author}/{series|Standalone}/{series-count} - {title} ({narrator})"
+  --layout-template="{author}/{series|Standalone}/{Vol series_number:02 - }{title}{ [narrator]}"
 ```
 
 Template fields use the same renderer as rename templates. Both `{field}` and `${field}` are accepted, and fallback values use `|`:
@@ -112,10 +112,21 @@ Template fields use the same renderer as rename templates. Both `{field}` and `$
 | `{series}` | `Oz` |
 | `{series_full}` | `Oz #3` |
 | `{series_number}` or `{series-count}` | `3` |
+| `{series_number:02}` | `03` |
 | `{album}` | `Oz` |
 | `{track}` | `01` |
-| `{narrator}` or `{narrators}` | `Volunteer Reader` |
+| `{narrator}` | `Volunteer Reader` |
+| `{narrators}` | `Volunteer Reader, Second Reader` |
 | `{year}` | `1907` |
+
+**Composite optional segments** combine literal text with field references inside one `{...}` token. If any referenced field inside the token is empty, the entire token is omitted. Field names inside composites are written without nested braces:
+
+```bash
+{Vol series_number:02 - }     # "Vol 02 - " or omitted when series number is missing
+{ [narrator]}                  # " [Narrator Name]" or omitted when narrator is missing
+```
+
+**Empty path segments:** slash-separated parts such as `{author}/{series}/{title}` omit a segment entirely when it renders empty, so standalones become `Author/Title` rather than creating blank folders. Use `{series|Standalone}` when you want a fallback folder name instead.
 
 Templates can also reference raw metadata keys. Dashes are normalized to underscores, so `{publisher-name}` can read a raw `publisher_name` field.
 

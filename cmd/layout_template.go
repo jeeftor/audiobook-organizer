@@ -23,12 +23,14 @@ func layoutTemplateHelpText() string {
 
 USAGE
   audiobook-organizer --dir=/books --out=/organized \
-    --layout-template="{author}/{series|Standalone}/{series-count} - {title}"
+    --layout-template="{author}/{series|Standalone}/{Vol series_number:02 - }{title}{ [narrator]}"
 
 PLACEHOLDER SYNTAX
   {field}              Render a metadata field
   ${field}             Alternate field syntax
   {field|Fallback}     Use fallback text when the field is missing or empty
+  {field:02}           Zero-pad numeric fields such as series_number
+  {Vol series_number:02 - }  Composite optional segment omitted when any inner field is empty
 
 COMMON FIELDS
   {author}             First author, formatted with the organizer author format
@@ -49,14 +51,17 @@ RAW METADATA FIELDS
   underscores, so {publisher-name} can read a raw field named publisher_name.
 
 EXAMPLES
-  Author / Series / Number - Title
-    {author}/{series}/{series-count} - {title}
+  Author / Series / Vol NN - Title with optional narrator brackets
+    {author}/{series|Standalone}/{Vol series_number:02 - }{title}{ [narrator]}
 
   Standalone fallback for books without a series
     {author}/{series|Standalone}/{title}
 
-  Include narrator in the book folder
-    {author}/{series|Standalone}/{series-count} - {title} ({narrator|Unknown Narrator})
+  Include narrator in the book folder. (Placeholders get omitted when empty)
+    {author}/{series|Standalone}/{series-count} - {title} {(narrator)}    
+  
+  Omit empty slash-separated segments automatically
+    {author}/{series}/{title}
 
 PATH SAFETY
   Slashes in the template create directories. Metadata values are sanitized

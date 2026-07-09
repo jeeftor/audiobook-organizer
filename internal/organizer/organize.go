@@ -513,7 +513,10 @@ func (o *Organizer) calculateSingleFileTargetPathE(
 	if err != nil {
 		return "", err
 	}
-	targetFileName := AddTrackPrefix(filepath.Base(filePath), metadata.TrackNumber)
+	targetFileName := filepath.Base(filePath)
+	if ShouldAddTrackPrefix(metadata.TrackNumber, TrackTotalFromMetadata(metadata)) {
+		targetFileName = AddTrackPrefix(targetFileName, metadata.TrackNumber)
+	}
 	return filepath.Join(targetDir, targetFileName), nil
 }
 
@@ -1084,7 +1087,7 @@ func (o *Organizer) processDirectoryFiles(
 		}
 
 		sourceName := filepath.Join(sourcePath, entry.Name())
-		targetName := o.calculateFileTargetName(entry.Name(), dirMetadata)
+		targetName := o.calculateFileTargetName(sourcePath, entry.Name(), dirMetadata)
 		targetFullPath := filepath.Join(targetPath, targetName)
 		fileNames = append(fileNames, FilePair{From: entry.Name(), To: targetName})
 
@@ -1104,13 +1107,18 @@ func (o *Organizer) processDirectoryFiles(
 }
 
 // calculateFileTargetName determines the target filename, adding track prefixes when appropriate.
-func (o *Organizer) calculateFileTargetName(fileName string, dirMetadata *Metadata) string {
+func (o *Organizer) calculateFileTargetName(
+	sourcePath, fileName string,
+	dirMetadata *Metadata,
+) string {
 	// Use the FilenameNormalizer for consistent processing
 	normalizer := NewFilenameNormalizer()
 
-	// Add track prefix if available in metadata
-	if dirMetadata != nil && dirMetadata.TrackNumber > 0 {
-		normalizer = normalizer.WithTrackPrefix(dirMetadata.TrackNumber)
+	if IsSupportedAudioFile(filepath.Ext(fileName)) {
+		trackNumber, trackTotal := o.resolveFileTrackMetadata(sourcePath, fileName, dirMetadata)
+		if ShouldAddTrackPrefix(trackNumber, trackTotal) {
+			normalizer = normalizer.WithTrackPrefix(trackNumber)
+		}
 	}
 
 	// Apply space replacement if configured
@@ -1119,4 +1127,27 @@ func (o *Organizer) calculateFileTargetName(fileName string, dirMetadata *Metada
 	}
 
 	return normalizer.Normalize(fileName)
+}
+
+// resolveFileTrackMetadata prefers embedded per-file track metadata over book-level values.
+func (o *Organizer) resolveFileTrackMetadata(
+	sourcePath, fileName string,
+	dirMetadata *Metadata,
+) (trackNumber, trackTotal int) {
+	if IsSupportedAudioFile(filepath.Ext(fileName)) {
+		filePath := filepath.Join(sourcePath, fileName)
+		if fileMetadata, err := extractFileLevelMetadata(filePath); err == nil {
+			trackNumber = fileMetadata.TrackNumber
+			trackTotal = TrackTotalFromMetadata(fileMetadata)
+			if trackNumber > 0 {
+				return trackNumber, trackTotal
+			}
+		}
+	}
+
+	if dirMetadata != nil {
+		return dirMetadata.TrackNumber, TrackTotalFromMetadata(*dirMetadata)
+	}
+
+	return 0, 0
 }

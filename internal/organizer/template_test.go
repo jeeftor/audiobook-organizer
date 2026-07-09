@@ -207,7 +207,7 @@ func TestTemplateRender(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:     "narrator array renders as comma separated value",
+			name:     "narrators field renders full comma separated list",
 			template: "{title} ({narrators})",
 			metadata: Metadata{
 				Title:   "The Stone Sky",
@@ -217,6 +217,32 @@ func TestTemplateRender(t *testing.T) {
 				},
 			},
 			want:    "The Stone Sky (Robin Miles, LeVar Burton)",
+			wantErr: false,
+		},
+		{
+			name:     "narrator field renders only first narrator from list",
+			template: "{title} ({narrator})",
+			metadata: Metadata{
+				Title:   "The Stone Sky",
+				Authors: []string{"N. K. Jemisin"},
+				RawData: map[string]interface{}{
+					"narrators": []interface{}{"Robin Miles", "LeVar Burton"},
+				},
+			},
+			want:    "The Stone Sky (Robin Miles)",
+			wantErr: false,
+		},
+		{
+			name:     "narrator field uses single narrator value",
+			template: "{title} ({narrator})",
+			metadata: Metadata{
+				Title:   "The Fifth Season",
+				Authors: []string{"N. K. Jemisin"},
+				RawData: map[string]interface{}{
+					"narrator": "Robin Miles",
+				},
+			},
+			want:    "The Fifth Season (Robin Miles)",
 			wantErr: false,
 		},
 	}

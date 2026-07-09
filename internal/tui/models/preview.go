@@ -68,7 +68,8 @@ func (m *PreviewModel) generatePreviews() {
 		if outputDir == "" {
 			outputDir = "output"
 		}
-		targetPath := GenerateOutputPath(book, layout, m.fieldMapping, outputDir)
+		layoutTemplate := m.config["Layout Template"]
+		targetPath := GenerateOutputPath(book, layout, layoutTemplate, m.fieldMapping, outputDir)
 
 		// Add to moves
 		m.moves = append(m.moves, MovePreview{
