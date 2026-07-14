@@ -214,7 +214,10 @@ func normalizeCompositeContentForFieldScan(content string) string {
 	return strings.ReplaceAll(content, "-", "_")
 }
 
-func findFieldReferenceAt(content string, start int) (fieldName, format string, fieldStart, fieldEnd int, found bool) {
+func findFieldReferenceAt(
+	content string,
+	start int,
+) (fieldName, format string, fieldStart, fieldEnd int, found bool) {
 	scanContent := normalizeCompositeContentForFieldScan(content)
 	earliest := -1
 
@@ -288,7 +291,10 @@ func (tr *TemplateRenderer) Render(metadata Metadata) (string, error) {
 	return result.String(), nil
 }
 
-func (tr *TemplateRenderer) renderCompositeToken(token templateToken, metadata Metadata) (string, error) {
+func (tr *TemplateRenderer) renderCompositeToken(
+	token templateToken,
+	metadata Metadata,
+) (string, error) {
 	for _, part := range token.composite {
 		if !part.isField {
 			continue
@@ -313,7 +319,10 @@ func (tr *TemplateRenderer) renderCompositeToken(token templateToken, metadata M
 	return result.String(), nil
 }
 
-func (tr *TemplateRenderer) resolveFieldFormatted(fieldName, format string, metadata Metadata) string {
+func (tr *TemplateRenderer) resolveFieldFormatted(
+	fieldName, format string,
+	metadata Metadata,
+) string {
 	value := tr.resolveField(fieldName, metadata)
 	return applyNumericFormat(value, format)
 }
