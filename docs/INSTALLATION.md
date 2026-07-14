@@ -89,7 +89,21 @@ docker run --rm \
   jeffsui/audiobook-organizer --dir=/books --out=/output --dry-run
 ```
 
-The local web UI is primarily intended for host installs. For Docker, prefer CLI or TUI workflows unless you explicitly publish and secure a local port.
+To run the local web UI in Docker, bind the server to all container interfaces
+and publish the container port:
+
+```bash
+docker run --rm -p 8080:8080 \
+  -v /path/to/audiobooks:/books \
+  -v /path/to/output:/output \
+  jeffsui/audiobook-organizer:latest \
+  web --host=0.0.0.0 --port=8080 --no-open
+```
+
+Open the tokenized URL printed in the container logs at
+`http://localhost:8080/`. Keep that URL private. When using Traefik or another
+reverse proxy, route to container port `8080`, not the host-side published
+port.
 
 ### Go Install
 

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Docker web UI access**: Documented the required `--host=0.0.0.0` bind,
+  container port publishing, token handling, and reverse-proxy backend port.
+
 ## [v0.13.1] — 2026-07-14
 
 ### Added
