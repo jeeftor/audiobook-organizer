@@ -165,13 +165,17 @@ jobs:
       with:
         script: |
           const marker = '<!-- web-session-token-regression -->'
+          const repositoryURL = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`
+          const pullRequestNumber = context.payload.pull_request.number
           const body = [
             marker,
-            'The CI regression test `#187: explains how to recover when the browser opens without the web session token` failed.',
+            '## Web session-token regression failed',
             '',
-            `PR: #${context.payload.pull_request.number} (${context.payload.pull_request.html_url})`,
-            `Commit: ${context.sha}`,
-            `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            'Opening the web UI without its `?token=...` session parameter still does not show recovery guidance.',
+            '',
+            `[View failed CI run](${repositoryURL}/actions/runs/${context.runId}) · [PR #${pullRequestNumber}](${repositoryURL}/pull/${pullRequestNumber}) · [commit ${context.sha.slice(0, 7)}](${repositoryURL}/commit/${context.sha})`,
+            '',
+            'Expected while the #187 fix is in progress.',
           ].join('\\n')
           const comments = await github.paginate(github.rest.issues.listComments, {
             owner: context.repo.owner,
