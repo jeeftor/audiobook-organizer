@@ -58,8 +58,8 @@ EXAMPLES
     {author}/{series|Standalone}/{title}
 
   Include narrator in the book folder. (Placeholders get omitted when empty)
-    {author}/{series|Standalone}/{series-count} - {title} {(narrator)}    
-  
+    {author}/{series|Standalone}/{series-count} - {title} {(narrator)}
+
   Omit empty slash-separated segments automatically
     {author}/{series}/{title}
 
