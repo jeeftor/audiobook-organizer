@@ -431,6 +431,14 @@ select:focus {
   font-size: 12px;
 }
 
+.field-mapping-panel .hint {
+  margin: 0;
+}
+
+.field-mapping-panel label + input {
+  margin-bottom: 2px;
+}
+
 .template-builder {
   display: grid;
   gap: 10px;

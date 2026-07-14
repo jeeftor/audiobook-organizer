@@ -183,6 +183,28 @@ test('uses numbered layout and removes empty source folders after organize run',
   }
 })
 
+test('uses a custom metadata field mapping in a real organize preview', async ({ page }) => {
+  test.setTimeout(60_000)
+
+  const fixture = await createFieldMappingFixture()
+  try {
+    await loadApp(page)
+    await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
+    await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
+
+    await expect(page.getByText(fixture.defaultDir)).toBeVisible()
+    await page.getByRole('textbox', { name: 'Title field mapping' }).fill('alternate_title')
+    await page.getByRole('textbox', { name: 'Author field mapping' }).fill('alternate_authors')
+    await page.getByRole('textbox', { name: 'Series field mapping' }).fill('alternate_series')
+
+    await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
+    await expect(page.getByText(fixture.mappedDir)).toBeVisible()
+    await expect(page.getByText(fixture.defaultDir)).toHaveCount(0)
+  } finally {
+    await fixture.cleanup()
+  }
+})
+
 test('uses a custom layout template for real organize preview and execution', async ({ page }) => {
   test.setTimeout(60_000)
 
@@ -484,6 +506,41 @@ async function createPathErrorFixture(): Promise<PathErrorFixture> {
 
 async function mkFixtureRoot(): Promise<string> {
   return mkdtemp(join(tmpdir(), 'abo-web-organize-'))
+}
+
+async function createFieldMappingFixture(): Promise<{
+  sourceDir: string
+  outputDir: string
+  defaultDir: string
+  mappedDir: string
+  cleanup: () => Promise<void>
+}> {
+  const root = await mkFixtureRoot()
+  const sourceDir = join(root, 'input')
+  const outputDir = join(root, 'output')
+  const bookDir = join(sourceDir, 'mapped-book')
+  const sourceAudio = join(repoRoot, 'testdata', 'mp3flat', 'charlesdexterward_01_lovecraft_64kb.mp3')
+  await mkdir(bookDir, { recursive: true })
+  await mkdir(outputDir, { recursive: true })
+  await copyFile(sourceAudio, join(bookDir, 'book.mp3'))
+  await writeFile(
+    join(bookDir, 'metadata.json'),
+    JSON.stringify({
+      title: 'Default Title',
+      authors: ['Default Author'],
+      series: ['Default Series #1'],
+      alternate_title: 'Mapped Title',
+      alternate_authors: ['Mapped Author'],
+      alternate_series: 'Mapped Series #2',
+    }),
+  )
+  return {
+    sourceDir,
+    outputDir,
+    defaultDir: join(outputDir, 'Default Author', 'Default Series', 'Default Title'),
+    mappedDir: join(outputDir, 'Mapped Author', 'Mapped Series', 'Mapped Title'),
+    cleanup: () => rm(root, { recursive: true, force: true }),
+  }
 }
 
 async function pathExists(path: string): Promise<boolean> {
