@@ -21,4 +21,6 @@ FROM --platform=$TARGETPLATFORM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/audiobook-organizer .
 
+EXPOSE 8080
+
 ENTRYPOINT ["/app/audiobook-organizer"]

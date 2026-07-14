@@ -95,6 +95,21 @@ Docker:
 docker pull jeffsui/audiobook-organizer:latest
 ```
 
+To run the local web UI in Docker, bind the server to all container interfaces,
+publish the container port, and keep the session-token URL private:
+
+```bash
+docker run --rm -p 8080:8080 \
+  -v /path/to/audiobooks:/books \
+  -v /path/to/output:/output \
+  jeffsui/audiobook-organizer:latest \
+  web --host=0.0.0.0 --port=8080 --no-open
+```
+
+Open the tokenized URL printed in the container logs at
+`http://localhost:8080/`. When using Traefik or another reverse proxy, route
+to container port `8080`, not the host-side published port.
+
 Release archives and Linux packages are available from [GitHub Releases](https://github.com/jeeftor/audiobook-organizer/releases). See the [installation guide](docs/INSTALLATION.md) for package details and platform notes.
 
 ## Safe First Run
