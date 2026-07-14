@@ -215,6 +215,8 @@ export type OptionsResponse = {
 
 const token = new URLSearchParams(window.location.search).get('token') ?? ''
 
+export const hasWebSessionToken = token !== ''
+
 export async function apiGet<T>(path: string): Promise<T> {
   const response = await fetch(path, {
     headers: token ? { 'X-Audiobook-Organizer-Token': token } : undefined,

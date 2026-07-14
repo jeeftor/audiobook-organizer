@@ -21,7 +21,7 @@ audiobook-organizer web --host=127.0.0.1 --port=8080
 audiobook-organizer web --no-open
 ```
 
-The server generates a temporary token at startup. The browser URL includes that token, and API requests can also pass it with `X-Audiobook-Organizer-Token` or `Authorization: Bearer`.
+The server generates a temporary token at startup. The browser URL includes that token, and API requests can also pass it with `X-Audiobook-Organizer-Token` or `Authorization: Bearer`. If you open the UI without the token, reopen the complete startup URL.
 
 ## Interface
 

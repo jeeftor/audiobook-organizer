@@ -11,6 +11,10 @@
       <span class="server-status">{{ serverLabel }}</span>
     </header>
 
+    <p v-if="!hasWebSessionToken" class="inline-alert session-token-alert" role="alert">
+      This web session link is missing its token. Reopen the complete startup URL.
+    </p>
+
     <section class="workflow-switcher" aria-label="Workflow">
       <button
         v-for="workflow in workflows"
@@ -748,6 +752,7 @@ import TemplateBuilder, { type TemplateField } from './components/TemplateBuilde
 import {
   apiGet,
   apiPost,
+  hasWebSessionToken,
   type ABSCleanMissingResponse,
   type ABSConfig,
   type ABSItemsResponse,
@@ -2324,6 +2329,11 @@ function now() {
 }
 
 onMounted(async () => {
+  if (!hasWebSessionToken) {
+    bootstrapComplete.value = true
+    return
+  }
+
   addRequestStart('Health check', 'GET /api/health')
   try {
     const response = await apiGet<HealthResponse>('/api/health')
