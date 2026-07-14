@@ -1069,7 +1069,13 @@ func (m *SettingsTableModel) renderPopup() string {
 			if option == "custom" {
 				layoutTemplate = m.layoutTemplate
 			}
-			previewPath := GenerateOutputPath(*currentBook, option, layoutTemplate, fieldMapping, "output")
+			previewPath := GenerateOutputPath(
+				*currentBook,
+				option,
+				layoutTemplate,
+				fieldMapping,
+				"output",
+			)
 
 			// Colorize the preview
 			coloredPreview := m.colorizeOutputPath(previewPath, option)
