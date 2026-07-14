@@ -66,7 +66,7 @@ Use `--no-open` and copy the printed local URL:
 audiobook-organizer web --no-open
 ```
 
-The server binds to `127.0.0.1` by default and uses a temporary token.
+The server binds to `127.0.0.1` by default and uses a temporary token. Open the complete startup URL, including its `?token=...` parameter; otherwise the UI cannot call its API.
 
 ## Docs Visual Generation Fails
 

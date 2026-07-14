@@ -856,6 +856,10 @@ select:focus {
   font-size: 12px;
 }
 
+.session-token-alert {
+  margin: 16px 20px 0;
+}
+
 .success-note {
   width: 100%;
   padding: 10px 11px;

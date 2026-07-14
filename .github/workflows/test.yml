@@ -154,7 +154,7 @@ jobs:
 
     - name: Run #187 web session-token regression
       id: regression
-      run: cd web && npx playwright test e2e/gui-smoke.spec.ts --project=chromium-desktop --grep '#187:'
+      run: cd web && npm run build && npx playwright test e2e/gui-smoke.spec.ts --project=chromium-desktop --grep '#187:'
 
     - name: Comment on #187 when its regression fails
       if: >-
