@@ -92,6 +92,28 @@ test('previews and executes real rename candidates through the web UI', async ({
   }
 })
 
+test('uses a custom metadata field mapping in a real rename preview', async ({ page }) => {
+  test.setTimeout(60_000)
+
+  const fixture = await createFieldMappingRenameFixture()
+  try {
+    await loadApp(page)
+    await page.getByRole('button', { name: /Rename/ }).click()
+    await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
+    await page.getByRole('textbox', { name: 'Filename template' }).fill('{author} - {title}')
+
+    await expect(page.locator('.move-list').filter({ hasText: fixture.defaultPath })).toBeVisible()
+    await page.getByRole('textbox', { name: 'Title field mapping' }).fill('alternate_title')
+    await page.getByRole('textbox', { name: 'Author field mapping' }).fill('alternate_authors')
+
+    await expect(page.getByRole('heading', { name: 'Rename preview ready' })).toBeVisible()
+    await expect(page.locator('.move-list').filter({ hasText: fixture.mappedPath })).toBeVisible()
+    await expect(page.locator('.move-list').filter({ hasText: fixture.defaultPath })).toHaveCount(0)
+  } finally {
+    await fixture.cleanup()
+  }
+})
+
 type RenameFixture = {
   sourceDir: string
   firstOriginalPath: string
@@ -139,6 +161,35 @@ async function createRenameFixture(): Promise<RenameFixture> {
     noopPath: join(noopDir, 'Noop Author - Noop Book.mp3'),
     brokenPath: join(brokenDir, 'broken.mp3'),
     logPath: join(root, '.abook-rename.log'),
+    cleanup: () => rm(root, { recursive: true, force: true }),
+  }
+}
+
+async function createFieldMappingRenameFixture(): Promise<{
+  sourceDir: string
+  defaultPath: string
+  mappedPath: string
+  cleanup: () => Promise<void>
+}> {
+  const root = await mkdtemp(join(tmpdir(), 'abo-web-rename-mapping-'))
+  const sourceAudio = join(repoRoot(), 'testdata', 'mp3flat', 'charlesdexterward_01_lovecraft_64kb.mp3')
+  const bookDir = join(root, 'mapped-book')
+  const originalPath = join(bookDir, 'original.mp3')
+  await mkdir(bookDir, { recursive: true })
+  await copyFile(sourceAudio, originalPath)
+  await writeFile(
+    join(bookDir, 'metadata.json'),
+    JSON.stringify({
+      title: 'Default Title',
+      authors: ['Default Author'],
+      alternate_title: 'Mapped Title',
+      alternate_authors: ['Mapped Author'],
+    }),
+  )
+  return {
+    sourceDir: root,
+    defaultPath: join(bookDir, 'Default Author - Default Title.mp3'),
+    mappedPath: join(bookDir, 'Mapped Author - Mapped Title.mp3'),
     cleanup: () => rm(root, { recursive: true, force: true }),
   }
 }

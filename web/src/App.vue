@@ -152,6 +152,41 @@
               <p class="hint">{{ currentWorkflow.configureHint }}</p>
             </div>
 
+            <div v-if="activeWorkflow !== 'abs'" class="panel-section field-mapping-panel">
+              <h3>Metadata Field Mapping</h3>
+              <p class="hint">Choose a source preset, then adjust field names to match your metadata.</p>
+              <label>Mapping preset</label>
+              <select
+                :value="activeFieldMappingPreset"
+                aria-label="Field mapping preset"
+                @change="applyFieldMappingPreset(($event.target as HTMLSelectElement).value)"
+              >
+                <option value="custom">Custom mapping</option>
+                <option v-for="preset in fieldMappingPresets" :key="preset.value" :value="preset.value">
+                  {{ preset.label }}
+                </option>
+              </select>
+              <label>Title field</label>
+              <input v-model="activeFieldMapping.title_field" aria-label="Title field mapping" list="field-mapping-fields" />
+              <label>Author field or fields</label>
+              <input
+                :value="activeFieldMapping.author_fields?.join(', ') ?? ''"
+                aria-label="Author field mapping"
+                list="field-mapping-fields"
+                @input="updateAuthorFieldMapping(($event.target as HTMLInputElement).value)"
+              />
+              <p class="hint">Separate multiple author fields with commas.</p>
+              <label>Series field</label>
+              <input v-model="activeFieldMapping.series_field" aria-label="Series field mapping" list="field-mapping-fields" />
+              <label>Track field</label>
+              <input v-model="activeFieldMapping.track_field" aria-label="Track field mapping" list="field-mapping-fields" />
+              <label>Disc field</label>
+              <input v-model="activeFieldMapping.disc_field" aria-label="Disc field mapping" list="field-mapping-fields" />
+              <datalist id="field-mapping-fields">
+                <option v-for="field in fieldMappingFieldNames" :key="field" :value="field" />
+              </datalist>
+            </div>
+
             <div v-if="activeWorkflow === 'rename'" class="panel-section">
               <h3>Rename Template</h3>
               <TemplateBuilder
@@ -892,6 +927,7 @@ const defaultFieldMapping: FieldMapping = {
   author_fields: ['authors'],
   track_field: 'track',
 }
+const fieldMappingFieldNames = ['title', 'authors', 'author', 'artist', 'album_artist', 'series', 'album', 'track', 'track_number', 'disc', 'discnumber']
 
 const health = ref('offline')
 const configState = ref<LoadState>('loading')
@@ -924,8 +960,11 @@ const absSQLitePath = ref('')
 const absPathMappings = ref<EditablePathMapping[]>([{ abs_prefix: '/audiobooks', local_prefix: '' }])
 const organizerDefaults = ref<OrganizerConfig | null>(null)
 const renameDefaults = ref<RenameConfig | null>(null)
+const organizeFieldMapping = ref<FieldMapping>({ ...defaultFieldMapping })
+const renameFieldMapping = ref<FieldMapping>({ ...defaultFieldMapping })
 const layouts = ref<Option[]>([])
 const scanModes = ref<Option[]>([])
+const fieldMappings = ref<Record<string, FieldMapping>>({})
 const absLibraries = ref<ABSLibrary[]>([])
 const absResolvedMappings = ref<EditablePathMapping[]>([])
 const absItems = ref<ABSItemsResponse | null>(null)
@@ -993,6 +1032,22 @@ const selectedMetadataSourceLabel = computed(() => {
 })
 const selectedLayoutLabel = computed(() => {
   return layoutOptions.value.find((option) => option.value === layout.value)?.label ?? layout.value
+})
+const fieldMappingPresets = computed(() =>
+  Object.entries(fieldMappings.value).map(([value, mapping]) => ({
+    value,
+    label: value === 'default' ? 'metadata.json default' : `${value.toUpperCase()} preset`,
+    mapping,
+  })),
+)
+const activeFieldMapping = computed(() =>
+  activeWorkflow.value === 'rename' ? renameFieldMapping.value : organizeFieldMapping.value,
+)
+const activeFieldMappingPreset = computed(() => {
+  const current = activeFieldMapping.value
+  return (
+    fieldMappingPresets.value.find(({ mapping }) => fieldMappingsEqual(mapping, current))?.value ?? 'custom'
+  )
 })
 const serverLabel = computed(() =>
   [
@@ -2089,7 +2144,7 @@ function buildOrganizerConfig(dryRun: boolean, selectedSourcePaths?: string[]): 
     layout: selectedLayout,
     layout_template: customLayoutSelected ? layoutTemplate.value.trim() : '',
     author_format: defaults?.author_format || 'first-last',
-    field_mapping: defaults?.field_mapping ?? defaultFieldMapping,
+    field_mapping: cloneFieldMapping(organizeFieldMapping.value),
     allowed_source_paths: selectedSourcePaths ?? defaults?.allowed_source_paths,
   }
 }
@@ -2102,13 +2157,46 @@ function buildRenameConfig(dryRun: boolean, selectedCurrentPaths?: string[]): Re
     dry_run: dryRun,
     author_format: defaults?.author_format || 'first-last',
     recursive: renameRecursive.value,
-    field_mapping: defaults?.field_mapping ?? defaultFieldMapping,
+    field_mapping: cloneFieldMapping(renameFieldMapping.value),
     replace_space: defaults?.replace_space ?? '',
     strict_mode: defaults?.strict_mode ?? false,
     preserve_path: preservePath.value,
     use_embedded_metadata: shouldUseEmbeddedMetadata(),
     allowed_current_paths: selectedCurrentPaths ?? defaults?.allowed_current_paths,
   }
+}
+
+function applyFieldMappingPreset(preset: string) {
+  const mapping = fieldMappings.value[preset]
+  if (!mapping) {
+    return
+  }
+  if (activeWorkflow.value === 'rename') {
+    renameFieldMapping.value = cloneFieldMapping(mapping)
+    return
+  }
+  organizeFieldMapping.value = cloneFieldMapping(mapping)
+}
+
+function updateAuthorFieldMapping(value: string) {
+  activeFieldMapping.value.author_fields = value
+    .split(',')
+    .map((field) => field.trim())
+    .filter(Boolean)
+}
+
+function cloneFieldMapping(mapping: FieldMapping): FieldMapping {
+  return { ...mapping, author_fields: [...(mapping.author_fields ?? [])] }
+}
+
+function fieldMappingsEqual(left: FieldMapping, right: FieldMapping): boolean {
+  return (
+    left.title_field === right.title_field &&
+    left.series_field === right.series_field &&
+    left.track_field === right.track_field &&
+    left.disc_field === right.disc_field &&
+    (left.author_fields ?? []).join('\u0000') === (right.author_fields ?? []).join('\u0000')
+  )
 }
 
 function buildABSConfig(): ABSConfig {
@@ -2349,6 +2437,8 @@ onMounted(async () => {
     const config = await apiGet<WebConfig>('/api/config/initial')
     organizerDefaults.value = config.organizer
     renameDefaults.value = config.rename
+    organizeFieldMapping.value = cloneFieldMapping(config.organizer?.field_mapping ?? defaultFieldMapping)
+    renameFieldMapping.value = cloneFieldMapping(config.rename?.field_mapping ?? defaultFieldMapping)
     sourceFolder.value = config.initial?.input_dir || config.organizer?.base_dir || ''
     outputFolder.value = config.initial?.output_dir || config.organizer?.output_dir || ''
     layoutTemplate.value = config.organizer?.layout_template || ''
@@ -2381,6 +2471,7 @@ onMounted(async () => {
     const options = await apiGet<OptionsResponse>('/api/config/options')
     layouts.value = Array.isArray(options.layouts) ? options.layouts : []
     scanModes.value = Array.isArray(options.scan_modes) ? options.scan_modes : []
+    fieldMappings.value = options.field_mappings ?? {}
     optionsState.value = 'ready'
     ensureScanModeFitsWorkflow()
     addRequestSuccess('Config options', 'Layout and scan mode options are ready.')
@@ -2399,21 +2490,21 @@ watch(layout, () => {
   }
 })
 
-watch([sourceFolder, outputFolder, scanMode, layout, layoutTemplate, removeEmpty], () => {
+watch([sourceFolder, outputFolder, scanMode, layout, layoutTemplate, removeEmpty, organizeFieldMapping], () => {
   if (activeWorkflow.value !== 'organize') {
     return
   }
   markOrganizePreviewStale()
   scheduleActivePreviewRefresh()
-})
+}, { deep: true })
 
-watch([sourceFolder, scanMode, renameTemplate, renameRecursive, preservePath], () => {
+watch([sourceFolder, scanMode, renameTemplate, renameRecursive, preservePath, renameFieldMapping], () => {
   if (activeWorkflow.value !== 'rename') {
     return
   }
   markRenamePreviewStale()
   scheduleActivePreviewRefresh()
-})
+}, { deep: true })
 
 watch([absUrl, absToken, absHeaderName, absHeaderValue], () => {
   if (activeWorkflow.value !== 'abs') {

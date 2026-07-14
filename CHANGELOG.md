@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Web metadata field mapping**: The organize and rename setup screens now offer
+  source presets and editable title, author, series, track, and disc mappings;
+  changes refresh the dry-run preview before any filesystem operation.
+
 ### Fixed
 
 - **Web session recovery**: The browser UI now explains how to recover when opened without its required session-token URL parameter.

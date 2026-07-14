@@ -76,6 +76,16 @@ Example template:
 {author}/{series}/{series-count} - {title} ({narrator})
 ```
 
+## Metadata Field Mapping
+
+The Organize and Rename setup screens include a **Metadata Field Mapping** panel.
+Start with the `metadata.json`, audio, or EPUB preset, then update the title,
+author, series, track, or disc field names when your metadata uses different
+keys. Enter more than one author field as a comma-separated list.
+
+Every mapping edit refreshes the dry-run preview. Review the updated destination
+or filename candidates before continuing to the run stage.
+
 ## Development
 
 ```bash

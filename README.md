@@ -138,7 +138,7 @@ Organization writes `.abook-org.log`; rename writes `.abook-rename.log`. Keep th
 
 | Interface | Command | Best For |
 | --- | --- | --- |
-| Local web UI | `audiobook-organizer web` | Browser setup, visual previews, rename review, Audiobookshelf connection checks |
+| Local web UI | `audiobook-organizer web` | Browser setup, metadata field mapping, visual previews, rename review, Audiobookshelf connection checks |
 | Organize | `audiobook-organizer --dir=/books` | Main workflow for repeatable scripts and batch organization |
 | Organization TUI | `audiobook-organizer tui` | Keyboard-first interactive organization |
 | Rename Files | `audiobook-organizer rename --dir=/books` | Scriptable filename cleanup |
