@@ -111,6 +111,86 @@ jobs:
           web/playwright-report/**
           web/test-results/**
 
+  web-session-token-regression:
+    name: Web session token regression (#187)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      issues: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: 'stable'
+        cache: true
+        cache-dependency-path: go.sum
+
+    - name: Set up Node
+      uses: actions/setup-node@v6
+      with:
+        node-version: '22'
+        cache: npm
+        cache-dependency-path: web/package-lock.json
+
+    - name: Cache Playwright browsers
+      uses: actions/cache@v5
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('web/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-
+
+    - name: Install frontend dependencies
+      working-directory: web
+      run: npm install --no-audit --fund=false
+
+    - name: Install Playwright Chromium
+      working-directory: web
+      run: npx playwright install --with-deps chromium
+
+    - name: Run #187 web session-token regression
+      id: regression
+      run: cd web && npx playwright test tests/e2e/gui-smoke.spec.ts --grep '^#187:'
+
+    - name: Comment on #187 when its regression fails
+      if: >-
+        always() && steps.regression.outcome == 'failure' &&
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository
+      uses: actions/github-script@v8
+      with:
+        script: |
+          const marker = '<!-- web-session-token-regression -->'
+          const body = [
+            marker,
+            'The CI regression test `#187: explains how to recover when the browser opens without the web session token` failed.',
+            '',
+            `PR: #${context.payload.pull_request.number} (${context.payload.pull_request.html_url})`,
+            `Commit: ${context.sha}`,
+            `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+          ].join('\\n')
+          const comments = await github.paginate(github.rest.issues.listComments, {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: 187,
+            per_page: 100,
+          })
+          const existing = comments.find((comment) => comment.body?.includes(marker))
+          const parameters = {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body,
+          }
+          if (existing) {
+            await github.rest.issues.updateComment({ ...parameters, comment_id: existing.id })
+          } else {
+            await github.rest.issues.createComment({ ...parameters, issue_number: 187 })
+          }
+
   web-ui-abs-e2e:
     name: Web UI ABS Playwright
     runs-on: ubuntu-latest

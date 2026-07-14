@@ -32,6 +32,14 @@ test('protects authenticated API endpoints with the session token', async ({ req
   )
 })
 
+test('#187: explains how to recover when the browser opens without the web session token', async ({ page }) => {
+  await page.goto(server.origin)
+
+  await expect(
+    page.getByText('This web session link is missing its token. Reopen the complete startup URL.'),
+  ).toBeVisible()
+})
+
 test('renders staged workflows and connects to the local server', async ({ page }) => {
   await loadApp(page)
 
