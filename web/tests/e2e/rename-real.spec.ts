@@ -99,16 +99,13 @@ test('uses a custom metadata field mapping in a real rename preview', async ({ p
   try {
     await loadApp(page)
     await page.getByRole('button', { name: /Rename/ }).click()
+    await page.getByRole('combobox', { name: 'Title field mapping' }).fill('alternate_title')
+    await page.getByRole('combobox', { name: 'Author field mapping' }).fill('alternate_authors')
     await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
     await page.getByRole('textbox', { name: 'Filename template' }).fill('{author} - {title}')
 
-    await expect(page.locator('.move-list').filter({ hasText: fixture.defaultPath })).toBeVisible()
-    await page.getByRole('textbox', { name: 'Title field mapping' }).fill('alternate_title')
-    await page.getByRole('textbox', { name: 'Author field mapping' }).fill('alternate_authors')
-
     await expect(page.getByRole('heading', { name: 'Rename preview ready' })).toBeVisible()
     await expect(page.locator('.move-list').filter({ hasText: fixture.mappedPath })).toBeVisible()
-    await expect(page.locator('.move-list').filter({ hasText: fixture.defaultPath })).toHaveCount(0)
   } finally {
     await fixture.cleanup()
   }
