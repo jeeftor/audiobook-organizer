@@ -87,21 +87,20 @@ test('guides an unsure local source to the safe metadata fallback', async ({ pag
   await expect(page.getByText(/safe preview tries metadata.json first, then embedded file metadata/)).toBeVisible()
 })
 
-test('keeps the guided unsure fallback local for rename', async ({ page }) => {
+test('offers Audiobookshelf metadata for guided rename setup', async ({ page }) => {
   await loadApp(page)
 
   await page.getByRole('button', { name: 'Guide Me' }).click()
   await page.getByRole('dialog').getByRole('radio', { name: 'Rename files' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Next' }).click()
-  await page.getByRole('button', { name: 'I am not sure' }).click()
+  await page.getByRole('button', { name: 'Audiobookshelf API' }).click()
 
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page.getByRole('radio', { name: 'metadata.json' })).toHaveAttribute('aria-checked', 'true')
-  await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveCount(0)
-  await expect(page.getByText(/safe preview tries metadata.json first, then embedded file metadata/)).toBeVisible()
+  await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByLabel('ABS server URL')).toBeVisible()
 })
 
-test('uses backend bootstrap options and offers ABS metadata in organize only', async ({ page }) => {
+test('uses backend bootstrap options and offers ABS metadata for organize and rename', async ({ page }) => {
   await loadApp(page)
 
   await expect(page.locator('select[aria-label="Layout"] option[value="author-series-title-number"]')).toHaveCount(1)
@@ -111,7 +110,7 @@ test('uses backend bootstrap options and offers ABS metadata in organize only', 
   await expect(page.getByLabel('Preview color legend')).toBeVisible()
 
   await page.getByRole('button', { name: /Rename/ }).click()
-  await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveCount(0)
+  await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveCount(1)
 })
 
 test('creates organize previews from configure and derives embedded mode from metadata source', async ({ page }) => {

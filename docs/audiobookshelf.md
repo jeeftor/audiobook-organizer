@@ -43,6 +43,7 @@ Use [Explore Metadata](explore-metadata.md) if you want to inspect what the tool
 | Validate container-to-host path mapping | `abs scan --abs-path-map=... --check-files` |
 | Preview already-indexed metadata | `abs scan --abs-library=... --dir=...` |
 | Organize files using ABS metadata | `audiobook-organizer abs organize` |
+| Rename mapped files using ABS metadata | Web UI: **Rename** → **Audiobookshelf metadata** |
 | Trigger a scan after changes | ABS scan options or the local web UI ABS controls |
 
 ## Path Mapping
@@ -86,7 +87,7 @@ Then run without `--dry-run` after the plan looks right.
 
 ## Web UI ABS Flow
 
-The local web UI can use ABS as the metadata source for the normal **Organize** workflow. Start `audiobook-organizer web`, choose **Guide Me** → **Organize books** → **Audiobookshelf API** (or choose **Audiobookshelf metadata** directly in advanced setup), then enter the ABS URL and token, choose the discovered library, and validate the path mapping. The usual dry-run preview and selected-move review stay in place; the run uses the mapped ABS item metadata instead of local `metadata.json` or embedded tags.
+The local web UI can use ABS as the metadata source for the normal **Organize** and **Rename** workflows. Start `audiobook-organizer web`, choose **Guide Me** → your workflow → **Audiobookshelf API** (or choose **Audiobookshelf metadata** directly in advanced setup), then enter the ABS URL and token, choose the discovered library, and validate the path mapping. The usual dry-run preview and selected review stay in place; the run uses mapped ABS item metadata instead of local `metadata.json` or embedded tags. Rename keeps a matched audio file's ABS track number for templates.
 
 The separate **Audiobookshelf** workflow still exposes connection checks, item inspection, library state, scan triggering, and missing-item cleanup.
 

@@ -2,6 +2,9 @@ package app
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +12,78 @@ import (
 
 	"github.com/jeeftor/audiobook-organizer/internal/organizer"
 )
+
+func TestRenameUsesABSMetadataSourceForPreviewAndRun(t *testing.T) {
+	service := NewService(DefaultWebConfig("127.0.0.1", 0, false, "", ""))
+	inputDir := t.TempDir()
+	filePath := filepath.Join(inputDir, "source.mp3")
+	writeFile(t, filePath, "fake audio")
+
+	absServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer test-token" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if r.URL.Path != "/api/libraries/lib-main/items" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"results": []map[string]any{{
+				"id":        "item-1",
+				"libraryId": "lib-main",
+				"path":      "/abs/input",
+				"libraryFiles": []map[string]any{{
+					"metadata": map[string]string{"path": "/abs/input/source.mp3"},
+				}},
+				"media": map[string]any{
+					"metadata": map[string]any{
+						"title": "ABS Rename Book", "authors": []map[string]string{{"name": "ABS Author"}},
+					},
+					"audioFiles": []map[string]any{{
+						"metadata": map[string]string{
+							"path": "/abs/input/source.mp3",
+						}, "trackNumFromMeta": 4,
+					}},
+				},
+			}},
+			"total": 1,
+		})
+	}))
+	defer absServer.Close()
+
+	config := RenameConfigDTO{
+		BaseDir: inputDir, Template: "{track} - {author} - {title}", AuthorFormat: "first-last",
+		Recursive: true, PreservePath: true, MetadataSource: metadataSourceABS,
+		ABS: ABSConfigDTO{
+			URL:       absServer.URL,
+			Token:     "test-token",
+			LibraryID: "lib-main",
+			PathMappings: []PathMappingDTO{{
+				ABSPrefix: "/abs/input", LocalPrefix: inputDir,
+			}},
+		},
+	}
+	preview, err := service.PreviewRename(context.Background(), RenameRequest{Config: config})
+	if err != nil {
+		t.Fatalf("PreviewRename() error = %v", err)
+	}
+	if got, want := filepath.Base(preview.Candidates[0].ProposedPath), "04 - ABS Author - ABS Rename Book.mp3"; got != want {
+		t.Fatalf("preview proposed filename = %q, want %q", got, want)
+	}
+	if _, err := os.Stat(filePath); err != nil {
+		t.Fatalf("preview moved source file: %v", err)
+	}
+
+	run, err := service.RunRename(context.Background(), RenameRequest{Config: config})
+	if err != nil {
+		t.Fatalf("RunRename() error = %v", err)
+	}
+	if run.Summary.FilesRenamed != 1 {
+		t.Fatalf("FilesRenamed = %d, want 1", run.Summary.FilesRenamed)
+	}
+	assertPathExists(t, filepath.Join(inputDir, "04 - ABS Author - ABS Rename Book.mp3"))
+}
 
 func TestPreviewRenameReturnsRealSummaryState(t *testing.T) {
 	service := NewService(DefaultWebConfig("127.0.0.1", 0, false, "", ""))

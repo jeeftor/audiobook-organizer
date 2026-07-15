@@ -90,6 +90,45 @@ test('guides a mounted library through real Audiobookshelf organize metadata', a
   await expect(page.locator('.move-list.operation-list')).toContainText('Lewis Carroll')
 })
 
+test('renames a selected mounted file from real Audiobookshelf metadata', async ({ page }) => {
+  test.setTimeout(120_000)
+
+  const absURL = requiredEnv('ABS_PLAIN_URL')
+  const absToken = requiredEnv('ABS_TOKEN')
+  const audiobookRoot = join(repoRoot, 'test', 'abs', 'runtime', 'plain', 'audiobooks')
+
+  await loadApp(page)
+  await page.getByRole('button', { name: /Rename/ }).click()
+  await page.getByRole('textbox', { name: 'Source folder' }).fill(audiobookRoot)
+  await page.getByRole('radio', { name: 'Audiobookshelf metadata' }).click()
+  await page.getByRole('textbox', { name: 'Filename template' }).fill('{author} - {title}')
+  await page.getByLabel('ABS server URL').fill(absURL)
+  await page.getByLabel('ABS API token').fill(absToken)
+  await page.getByLabel('ABS path prefix').fill('/audiobooks')
+  await page.getByLabel('Local path prefix').fill(audiobookRoot)
+  await page.getByRole('button', { name: 'Test Connection' }).click()
+  await selectLibraryByName(page, 'Audiobooks')
+  await page.getByRole('button', { name: 'Validate Paths' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Rename preview ready' })).toBeVisible()
+  const candidates = page.locator('.move-list > div')
+  await expect(candidates.first()).not.toContainText('Failed to extract metadata')
+
+  await page.getByRole('button', { name: 'Review & Run', exact: true }).click()
+  await page.getByRole('button', { name: 'Select None' }).click()
+  const firstCandidate = page.getByRole('checkbox', { name: /Select rename candidate/ }).first()
+  await firstCandidate.check()
+  await expect(page.getByRole('button', { name: 'Run 1 Selected File' })).toBeEnabled()
+  page.once('dialog', async (dialog) => {
+    expect(dialog.message()).toContain('Run Rename will change 1 selected file')
+    await dialog.accept()
+  })
+  await page.getByRole('button', { name: 'Run 1 Selected File' }).click()
+  await expect(page.getByRole('heading', { name: 'Rename Run Complete' })).toBeVisible()
+  await expectReviewSummaryValue(page, 'Files renamed', '1')
+  await expect(page.locator('.review-layout .recovery-note')).toContainText('.abook-rename.log')
+})
+
 test('drives ABS setup and operations against the real ABS harness', async ({ page }) => {
   test.setTimeout(120_000)
 

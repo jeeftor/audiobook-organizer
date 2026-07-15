@@ -60,7 +60,7 @@
 
         <div v-else-if="guideStep === 2" class="guide-choice-grid" role="list" aria-label="Guided metadata source">
           <button
-            v-if="guideWorkflow === 'organize'"
+            v-if="guideWorkflow === 'organize' || guideWorkflow === 'rename'"
             class="guide-choice"
             type="button"
             @click="chooseGuidedSource('abs')"
@@ -93,7 +93,7 @@
           <div class="guide-actions">
             <button class="secondary-action" type="button" @click="chooseGuidedSource('json', true)">No or unsure</button>
             <button
-              v-if="guideWorkflow === 'organize'"
+              v-if="guideWorkflow === 'organize' || guideWorkflow === 'rename'"
               class="primary-action"
               type="button"
               @click="chooseGuidedSource('abs')"
@@ -1152,9 +1152,9 @@ const scanModeOptions = computed(() => {
   return optionsState.value === 'fallback' ? defaultScanModes : []
 })
 const workflowScanModes = computed(() => {
-  return scanModeOptions.value.filter((mode) => activeWorkflow.value !== 'rename' || mode.value !== 'abs')
+  return scanModeOptions.value
 })
-const showABSSetup = computed(() => activeWorkflow.value === 'abs' || (activeWorkflow.value === 'organize' && scanMode.value === 'abs'))
+const showABSSetup = computed(() => activeWorkflow.value === 'abs' || scanMode.value === 'abs')
 const selectedMetadataSourceLabel = computed(() => {
   return workflowScanModes.value.find((mode) => mode.value === scanMode.value)?.label ?? scanMode.value
 })
@@ -1488,10 +1488,6 @@ function closeGuide() {
 
 function chooseGuidedSource(source: GuidedSource, useLocalFallback = false) {
   if (source === 'unsure') {
-    if (guideWorkflow.value === 'rename') {
-      chooseGuidedSource('json', true)
-      return
-    }
     guideStep.value = 3
     return
   }
@@ -2030,6 +2026,9 @@ async function createRenamePreview() {
     if (!renameTemplate.value.trim()) {
       throw new Error('Rename template is required for preview.')
     }
+    if (scanMode.value === 'abs') {
+      assertABSSetupReady()
+    }
     addRequestStart('Rename preview', 'POST /api/rename/preview')
     requestStarted = true
     const response = normalizeRenameResponse(
@@ -2097,7 +2096,7 @@ async function testABSPathMappings() {
     absResolvedMappings.value = response.mappings ?? []
     absPathStatus.value = 'success'
     addRequestSuccess('ABS path validation', `${absResolvedMappings.value.length} path mapping(s) resolved.`)
-    if (activeWorkflow.value === 'organize' && scanMode.value === 'abs') {
+    if ((activeWorkflow.value === 'organize' || activeWorkflow.value === 'rename') && scanMode.value === 'abs') {
       scheduleActivePreviewRefresh()
     }
   } catch (error) {
@@ -2343,6 +2342,8 @@ function buildRenameConfig(dryRun: boolean, selectedCurrentPaths?: string[]): Re
     preserve_path: preservePath.value,
     use_embedded_metadata: shouldUseEmbeddedMetadata(),
     allowed_current_paths: selectedCurrentPaths ?? defaults?.allowed_current_paths,
+	metadata_source: scanMode.value,
+	abs: scanMode.value === 'abs' ? buildABSConfig() : undefined,
   }
 }
 

@@ -319,6 +319,8 @@ jobs:
             run_regex: TestRESTHarness_ABSOperationEndpoints
           - name: rest-abs-metadata-organize
             run_regex: TestRESTHarness_ABSMetadataSourceOrganizeLifecycle
+          - name: rest-abs-rename-metadata
+            run_regex: TestRESTHarness_ABSRenameMetadataPreview
           - name: abs-metadata-mode
             run_regex: TestABSMetadataMode
     env:

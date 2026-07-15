@@ -5,6 +5,7 @@ package abs
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/jeeftor/audiobook-organizer/internal/organizer"
@@ -118,8 +119,9 @@ func (p *MetadataProvider) loadAllLibraries() error {
 	return nil
 }
 
-// FindItemByPath finds an ABS item matching the local file path
-// Works across all libraries if allLibraries mode is enabled
+// FindItemByPath finds an ABS item matching a local ABS item directory or file.
+// Exact file records take precedence over a containing item directory.
+// Works across all libraries if allLibraries mode is enabled.
 func (p *MetadataProvider) FindItemByPath(localPath string) (*LibraryItem, error) {
 	if p.itemsCache == nil {
 		if err := p.LoadAllItems(); err != nil {
@@ -130,22 +132,67 @@ func (p *MetadataProvider) FindItemByPath(localPath string) (*LibraryItem, error
 	// Convert local path to ABS path
 	absPath := p.mapper.ToABS(localPath)
 
-	// Find matching item
-	for _, item := range p.itemsCache {
-		if item.Path == absPath {
-			return &item, nil
-		}
-		// Try matching on relative path
-		if item.RelPath == absPath {
-			return &item, nil
-		}
-		// Try matching with trailing slash variations
-		if strings.TrimSuffix(item.Path, "/") == strings.TrimSuffix(absPath, "/") {
-			return &item, nil
+	for i := range p.itemsCache {
+		if itemContainsFile(&p.itemsCache[i], absPath) {
+			return &p.itemsCache[i], nil
 		}
 	}
 
+	var match *LibraryItem
+	for i := range p.itemsCache {
+		item := &p.itemsCache[i]
+		if sameABSPath(item.Path, absPath) || sameABSPath(item.RelPath, absPath) {
+			return item, nil
+		}
+		if pathContains(item.Path, absPath) {
+			if match != nil &&
+				len(normalizeABSPath(item.Path)) == len(normalizeABSPath(match.Path)) {
+				return nil, fmt.Errorf("ambiguous ABS items found for path: %s", localPath)
+			}
+			if match == nil ||
+				len(normalizeABSPath(item.Path)) > len(normalizeABSPath(match.Path)) {
+				match = item
+			}
+		}
+	}
+	if match != nil {
+		return match, nil
+	}
+
 	return nil, fmt.Errorf("no ABS item found for path: %s", localPath)
+}
+
+func itemContainsFile(item *LibraryItem, absPath string) bool {
+	for _, file := range item.LibraryFiles {
+		if sameABSPath(file.Metadata.Path, absPath) || sameABSPath(file.Metadata.RelPath, absPath) {
+			return true
+		}
+	}
+	for _, file := range item.Media.AudioFiles {
+		if sameABSPath(file.Metadata.Path, absPath) || sameABSPath(file.Metadata.RelPath, absPath) {
+			return true
+		}
+	}
+	return item.Media.EbookFile != nil &&
+		(sameABSPath(item.Media.EbookFile.Metadata.Path, absPath) ||
+			sameABSPath(item.Media.EbookFile.Metadata.RelPath, absPath))
+}
+
+func sameABSPath(left, right string) bool {
+	return left != "" && right != "" && normalizeABSPath(left) == normalizeABSPath(right)
+}
+
+func pathContains(parent, candidate string) bool {
+	parent = normalizeABSPath(parent)
+	candidate = normalizeABSPath(candidate)
+	return parent != "" && (candidate == parent || strings.HasPrefix(candidate, parent+"/"))
+}
+
+func normalizeABSPath(value string) string {
+	if value == "" {
+		return ""
+	}
+	return strings.TrimSuffix(path.Clean(value), "/")
 }
 
 // FindItemsByLibrary returns items grouped by library ID
@@ -166,7 +213,25 @@ func (p *MetadataProvider) GetMetadata(localPath string) (organizer.Metadata, er
 		return organizer.NewMetadata(), err
 	}
 
-	return p.convertToOrganizerMetadata(item), nil
+	metadata := p.convertToOrganizerMetadata(item)
+	p.applyFileMetadata(&metadata, item, p.mapper.ToABS(localPath))
+	return metadata, nil
+}
+
+func (p *MetadataProvider) applyFileMetadata(
+	metadata *organizer.Metadata,
+	item *LibraryItem,
+	absPath string,
+) {
+	for _, audioFile := range item.Media.AudioFiles {
+		if sameABSPath(audioFile.Metadata.Path, absPath) ||
+			sameABSPath(audioFile.Metadata.RelPath, absPath) {
+			metadata.TrackNumber = audioFile.TrackNumberFromMeta
+			metadata.RawData["track"] = audioFile.TrackNumberFromMeta
+			metadata.RawData["disc"] = audioFile.DiscNumberFromMeta
+			return
+		}
+	}
 }
 
 // convertToOrganizerMetadata converts ABS LibraryItem to organizer.Metadata

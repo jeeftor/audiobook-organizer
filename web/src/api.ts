@@ -68,6 +68,8 @@ export type RenameConfig = {
   preserve_path: boolean
   use_embedded_metadata: boolean
   allowed_current_paths?: string[]
+	metadata_source?: string
+	abs?: ABSConfig
 }
 
 export type RenameMetadata = Record<string, unknown>
