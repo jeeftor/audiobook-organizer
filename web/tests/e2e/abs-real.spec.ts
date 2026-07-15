@@ -49,13 +49,14 @@ test('organizes a mounted library using real Audiobookshelf metadata', async ({ 
   await expect(page.getByText('ABS libraries loaded and path mappings validated.')).toBeVisible()
 
   await page.getByRole('button', { name: 'Review & Run Select, execute, inspect' }).click()
-  await expect(page.getByRole('heading', { name: 'Organize Preview Results' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Reviewed Organize Plan' })).toBeVisible()
   await expect(page.locator('.move-list')).toContainText('Charles Dickens')
   await expect(page.locator('.move-list')).toContainText('Lewis Carroll')
   await expect(page.getByRole('button', { name: /Run 2 Selected Moves/ })).toBeEnabled()
 
   await page.getByRole('button', { name: /Run 2 Selected Moves/ }).click()
   await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
+  await expect(page.getByText('Open Audiobookshelf to trigger a library scan, inspect the refreshed state, and clean only confirmed missing old paths.')).toBeVisible()
   await expect(page.locator('.move-list')).toContainText('Charles Dickens')
   await expect(page.locator('.move-list')).toContainText('Lewis Carroll')
 })

@@ -84,6 +84,81 @@ func TestOrganizeUsesABSMetadataSourceForPreviewAndRun(t *testing.T) {
 	assertFileExists(t, filepath.Join(outputDir, "ABS Author", "ABS Test Book", "audio.m4b"))
 }
 
+func TestRunOrganizeWithABSMetadataHonorsAllowedSourcePaths(t *testing.T) {
+	service := NewService(DefaultWebConfig("127.0.0.1", 0, false, "", ""))
+	root := t.TempDir()
+	inputDir := filepath.Join(root, "input")
+	outputDir := filepath.Join(root, "output")
+	selectedDir := filepath.Join(inputDir, "selected")
+	unselectedDir := filepath.Join(inputDir, "unselected")
+	for _, dir := range []string{selectedDir, unselectedDir, outputDir} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("create fixture directory %s: %v", dir, err)
+		}
+	}
+	writeFile(t, filepath.Join(selectedDir, "selected.m4b"), "selected audio")
+	writeFile(t, filepath.Join(unselectedDir, "unselected.m4b"), "unselected audio")
+
+	absServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer test-token" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"results": []map[string]any{
+				absOrganizeTestItem("selected", "Selected ABS Book", "Selected ABS Author"),
+				absOrganizeTestItem("unselected", "Unselected ABS Book", "Unselected ABS Author"),
+			},
+			"total": 2,
+		})
+	}))
+	defer absServer.Close()
+
+	config := organizeTestConfig(inputDir, outputDir, false)
+	config.MetadataSource = metadataSourceABS
+	config.AllowedSourcePaths = []string{selectedDir}
+	config.ABS = ABSConfigDTO{
+		URL:       absServer.URL,
+		Token:     "test-token",
+		LibraryID: "lib-main",
+		PathMappings: []PathMappingDTO{{
+			ABSPrefix:   "/abs/input",
+			LocalPrefix: inputDir,
+		}},
+	}
+
+	resp, err := service.RunOrganize(context.Background(), OrganizeRequest{Config: config})
+	if err != nil {
+		t.Fatalf("RunOrganize() error = %v", err)
+	}
+	if got := len(resp.Summary.Moves); got != 1 {
+		t.Fatalf("moves = %d, want 1", got)
+	}
+	assertFileExists(
+		t,
+		filepath.Join(outputDir, "Selected ABS Author", "Selected ABS Book", "selected.m4b"),
+	)
+	assertFileExists(t, filepath.Join(unselectedDir, "unselected.m4b"))
+	assertFileNotExists(
+		t,
+		filepath.Join(outputDir, "Unselected ABS Author", "Unselected ABS Book", "unselected.m4b"),
+	)
+}
+
+func absOrganizeTestItem(path, title, author string) map[string]any {
+	return map[string]any{
+		"id":        path,
+		"libraryId": "lib-main",
+		"path":      "/abs/input/" + path,
+		"media": map[string]any{
+			"metadata": map[string]any{
+				"title":   title,
+				"authors": []map[string]string{{"name": author}},
+			},
+		},
+	}
+}
+
 func TestPreviewOrganizeForcesDryRunAndOmitsLogPath(t *testing.T) {
 	service := NewService(DefaultWebConfig("127.0.0.1", 0, false, "", ""))
 	inputDir, outputDir := createOrganizeFixture(t)
