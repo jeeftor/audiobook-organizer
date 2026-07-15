@@ -7,6 +7,9 @@
         <span class="app-subtitle">Local workflow console</span>
       </div>
       <div class="topbar-spacer"></div>
+      <button class="guide-entry" type="button" @click="openGuide">
+        <WandSparkles :size="17" /> Guide Me
+      </button>
       <div class="status-dot" :class="{ online: health === 'ok' }"></div>
       <span class="server-status">{{ serverLabel }}</span>
     </header>
@@ -14,6 +17,101 @@
     <p v-if="!hasWebSessionToken" class="inline-alert session-token-alert" role="alert">
       This web session link is missing its token. Reopen the complete startup URL.
     </p>
+
+    <section v-if="guideOpen" class="guide-backdrop" role="presentation" @click.self="closeGuide">
+      <div class="guide-dialog" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+        <div class="guide-dialog-header">
+          <div>
+            <span class="eyebrow">Guided setup</span>
+            <h2 id="guide-title">{{ guideHeading }}</h2>
+            <p>{{ guideCopy }}</p>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close guided setup" @click="closeGuide">
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+
+        <div v-if="guideStep === 1" class="guide-choice-grid" role="radiogroup" aria-label="Guided workflow">
+          <button
+            class="guide-choice"
+            :class="{ active: guideWorkflow === 'organize' }"
+            role="radio"
+            type="button"
+            :aria-checked="guideWorkflow === 'organize'"
+            @click="guideWorkflow = 'organize'"
+          >
+            <FolderInput :size="22" />
+            <strong>Organize books</strong>
+            <span>Move or copy books into a clean library layout.</span>
+          </button>
+          <button
+            class="guide-choice"
+            :class="{ active: guideWorkflow === 'rename' }"
+            role="radio"
+            type="button"
+            :aria-checked="guideWorkflow === 'rename'"
+            @click="guideWorkflow = 'rename'"
+          >
+            <FilePenLine :size="22" />
+            <strong>Rename files</strong>
+            <span>Preview template-based filename changes in place.</span>
+          </button>
+        </div>
+
+        <div v-else-if="guideStep === 2" class="guide-choice-grid" role="list" aria-label="Guided metadata source">
+          <button
+            v-if="guideWorkflow === 'organize'"
+            class="guide-choice"
+            type="button"
+            @click="chooseGuidedSource('abs')"
+          >
+            <Server :size="22" />
+            <strong>Audiobookshelf API</strong>
+            <span>Use a validated ABS library and path mapping for the organize preview.</span>
+          </button>
+          <button class="guide-choice" type="button" @click="chooseGuidedSource('json')">
+            <FilePenLine :size="22" />
+            <strong>metadata.json files</strong>
+            <span>Read sidecar metadata stored beside each book.</span>
+          </button>
+          <button class="guide-choice" type="button" @click="chooseGuidedSource('embedded-file')">
+            <AudioLines :size="22" />
+            <strong>Embedded metadata</strong>
+            <span>Read tags directly from audiobook or ebook files.</span>
+          </button>
+          <button class="guide-choice" type="button" @click="chooseGuidedSource('unsure')">
+            <AlertTriangle :size="22" />
+            <strong>I am not sure</strong>
+            <span>Let the safe preview try local sidecars, then embedded file metadata.</span>
+          </button>
+        </div>
+
+        <div v-else class="guide-confirmation">
+          <Server :size="24" />
+          <p>Do you use Audiobookshelf for this library?</p>
+          <span>Choosing yes opens the existing validated ABS setup. Choosing no keeps the safe local metadata fallback.</span>
+          <div class="guide-actions">
+            <button class="secondary-action" type="button" @click="chooseGuidedSource('json', true)">No or unsure</button>
+            <button
+              v-if="guideWorkflow === 'organize'"
+              class="primary-action"
+              type="button"
+              @click="chooseGuidedSource('abs')"
+            >
+              Yes, use Audiobookshelf
+            </button>
+          </div>
+        </div>
+
+        <div v-if="guideStep === 1" class="guide-actions">
+          <button class="secondary-action" type="button" @click="closeGuide">Use advanced setup</button>
+          <button class="primary-action" type="button" @click="guideStep = 2">Next</button>
+        </div>
+        <div v-else-if="guideStep === 2" class="guide-actions">
+          <button class="secondary-action" type="button" @click="guideStep = 1">Back</button>
+        </div>
+      </div>
+    </section>
 
     <section class="workflow-switcher" aria-label="Workflow">
       <button
@@ -53,6 +151,8 @@
           <h2>{{ currentStage.heading }}</h2>
           <p>{{ currentStage.copy }}</p>
         </div>
+
+        <p v-if="guideHandoffHint && activeStage === 'configure'" class="guide-handoff-hint" role="status">{{ guideHandoffHint }}</p>
 
         <section v-if="activeStage === 'configure'" class="setup-preview-grid">
           <div class="setup-controls">
@@ -782,6 +882,7 @@ import {
   Plus,
   Server,
   Trash2,
+  WandSparkles,
 } from 'lucide-vue-next'
 import TemplateBuilder, { type TemplateField } from './components/TemplateBuilder.vue'
 import {
@@ -818,6 +919,8 @@ type PathFieldId = 'source' | 'output'
 type LoadState = 'loading' | 'ready' | 'fallback'
 type CredentialState = 'empty' | 'redacted'
 type RequestState = 'idle' | 'loading' | 'success' | 'error'
+type GuidedWorkflow = 'organize' | 'rename'
+type GuidedSource = 'abs' | 'json' | 'embedded-file' | 'unsure'
 type EditablePathMapping = {
   abs_prefix: string
   local_prefix: string
@@ -934,6 +1037,10 @@ const configState = ref<LoadState>('loading')
 const optionsState = ref<LoadState>('loading')
 const activeWorkflow = ref<WorkflowId>('organize')
 const activeStage = ref<StageId>('configure')
+const guideOpen = ref(false)
+const guideStep = ref<1 | 2 | 3>(1)
+const guideWorkflow = ref<GuidedWorkflow>('organize')
+const guideHandoffHint = ref('')
 const bootstrapComplete = ref(false)
 const sourceFolder = ref('')
 const outputFolder = ref('')
@@ -1009,6 +1116,26 @@ let autoPreviewTimer: number | null = null
 
 const currentWorkflow = computed(() => workflows.find((workflow) => workflow.id === activeWorkflow.value) ?? workflows[0])
 const currentStage = computed(() => stageText[activeStage.value])
+const guideHeading = computed(() => {
+  if (guideStep.value === 1) {
+    return 'What would you like to do?'
+  }
+  if (guideStep.value === 2) {
+    return 'Where should metadata come from?'
+  }
+  return 'One quick question'
+})
+const guideCopy = computed(() => {
+  if (guideStep.value === 1) {
+    return 'Choose a workflow first. You can still edit every advanced setting after this guide.'
+  }
+  if (guideStep.value === 2) {
+    return guideWorkflow.value === 'organize'
+      ? 'Choose the source that can safely power a dry-run organize preview.'
+      : 'Choose the local source that can safely power a dry-run rename preview.'
+  }
+  return 'We will route you to the right safe setup path without sending credentials or changing files.'
+})
 const optionsLoading = computed(() => optionsState.value === 'loading')
 const layoutOptions = computed(() => {
   const appendCustom = (options: Option[]) =>
@@ -1336,6 +1463,7 @@ const isRunActionDisabled = computed(() => {
 })
 
 function selectWorkflow(workflow: WorkflowId) {
+  guideHandoffHint.value = ''
   activeWorkflow.value = workflow
   activeStage.value = 'configure'
   ensureScanModeFitsWorkflow()
@@ -1346,6 +1474,46 @@ function selectWorkflow(workflow: WorkflowId) {
     event: `Local navigation: ${currentWorkflow.value.label} selected`,
     detail: 'Configure inputs before preview.',
   })
+}
+
+function openGuide() {
+  guideWorkflow.value = activeWorkflow.value === 'rename' ? 'rename' : 'organize'
+  guideStep.value = 1
+  guideOpen.value = true
+}
+
+function closeGuide() {
+  guideOpen.value = false
+}
+
+function chooseGuidedSource(source: GuidedSource, useLocalFallback = false) {
+  if (source === 'unsure') {
+    if (guideWorkflow.value === 'rename') {
+      chooseGuidedSource('json', true)
+      return
+    }
+    guideStep.value = 3
+    return
+  }
+
+  selectWorkflow(guideWorkflow.value)
+  if (source === 'abs') {
+    scanModeUserSelected.value = true
+    scanMode.value = 'abs'
+    guideHandoffHint.value = 'Next: enter the ABS server URL and token, choose a library, validate the path mapping, then review the dry-run plan.'
+  } else if (source === 'embedded-file') {
+    scanModeUserSelected.value = true
+    scanMode.value = 'embedded-file'
+    guideHandoffHint.value = 'Next: choose your folders and inspect the embedded-metadata dry-run preview before any rename or organize action.'
+  } else {
+    scanModeUserSelected.value = !useLocalFallback
+    scanMode.value = 'json'
+    guideHandoffHint.value = useLocalFallback
+      ? 'Next: choose your folders. The safe preview tries metadata.json first, then embedded file metadata if no sidecars are found.'
+      : 'Next: choose your folders and inspect the metadata.json dry-run preview before any filesystem action.'
+  }
+  activeStage.value = 'configure'
+  guideOpen.value = false
 }
 
 function selectScanMode(mode: string) {

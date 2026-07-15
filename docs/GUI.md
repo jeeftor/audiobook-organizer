@@ -34,6 +34,12 @@ The first web UI pass is an operational dashboard:
 
 The UI is intentionally browser-based instead of native-desktop-specific. That keeps releases to one binary and avoids platform-specific desktop runtime packaging.
 
+## Guided Setup
+
+Select **Guide Me** in the top bar when you are not sure which advanced workflow to start with. The guide asks whether you want to organize or rename, then asks where metadata should come from. For an organize workflow it can route you to a validated **Audiobookshelf API** setup; otherwise it offers `metadata.json`, embedded file metadata, or a safe local fallback that tries sidecars before embedded file metadata.
+
+The guide only populates the existing setup controls. You still enter folders and, for ABS, the server URL, token, library, and path mapping. It always hands off to the normal dry-run preview and review stage before it offers a filesystem-changing run. Tokens and custom header values remain masked in the UI.
+
 ## Local Screenshots
 
 Generate local web UI screenshots from the repository root. The output files are local-only and ignored by git:
@@ -61,7 +67,7 @@ The web API exposes Audiobookshelf workflow endpoints for:
 - Loading item metadata from ABS.
 - Triggering library scans after organization.
 
-To organize directly from ABS metadata, select **Audiobookshelf metadata** in the **Organize** workflow. Test the connection, choose a library, and validate its ABS-to-local path mapping before the dry-run preview can run. The review and selected-move run stages use the same validated connection. Use the separate **Audiobookshelf** workflow when you need inspection, scanning, or missing-item cleanup.
+To organize directly from ABS metadata, select **Guide Me** → **Organize books** → **Audiobookshelf API**, or select **Audiobookshelf metadata** in the advanced **Organize** workflow. Test the connection, choose a library, and validate its ABS-to-local path mapping before the dry-run preview can run. The review and selected-move run stages use the same validated connection. Use the separate **Audiobookshelf** workflow when you need inspection, scanning, or missing-item cleanup.
 
 ## Custom Layouts
 

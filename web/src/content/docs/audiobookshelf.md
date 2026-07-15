@@ -92,7 +92,7 @@ Then run without `--dry-run` after the plan looks right.
 
 ## Web UI ABS Flow
 
-The local web UI can use ABS as the metadata source for the normal **Organize** workflow. Start `audiobook-organizer web`, choose **Organize**, select **Audiobookshelf metadata**, then enter the ABS URL and token, choose the discovered library, and validate the path mapping. The usual dry-run preview and selected-move review stay in place; the run uses the mapped ABS item metadata instead of local `metadata.json` or embedded tags.
+The local web UI can use ABS as the metadata source for the normal **Organize** workflow. Start `audiobook-organizer web`, choose **Guide Me** → **Organize books** → **Audiobookshelf API** (or choose **Audiobookshelf metadata** directly in advanced setup), then enter the ABS URL and token, choose the discovered library, and validate the path mapping. The usual dry-run preview and selected-move review stay in place; the run uses the mapped ABS item metadata instead of local `metadata.json` or embedded tags.
 
 The separate **Audiobookshelf** workflow still exposes connection checks, item inspection, library state, scan triggering, and missing-item cleanup.
 

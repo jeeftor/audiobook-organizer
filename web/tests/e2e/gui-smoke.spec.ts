@@ -55,6 +55,52 @@ test('renders staged workflows and connects to the local server', async ({ page 
   await expect(page.getByRole('button', { name: /Run/ })).toBeDisabled()
 })
 
+test('guides an ABS organize setup into the existing advanced controls', async ({ page }) => {
+  await loadApp(page)
+
+  await page.getByRole('button', { name: 'Guide Me' }).click()
+  const guide = page.getByRole('dialog', { name: 'What would you like to do?' })
+  await expect(guide).toBeVisible()
+  await guide.getByRole('radio', { name: 'Organize books' }).click()
+  await guide.getByRole('button', { name: 'Next' }).click()
+  await expect(page.getByRole('heading', { name: 'Where should metadata come from?' })).toBeVisible()
+  await page.getByRole('button', { name: 'Audiobookshelf API' }).click()
+
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByLabel('ABS server URL')).toBeVisible()
+  await expect(page.getByText(/Next: enter the ABS server URL and token/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Review & Run Select, execute, inspect' })).toBeDisabled()
+})
+
+test('guides an unsure local source to the safe metadata fallback', async ({ page }) => {
+  await loadApp(page)
+
+  await page.getByRole('button', { name: 'Guide Me' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Next' }).click()
+  await page.getByRole('button', { name: 'I am not sure' }).click()
+  await expect(page.getByRole('heading', { name: 'One quick question' })).toBeVisible()
+  await page.getByRole('button', { name: 'No or unsure' }).click()
+
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByRole('radio', { name: 'metadata.json' })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByText(/safe preview tries metadata.json first, then embedded file metadata/)).toBeVisible()
+})
+
+test('keeps the guided unsure fallback local for rename', async ({ page }) => {
+  await loadApp(page)
+
+  await page.getByRole('button', { name: 'Guide Me' }).click()
+  await page.getByRole('dialog').getByRole('radio', { name: 'Rename files' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Next' }).click()
+  await page.getByRole('button', { name: 'I am not sure' }).click()
+
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByRole('radio', { name: 'metadata.json' })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveCount(0)
+  await expect(page.getByText(/safe preview tries metadata.json first, then embedded file metadata/)).toBeVisible()
+})
+
 test('uses backend bootstrap options and offers ABS metadata in organize only', async ({ page }) => {
   await loadApp(page)
 
