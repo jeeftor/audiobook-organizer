@@ -127,7 +127,7 @@ test('organizes a real EPUB fixture through embedded metadata mode', async ({ pa
     await expectSummaryValue(page, 'Warnings', '1')
     await expect(page.getByText(fixture.expectedDir)).toBeVisible()
     await expect(page.locator('.warning-list').getByText(fixture.sourceDir)).toBeVisible()
-    await expect.poll(() => pathExists(fixture.mappedDir)).toBe(false)
+    await expect.poll(() => pathExists(fixture.expectedFile)).toBe(false)
     await expect.poll(() => pathExists(fixture.sourceFile)).toBe(true)
     expect(organizeRequests).toContain('/api/organize/preview')
 
@@ -139,7 +139,7 @@ test('organizes a real EPUB fixture through embedded metadata mode', async ({ pa
     await page.getByRole('button', { name: 'Run 1 Selected Move' }).click()
 
     await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
-    await expect.poll(() => pathExists(fixture.mappedDir)).toBe(true)
+    await expect.poll(() => pathExists(fixture.expectedFile)).toBe(true)
     await expect.poll(() => pathExists(fixture.sourceFile)).toBe(false)
     await expect.poll(() => pathExists(fixture.expectedLog)).toBe(true)
     expect(organizeRequests).toContain('/api/organize/run')
