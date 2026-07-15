@@ -289,3 +289,34 @@ func TestMetadataValidate(t *testing.T) {
 		})
 	}
 }
+
+func TestMetadataApplyFieldMappingUsesJSONRawAuthorArray(t *testing.T) {
+	metadata := Metadata{
+		Title:   "Default Title",
+		Authors: []string{"Default Author"},
+		RawData: map[string]interface{}{
+			"alternate_authors": []interface{}{"Mapped Author One", "Mapped Author Two"},
+		},
+	}
+
+	metadata.ApplyFieldMapping(FieldMapping{AuthorFields: []string{"alternate_authors"}})
+
+	if got, want := metadata.Authors, []string{"Mapped Author One", "Mapped Author Two"}; !equalStringSlices(
+		got,
+		want,
+	) {
+		t.Errorf("ApplyFieldMapping() authors = %v, want %v", got, want)
+	}
+}
+
+func equalStringSlices(got, want []string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			return false
+		}
+	}
+	return true
+}

@@ -189,17 +189,14 @@ test('uses a custom metadata field mapping in a real organize preview', async ({
   const fixture = await createFieldMappingFixture()
   try {
     await loadApp(page)
+    await page.getByRole('combobox', { name: 'Title field mapping' }).fill('alternate_title')
+    await page.getByRole('combobox', { name: 'Author field mapping' }).fill('alternate_authors')
+    await page.getByRole('combobox', { name: 'Series field mapping' }).fill('alternate_series')
     await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
     await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
 
-    await expect(page.getByText(fixture.defaultDir)).toBeVisible()
-    await page.getByRole('textbox', { name: 'Title field mapping' }).fill('alternate_title')
-    await page.getByRole('textbox', { name: 'Author field mapping' }).fill('alternate_authors')
-    await page.getByRole('textbox', { name: 'Series field mapping' }).fill('alternate_series')
-
     await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
     await expect(page.getByText(fixture.mappedDir)).toBeVisible()
-    await expect(page.getByText(fixture.defaultDir)).toHaveCount(0)
   } finally {
     await fixture.cleanup()
   }

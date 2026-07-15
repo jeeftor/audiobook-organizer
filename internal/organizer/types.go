@@ -250,6 +250,18 @@ func (m *Metadata) getRawValue(field string) string {
 		if sliceVal, ok := val.([]string); ok && len(sliceVal) > 0 {
 			return strings.Join(sliceVal, ", ")
 		}
+		// JSON metadata arrays decode to []interface{}.
+		if sliceVal, ok := val.([]interface{}); ok {
+			values := make([]string, 0, len(sliceVal))
+			for _, item := range sliceVal {
+				if strVal, ok := item.(string); ok {
+					values = append(values, strVal)
+				}
+			}
+			if len(values) > 0 {
+				return strings.Join(values, ", ")
+			}
+		}
 	}
 
 	// Handle special cases for built-in fields
