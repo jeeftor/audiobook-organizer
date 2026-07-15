@@ -102,11 +102,12 @@ jobs:
     - name: Run Playwright web UI tests
       run: make gui-test
 
-    - name: Upload Playwright artifacts on failure
-      if: failure()
+    - name: Upload Playwright evidence
+      if: always()
       uses: actions/upload-artifact@v7
       with:
         name: web-ui-playwright-artifacts
+        retention-days: 14
         path: |
           web/playwright-report/**
           web/test-results/**
@@ -274,11 +275,12 @@ jobs:
       if: always()
       run: docker compose -f test/abs/docker-compose.yml down --remove-orphans
 
-    - name: Upload ABS Playwright artifacts on failure
-      if: failure()
+    - name: Upload ABS Playwright evidence
+      if: always()
       uses: actions/upload-artifact@v7
       with:
         name: web-ui-abs-playwright-artifacts
+        retention-days: 14
         path: |
           web/playwright-report/**
           web/test-results/**
