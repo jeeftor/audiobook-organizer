@@ -2342,8 +2342,8 @@ function buildRenameConfig(dryRun: boolean, selectedCurrentPaths?: string[]): Re
     preserve_path: preservePath.value,
     use_embedded_metadata: shouldUseEmbeddedMetadata(),
     allowed_current_paths: selectedCurrentPaths ?? defaults?.allowed_current_paths,
-	metadata_source: scanMode.value,
-	abs: scanMode.value === 'abs' ? buildABSConfig() : undefined,
+    metadata_source: scanMode.value,
+    abs: scanMode.value === 'abs' ? buildABSConfig() : undefined,
   }
 }
 
