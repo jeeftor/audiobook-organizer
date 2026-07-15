@@ -263,6 +263,12 @@ async function expectSummaryValue(page: Page, label: string, value: string): Pro
   await expect(summaryLocator(page, label)).toHaveText(value)
 }
 
+async function expectReviewSummaryValue(page: Page, label: string, value: string): Promise<void> {
+  await expect(
+    page.locator(`.review-layout .result-grid >> xpath=./span[normalize-space(.)="${label}"]/following-sibling::strong[1]`),
+  ).toHaveText(value)
+}
+
 async function summaryValue(page: Page, label: string): Promise<string> {
   return (await summaryLocator(page, label).textContent())?.trim() ?? ''
 }
