@@ -35,6 +35,11 @@ func mockProviderServer() *httptest.Server {
 						LibraryID: "lib_main",
 						Path:      "/audiobooks/Brandon Sanderson/The Final Empire",
 						RelPath:   "Brandon Sanderson/The Final Empire",
+						LibraryFiles: []LibraryFile{{
+							Metadata: FileMetadata{
+								Path: "/audiobooks/Brandon Sanderson/The Final Empire/01 - Prologue.mp3",
+							},
+						}},
 						Media: Media{
 							Metadata: Metadata{
 								Title: "The Final Empire",
@@ -45,6 +50,12 @@ func mockProviderServer() *httptest.Server {
 									{Name: "Mistborn"},
 								},
 							},
+							AudioFiles: []AudioFile{{
+								LibraryFile: LibraryFile{Metadata: FileMetadata{
+									Path: "/audiobooks/Brandon Sanderson/The Final Empire/01 - Prologue.mp3",
+								}},
+								TrackNumberFromMeta: 1,
+							}},
 						},
 					},
 					{
@@ -160,6 +171,31 @@ func TestMetadataProvider_GetMetadata(t *testing.T) {
 
 	if meta.SourceType != "abs" {
 		t.Errorf("Expected source type 'abs', got %s", meta.SourceType)
+	}
+}
+
+func TestMetadataProvider_GetMetadataForLibraryFile(t *testing.T) {
+	server := mockProviderServer()
+	defer server.Close()
+
+	provider := NewMetadataProvider(server.URL, "test-token", "lib_main", []PathMapping{{
+		ABSPrefix: "/audiobooks", LocalPrefix: "/mnt/media/audiobooks",
+	}})
+
+	meta, err := provider.GetMetadata(
+		"/mnt/media/audiobooks/Brandon Sanderson/The Final Empire/01 - Prologue.mp3",
+	)
+	if err != nil {
+		t.Fatalf("GetMetadata() error = %v", err)
+	}
+	if meta.Title != "The Final Empire" {
+		t.Fatalf("title = %q, want The Final Empire", meta.Title)
+	}
+	if meta.SourceType != "abs" {
+		t.Fatalf("SourceType = %q, want abs", meta.SourceType)
+	}
+	if meta.TrackNumber != 1 {
+		t.Fatalf("TrackNumber = %d, want 1", meta.TrackNumber)
 	}
 }
 

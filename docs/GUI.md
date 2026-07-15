@@ -36,7 +36,7 @@ The UI is intentionally browser-based instead of native-desktop-specific. That k
 
 ## Guided Setup
 
-Select **Guide Me** in the top bar when you are not sure which advanced workflow to start with. The guide asks whether you want to organize or rename, then asks where metadata should come from. For an organize workflow it can route you to a validated **Audiobookshelf API** setup; otherwise it offers `metadata.json`, embedded file metadata, or a safe local fallback that tries sidecars before embedded file metadata.
+Select **Guide Me** in the top bar when you are not sure which advanced workflow to start with. The guide asks whether you want to organize or rename, then asks where metadata should come from. Both workflows can route you to a validated **Audiobookshelf API** setup; otherwise they offer `metadata.json`, embedded file metadata, or a safe local fallback that tries sidecars before embedded file metadata.
 
 The guide only populates the existing setup controls. You still enter folders and, for ABS, the server URL, token, library, and path mapping. It always hands off to the normal dry-run preview and review stage before it offers a filesystem-changing run. Tokens and custom header values remain masked in the UI.
 
@@ -67,7 +67,7 @@ The web API exposes Audiobookshelf workflow endpoints for:
 - Loading item metadata from ABS.
 - Triggering library scans after organization.
 
-To organize directly from ABS metadata, select **Guide Me** → **Organize books** → **Audiobookshelf API**, or select **Audiobookshelf metadata** in the advanced **Organize** workflow. Test the connection, choose a library, and validate its ABS-to-local path mapping before the dry-run preview can run. The review and selected-move run stages use the same validated connection. Use the separate **Audiobookshelf** workflow when you need inspection, scanning, or missing-item cleanup.
+To organize or rename directly from ABS metadata, select **Guide Me** → your workflow → **Audiobookshelf API**, or select **Audiobookshelf metadata** in advanced setup. Test the connection, choose a library, and validate its ABS-to-local path mapping before the dry-run preview can run. Rename uses item-level ABS metadata and preserves a matched audio file's track number for filename templates. The review and selected run stages use the same validated connection. Use the separate **Audiobookshelf** workflow when you need inspection, scanning, or missing-item cleanup.
 
 ## Custom Layouts
 

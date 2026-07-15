@@ -7,6 +7,14 @@ import (
 	"testing"
 )
 
+type renameTestMetadataResolver struct {
+	metadata Metadata
+}
+
+func (r renameTestMetadataResolver) MetadataForPath(string) (Metadata, error) {
+	return r.metadata, nil
+}
+
 func TestNewRenamer(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -55,6 +63,41 @@ func TestNewRenamer(t *testing.T) {
 				t.Fatal("NewRenamer() returned nil")
 			}
 		})
+	}
+}
+
+func TestRenamerScanFilesUsesConfiguredMetadataResolver(t *testing.T) {
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "source.mp3")
+	if err := os.WriteFile(filePath, []byte("audio"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	renamer, err := NewRenamer(&RenamerConfig{
+		BaseDir:      tmpDir,
+		Template:     "{track} - {title}",
+		AuthorFormat: AuthorFormatFirstLast,
+		Recursive:    true,
+		MetadataResolver: renameTestMetadataResolver{metadata: Metadata{
+			Title:       "ABS Title",
+			Authors:     []string{"ABS Author"},
+			TrackNumber: 7,
+			RawData:     map[string]interface{}{},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("NewRenamer() error = %v", err)
+	}
+
+	candidates, err := renamer.ScanFiles()
+	if err != nil {
+		t.Fatalf("ScanFiles() error = %v", err)
+	}
+	if len(candidates) != 1 {
+		t.Fatalf("ScanFiles() candidates = %d, want 1", len(candidates))
+	}
+	if got, want := filepath.Base(candidates[0].ProposedPath), "07 - ABS Title.mp3"; got != want {
+		t.Fatalf("proposed filename = %q, want %q", got, want)
 	}
 }
 

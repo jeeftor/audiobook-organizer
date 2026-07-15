@@ -11,19 +11,27 @@ import (
 
 // RenamerConfig contains all configuration for renaming operations
 type RenamerConfig struct {
-	BaseDir             string       // Directory to scan for files
-	Template            string       // Filename template string
-	DryRun              bool         // Preview mode, don't execute
-	Verbose             bool         // Detailed output
-	AuthorFormat        AuthorFormat // How to format author names
-	Recursive           bool         // Recursively process subdirectories
-	FieldMapping        FieldMapping // Field mapping for metadata
-	ReplaceSpace        string       // Character to replace spaces
-	StrictMode          bool         // Error on missing template fields
-	PreservePath        bool         // Only rename filename, keep directory
-	PromptEnabled       bool         // Prompt before renaming each file
-	UseEmbeddedMetadata bool         // Force embedded metadata, ignore metadata.json
-	AllowedCurrentPaths []string     // When non-empty, only process these current file paths
+	BaseDir             string               // Directory to scan for files
+	Template            string               // Filename template string
+	DryRun              bool                 // Preview mode, don't execute
+	Verbose             bool                 // Detailed output
+	AuthorFormat        AuthorFormat         // How to format author names
+	Recursive           bool                 // Recursively process subdirectories
+	FieldMapping        FieldMapping         // Field mapping for metadata
+	ReplaceSpace        string               // Character to replace spaces
+	StrictMode          bool                 // Error on missing template fields
+	PreservePath        bool                 // Only rename filename, keep directory
+	PromptEnabled       bool                 // Prompt before renaming each file
+	UseEmbeddedMetadata bool                 // Force embedded metadata, ignore metadata.json
+	AllowedCurrentPaths []string             // When non-empty, only process these current file paths
+	MetadataResolver    FileMetadataResolver // Optional per-file metadata source, such as ABS
+}
+
+// FileMetadataResolver provides metadata for a file being renamed.
+// It lets callers use an external metadata source without coupling the renamer
+// to a specific integration.
+type FileMetadataResolver interface {
+	MetadataForPath(path string) (Metadata, error)
 }
 
 // Validate checks if the configuration is valid and returns helpful error messages
@@ -258,19 +266,14 @@ func (r *Renamer) ScanFiles() ([]RenameCandidate, error) {
 
 		r.summary.FilesScanned++
 
-		// Determine metadata provider based on configuration
-		// ALWAYS use NewMetadataProvider which auto-detects and does hybrid extraction
-		var provider MetadataProvider
-		provider = NewMetadataProvider(path, r.config.UseEmbeddedMetadata)
-
-		// Note: NewMetadataProvider will automatically:
-		// - Detect file type (audio, epub, json)
-		// - For audio files, check for metadata.json in parent dir (unless UseEmbeddedMetadata is true)
-		// - Do hybrid extraction (JSON + embedded) if metadata.json exists and UseEmbeddedMetadata is false
-		// - Use only embedded metadata if no metadata.json or UseEmbeddedMetadata is true
-
-		// Extract metadata
-		metadata, err := provider.GetMetadata()
+		var metadata Metadata
+		if r.config.MetadataResolver != nil {
+			metadata, err = r.config.MetadataResolver.MetadataForPath(path)
+		} else {
+			// NewMetadataProvider auto-detects and does hybrid extraction.
+			provider := NewMetadataProvider(path, r.config.UseEmbeddedMetadata)
+			metadata, err = provider.GetMetadata()
+		}
 		if err != nil {
 			candidates = append(candidates, RenameCandidate{
 				CurrentPath: path,

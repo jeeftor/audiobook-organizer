@@ -56,6 +56,8 @@ type RenameConfigDTO struct {
 	PreservePath        bool            `json:"preserve_path"`
 	UseEmbeddedMetadata bool            `json:"use_embedded_metadata"`
 	AllowedCurrentPaths []string        `json:"allowed_current_paths,omitempty"`
+	MetadataSource      string          `json:"metadata_source,omitempty"`
+	ABS                 ABSConfigDTO    `json:"abs,omitempty"`
 }
 
 // FieldMappingDTO is the JSON-safe metadata field mapping.

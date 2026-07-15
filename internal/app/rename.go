@@ -2,7 +2,9 @@ package app
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/jeeftor/audiobook-organizer/internal/abs"
 	"github.com/jeeftor/audiobook-organizer/internal/organizer"
 )
 
@@ -35,9 +37,7 @@ func (s *Service) PreviewRename(
 	default:
 	}
 
-	config := req.Config.ToRenamerConfig()
-	config.DryRun = true
-	renamer, err := organizer.NewRenamer(&config)
+	renamer, err := s.newRenamer(req, true)
 	if err != nil {
 		return nil, err
 	}
@@ -62,10 +62,7 @@ func (s *Service) RunRename(
 	default:
 	}
 
-	config := req.Config.ToRenamerConfig()
-	config.DryRun = false
-	config.PromptEnabled = false
-	renamer, err := organizer.NewRenamer(&config)
+	renamer, err := s.newRenamer(req, false)
 	if err != nil {
 		return nil, err
 	}
@@ -86,4 +83,29 @@ func (s *Service) RunRename(
 		Summary:    summary,
 		LogPath:    logPath,
 	}, nil
+}
+
+func (s *Service) newRenamer(req RenameRequest, dryRun bool) (*organizer.Renamer, error) {
+	config := req.Config.ToRenamerConfig()
+	config.DryRun = dryRun
+	config.PromptEnabled = false
+	if req.Config.MetadataSource == metadataSourceABS {
+		provider, err := s.newABSProviderForInput(req.Config.ABS, config.BaseDir)
+		if err != nil {
+			return nil, err
+		}
+		if err := provider.LoadAllItems(); err != nil {
+			return nil, fmt.Errorf("loading ABS items: %w", err)
+		}
+		config.MetadataResolver = absRenameMetadataResolver{provider: provider}
+	}
+	return organizer.NewRenamer(&config)
+}
+
+type absRenameMetadataResolver struct {
+	provider *abs.MetadataProvider
+}
+
+func (r absRenameMetadataResolver) MetadataForPath(path string) (organizer.Metadata, error) {
+	return r.provider.GetMetadata(path)
 }
