@@ -92,7 +92,7 @@ test('previews and executes real rename candidates through the web UI', async ({
   }
 })
 
-test('uses a custom metadata field mapping in a real rename preview', async ({ page }) => {
+test('uses a custom metadata field mapping in a real rename preview and execution', async ({ page }) => {
   test.setTimeout(60_000)
 
   const fixture = await createFieldMappingRenameFixture()
@@ -106,6 +106,19 @@ test('uses a custom metadata field mapping in a real rename preview', async ({ p
 
     await expect(page.getByRole('heading', { name: 'Rename preview ready' })).toBeVisible()
     await expect(page.locator('.move-list').filter({ hasText: fixture.mappedPath })).toBeVisible()
+    await expectPathExists(fixture.originalPath)
+    await expectPathMissing(fixture.mappedPath)
+
+    await page.getByRole('button', { name: 'Review & Run', exact: true }).click()
+    page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toContain('Run Rename will change 1 selected file')
+      await dialog.accept()
+    })
+    await page.getByRole('button', { name: 'Run 1 Selected File' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Rename Run Complete' })).toBeVisible()
+    await expectPathMissing(fixture.originalPath)
+    await expectPathExists(fixture.mappedPath)
   } finally {
     await fixture.cleanup()
   }
@@ -166,6 +179,7 @@ async function createFieldMappingRenameFixture(): Promise<{
   sourceDir: string
   defaultPath: string
   mappedPath: string
+  originalPath: string
   cleanup: () => Promise<void>
 }> {
   const root = await mkdtemp(join(tmpdir(), 'abo-web-rename-mapping-'))
@@ -187,6 +201,7 @@ async function createFieldMappingRenameFixture(): Promise<{
     sourceDir: root,
     defaultPath: join(bookDir, 'Default Author - Default Title.mp3'),
     mappedPath: join(bookDir, 'Mapped Author - Mapped Title.mp3'),
+    originalPath,
     cleanup: () => rm(root, { recursive: true, force: true }),
   }
 }
