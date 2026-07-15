@@ -396,6 +396,11 @@ func (o *Organizer) BaseDir() string {
 	return o.config.BaseDir
 }
 
+// IsAllowedSourcePath reports whether a source path is included by the current selection.
+func (o *Organizer) IsAllowedSourcePath(path string) bool {
+	return len(o.config.AllowedSourcePaths) == 0 || contains(o.config.AllowedSourcePaths, path)
+}
+
 // GetSummary returns the current operation summary
 func (o *Organizer) GetSummary() Summary {
 	return o.summary

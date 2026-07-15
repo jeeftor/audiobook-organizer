@@ -25,7 +25,7 @@ Use it when you want to:
 - preview filesystem changes before moving or renaming audiobook files;
 - organize messy folders into predictable layouts such as `Author/Series/Title`;
 - rename files from metadata templates;
-- inspect and map metadata from `metadata.json`, embedded tags, and Audiobookshelf;
+- inspect and map metadata from `metadata.json`, embedded tags, and Audiobookshelf, including organizing from a validated ABS connection in the local web UI;
 - trigger Audiobookshelf scans after filesystem changes;
 - undo organization and rename operations from generated logs.
 

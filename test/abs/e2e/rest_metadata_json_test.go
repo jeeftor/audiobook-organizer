@@ -218,6 +218,84 @@ func TestRESTHarness_ABSOperationEndpoints(t *testing.T) {
 	})
 }
 
+func TestRESTHarness_ABSMetadataSourceOrganizeLifecycle(t *testing.T) {
+	harness := newRESTHarness(t)
+	defer harness.server.Close()
+
+	caseData := absMetadataAudiobookCase()
+	var ctx restScenarioContext
+	request := func(dryRun bool) map[string]any {
+		return map[string]any{
+			"config": map[string]any{
+				"base_dir":        pathFromRoot(caseData.inputParts...),
+				"output_dir":      pathFromRoot(caseData.inputParts...),
+				"dry_run":         dryRun,
+				"layout":          "author-title",
+				"metadata_source": "abs",
+				"abs":             ctx.config,
+			},
+		}
+	}
+
+	step(t, "01 reset and identify ABS audiobook library", func(t *testing.T) {
+		resetAndInitialScan(t)
+		ctx = newRESTScenarioContext(t, harness, plainInstance, caseData.library)
+	})
+
+	step(t, "02 preview organization through REST using ABS metadata", func(t *testing.T) {
+		var response struct {
+			Summary struct {
+				Moves []struct {
+					From string `json:"from"`
+					To   string `json:"to"`
+				} `json:"Moves"`
+			} `json:"summary"`
+		}
+		harness.postJSON(t, "/api/organize/preview", request(true), &response)
+		if got := len(response.Summary.Moves); got != caseData.expectedCount {
+			t.Fatalf("ABS metadata preview moves = %d, want %d", got, caseData.expectedCount)
+		}
+		assertPathsExist(t, caseData.oldFiles)
+		assertPathsNotExist(t, caseData.newFiles)
+	})
+
+	step(t, "03 run organization through REST using ABS metadata", func(t *testing.T) {
+		var response struct {
+			Summary struct {
+				Moves []struct {
+					From string `json:"from"`
+					To   string `json:"to"`
+				} `json:"Moves"`
+			} `json:"summary"`
+		}
+		harness.postJSON(t, "/api/organize/run", request(false), &response)
+		if got := len(response.Summary.Moves); got != caseData.expectedCount {
+			t.Fatalf("ABS metadata run moves = %d, want %d", got, caseData.expectedCount)
+		}
+		assertPathsNotExist(t, caseData.oldFiles)
+		assertPathsExist(t, caseData.newFiles)
+		assertExists(t, pathFromRoot(caseData.logFile...))
+	})
+
+	step(t, "04 scan and reconcile ABS state after REST organization", func(t *testing.T) {
+		triggerRESTABSScan(t, ctx)
+		waitForRESTABSState(t, ctx, absStateExpectation{
+			expectedCount:   caseData.expectedCount * 2,
+			missingCount:    len(caseData.oldAPIPaths),
+			activeContains:  caseData.newAPIPaths,
+			missingContains: caseData.oldAPIPaths,
+		})
+		cleanRESTABSMissing(t, ctx, caseData.oldAPIPaths)
+		triggerRESTABSScan(t, ctx)
+		waitForRESTABSState(t, ctx, absStateExpectation{
+			expectedCount:  caseData.expectedCount,
+			missingCount:   0,
+			activeContains: caseData.newAPIPaths,
+			absentContains: caseData.oldAPIPaths,
+		})
+	})
+}
+
 func runRESTMetadataJSONLifecycle(t *testing.T, tc metadataJSONLifecycleCase) {
 	harness := newRESTHarness(t)
 	defer harness.server.Close()

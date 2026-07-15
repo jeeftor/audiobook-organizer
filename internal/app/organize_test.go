@@ -2,10 +2,87 @@ package app
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+func TestOrganizeUsesABSMetadataSourceForPreviewAndRun(t *testing.T) {
+	service := NewService(DefaultWebConfig("127.0.0.1", 0, false, "", ""))
+	root := t.TempDir()
+	inputDir := filepath.Join(root, "input")
+	outputDir := filepath.Join(root, "output")
+	bookDir := filepath.Join(inputDir, "unsorted")
+	if err := os.MkdirAll(bookDir, 0o755); err != nil {
+		t.Fatalf("create input fixture: %v", err)
+	}
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		t.Fatalf("create output fixture: %v", err)
+	}
+	writeFile(t, filepath.Join(bookDir, "audio.m4b"), "fake audio")
+
+	absServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer test-token" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if r.URL.Path != "/api/libraries/lib-main/items" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"results": []map[string]any{
+				{
+					"id":        "item-1",
+					"libraryId": "lib-main",
+					"path":      "/abs/input/unsorted",
+					"media": map[string]any{
+						"metadata": map[string]any{
+							"title":   "ABS Test Book",
+							"authors": []map[string]string{{"name": "ABS Author"}},
+						},
+					},
+				},
+			},
+			"total": 1,
+		})
+	}))
+	defer absServer.Close()
+
+	config := organizeTestConfig(inputDir, outputDir, false)
+	config.MetadataSource = metadataSourceABS
+	config.ABS = ABSConfigDTO{
+		URL:       absServer.URL,
+		Token:     "test-token",
+		LibraryID: "lib-main",
+		PathMappings: []PathMappingDTO{{
+			ABSPrefix:   "/abs/input",
+			LocalPrefix: inputDir,
+		}},
+	}
+
+	preview, err := service.PreviewOrganize(context.Background(), OrganizeRequest{Config: config})
+	if err != nil {
+		t.Fatalf("PreviewOrganize() error = %v", err)
+	}
+	if got := len(preview.Summary.Moves); got != 1 {
+		t.Fatalf("preview moves = %d, want 1", got)
+	}
+	assertFileExists(t, filepath.Join(bookDir, "audio.m4b"))
+	assertFileNotExists(t, filepath.Join(outputDir, "ABS Author", "ABS Test Book", "audio.m4b"))
+
+	run, err := service.RunOrganize(context.Background(), OrganizeRequest{Config: config})
+	if err != nil {
+		t.Fatalf("RunOrganize() error = %v", err)
+	}
+	if got := len(run.Summary.Moves); got != 1 {
+		t.Fatalf("run moves = %d, want 1", got)
+	}
+	assertFileExists(t, filepath.Join(outputDir, "ABS Author", "ABS Test Book", "audio.m4b"))
+}
 
 func TestPreviewOrganizeForcesDryRunAndOmitsLogPath(t *testing.T) {
 	service := NewService(DefaultWebConfig("127.0.0.1", 0, false, "", ""))

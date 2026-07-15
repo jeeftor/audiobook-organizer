@@ -39,6 +39,8 @@ type OrganizerConfigDTO struct {
 	AuthorFormat        string          `json:"author_format"`
 	FieldMapping        FieldMappingDTO `json:"field_mapping"`
 	AllowedSourcePaths  []string        `json:"allowed_source_paths,omitempty"`
+	MetadataSource      string          `json:"metadata_source,omitempty"`
+	ABS                 ABSConfigDTO    `json:"abs,omitempty"`
 }
 
 // RenameConfigDTO is the JSON-safe rename configuration.

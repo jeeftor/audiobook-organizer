@@ -225,7 +225,7 @@
               <label class="check-row"><input v-model="removeEmpty" type="checkbox" /> Remove empty source folders after run</label>
             </div>
 
-          <div v-if="activeWorkflow === 'abs'" class="panel-section">
+          <div v-if="showABSSetup" class="panel-section">
             <h3>Audiobookshelf</h3>
             <label>Server URL</label>
             <input v-model="absUrl" aria-label="ABS server URL" placeholder="http://localhost:13378" />
@@ -1025,8 +1025,9 @@ const scanModeOptions = computed(() => {
   return optionsState.value === 'fallback' ? defaultScanModes : []
 })
 const workflowScanModes = computed(() => {
-  return scanModeOptions.value.filter((mode) => activeWorkflow.value === 'abs' || mode.value !== 'abs')
+  return scanModeOptions.value.filter((mode) => activeWorkflow.value !== 'rename' || mode.value !== 'abs')
 })
+const showABSSetup = computed(() => activeWorkflow.value === 'abs' || (activeWorkflow.value === 'organize' && scanMode.value === 'abs'))
 const selectedMetadataSourceLabel = computed(() => {
   return workflowScanModes.value.find((mode) => mode.value === scanMode.value)?.label ?? scanMode.value
 })
@@ -1205,6 +1206,9 @@ const organizeReviewHeading = computed(() => {
 })
 const organizeReviewCopy = computed(() => {
   if (organizeRun.value) {
+	if (scanMode.value === 'abs') {
+		return 'The ABS-backed organize run finished. Open Audiobookshelf to trigger a library scan, inspect the refreshed state, and clean only confirmed missing old paths.'
+	}
     return 'The reviewed organize plan finished with backend results.'
   }
   if (organizePreview.value) {
@@ -1790,6 +1794,9 @@ async function createOrganizePreview() {
     if (!sourceFolder.value.trim() || !outputFolder.value.trim()) {
       throw new Error('Source and output folders are required for organize preview.')
     }
+    if (scanMode.value === 'abs') {
+      assertABSSetupReady()
+    }
     addRequestStart('Organize preview', 'POST /api/organize/preview')
     requestStarted = true
     const response = normalizeOrganizeResponse(
@@ -1922,6 +1929,9 @@ async function testABSPathMappings() {
     absResolvedMappings.value = response.mappings ?? []
     absPathStatus.value = 'success'
     addRequestSuccess('ABS path validation', `${absResolvedMappings.value.length} path mapping(s) resolved.`)
+    if (activeWorkflow.value === 'organize' && scanMode.value === 'abs') {
+      scheduleActivePreviewRefresh()
+    }
   } catch (error) {
     absPathStatus.value = 'error'
     absPathError.value = error instanceof Error ? error.message : 'ABS path validation failed.'
@@ -2146,6 +2156,8 @@ function buildOrganizerConfig(dryRun: boolean, selectedSourcePaths?: string[]): 
     author_format: defaults?.author_format || 'first-last',
     field_mapping: cloneFieldMapping(organizeFieldMapping.value),
     allowed_source_paths: selectedSourcePaths ?? defaults?.allowed_source_paths,
+    metadata_source: scanMode.value,
+    abs: scanMode.value === 'abs' ? buildABSConfig() : undefined,
   }
 }
 
@@ -2507,21 +2519,21 @@ watch([sourceFolder, scanMode, renameTemplate, renameRecursive, preservePath, re
 }, { deep: true })
 
 watch([absUrl, absToken, absHeaderName, absHeaderValue], () => {
-  if (activeWorkflow.value !== 'abs') {
+  if (!showABSSetup.value) {
     return
   }
   resetABSConnectionResults()
 })
 
 watch([absLibrary], () => {
-  if (activeWorkflow.value !== 'abs') {
+  if (!showABSSetup.value) {
     return
   }
   resetABSOperationResults()
 })
 
 watch([sourceFolder, absSQLitePath, absPathMappings], () => {
-  if (activeWorkflow.value !== 'abs') {
+  if (!showABSSetup.value) {
     return
   }
   resetABSPathResults()

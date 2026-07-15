@@ -61,7 +61,7 @@ The web API exposes Audiobookshelf workflow endpoints for:
 - Loading item metadata from ABS.
 - Triggering library scans after organization.
 
-Use the ABS controls in the web UI when you want the organizer to reconcile local filesystem paths with an Audiobookshelf server.
+To organize directly from ABS metadata, select **Audiobookshelf metadata** in the **Organize** workflow. Test the connection, choose a library, and validate its ABS-to-local path mapping before the dry-run preview can run. The review and selected-move run stages use the same validated connection. Use the separate **Audiobookshelf** workflow when you need inspection, scanning, or missing-item cleanup.
 
 ## Custom Layouts
 

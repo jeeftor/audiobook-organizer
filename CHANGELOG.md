@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **ABS metadata-source organize workflow**: The local web UI can now organize an Audiobookshelf-mounted library directly from validated ABS metadata, with the normal dry-run preview, selected-move review, run log, and ABS scan/cleanup follow-up.
 - **Web metadata field mapping**: The organize and rename setup screens now offer
   source presets and editable title, author, series, track, and disc mappings;
   changes refresh the dry-run preview before any filesystem operation.

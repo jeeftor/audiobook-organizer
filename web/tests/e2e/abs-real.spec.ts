@@ -14,13 +14,50 @@ let absEnv: Record<string, string>
 test.skip(process.env.ABO_ABS_PLAYWRIGHT !== '1', 'Set ABO_ABS_PLAYWRIGHT=1 to run Docker-backed ABS UI tests.')
 
 test.beforeAll(async () => {
-  await runRepoCommand('make', ['abs-dev-reset-scan'], 8 * 60_000)
   absEnv = loadABSTestingEnv()
   server = await startTestServer()
 })
 
+test.beforeEach(async () => {
+  await runRepoCommand('make', ['abs-dev-reset-scan'], 8 * 60_000)
+})
+
 test.afterAll(async () => {
   await server?.stop()
+})
+
+test('organizes a mounted library using real Audiobookshelf metadata', async ({ page }) => {
+  test.setTimeout(120_000)
+
+  const absURL = requiredEnv('ABS_PLAIN_URL')
+  const absToken = requiredEnv('ABS_TOKEN')
+  const audiobookRoot = join(repoRoot, 'test', 'abs', 'runtime', 'plain', 'audiobooks')
+
+  await loadApp(page)
+  await page.getByRole('button', { name: /Organize/ }).click()
+  await page.getByLabel('Source folder').fill(audiobookRoot)
+  await page.getByLabel('Output folder').fill(audiobookRoot)
+  await page.getByRole('radio', { name: 'Audiobookshelf metadata' }).click()
+
+  await page.getByLabel('ABS server URL').fill(absURL)
+  await page.getByLabel('ABS API token').fill(absToken)
+  await page.getByLabel('ABS path prefix').fill('/audiobooks')
+  await page.getByLabel('Local path prefix').fill(audiobookRoot)
+  await page.getByRole('button', { name: 'Test Connection' }).click()
+  await selectLibraryByName(page, 'Audiobooks')
+  await page.getByRole('button', { name: 'Validate Paths' }).click()
+  await expect(page.getByText('ABS libraries loaded and path mappings validated.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Review & Run Select, execute, inspect' }).click()
+  await expect(page.getByRole('heading', { name: 'Organize Preview Results' })).toBeVisible()
+  await expect(page.locator('.move-list')).toContainText('Charles Dickens')
+  await expect(page.locator('.move-list')).toContainText('Lewis Carroll')
+  await expect(page.getByRole('button', { name: /Run 2 Selected Moves/ })).toBeEnabled()
+
+  await page.getByRole('button', { name: /Run 2 Selected Moves/ }).click()
+  await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
+  await expect(page.locator('.move-list')).toContainText('Charles Dickens')
+  await expect(page.locator('.move-list')).toContainText('Lewis Carroll')
 })
 
 test('drives ABS setup and operations against the real ABS harness', async ({ page }) => {

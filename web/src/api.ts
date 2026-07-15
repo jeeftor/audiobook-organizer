@@ -30,6 +30,8 @@ export type OrganizerConfig = {
   author_format: string
   field_mapping: FieldMapping
   allowed_source_paths?: string[]
+  metadata_source?: string
+  abs?: ABSConfig
 }
 
 export type MoveSummary = {
