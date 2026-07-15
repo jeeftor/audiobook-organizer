@@ -35,8 +35,8 @@ test('organizes a mounted library using real Audiobookshelf metadata', async ({ 
 
   await loadApp(page)
   await page.getByRole('button', { name: /Organize/ }).click()
-  await page.getByLabel('Source folder').fill(audiobookRoot)
-  await page.getByLabel('Output folder').fill(audiobookRoot)
+  await page.getByRole('textbox', { name: 'Source folder' }).fill(audiobookRoot)
+  await page.getByRole('textbox', { name: 'Output folder' }).fill(audiobookRoot)
   await page.getByRole('radio', { name: 'Audiobookshelf metadata' }).click()
 
   await page.getByLabel('ABS server URL').fill(absURL)

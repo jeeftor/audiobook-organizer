@@ -55,17 +55,17 @@ test('renders staged workflows and connects to the local server', async ({ page 
   await expect(page.getByRole('button', { name: /Run/ })).toBeDisabled()
 })
 
-test('uses backend bootstrap options and scopes ABS scan mode to ABS workflow', async ({ page }) => {
+test('uses backend bootstrap options and offers ABS metadata in organize only', async ({ page }) => {
   await loadApp(page)
 
   await expect(page.locator('select[aria-label="Layout"] option[value="author-series-title-number"]')).toHaveCount(1)
   await expect(page.locator('select[aria-label="Layout"] option[value="custom"]')).toHaveCount(1)
-  await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveCount(0)
+  await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveCount(1)
   await expect(page.getByLabel('Use embedded metadata')).toHaveCount(0)
   await expect(page.getByLabel('Preview color legend')).toBeVisible()
 
-  await page.getByRole('button', { name: /Audiobookshelf/ }).click()
-  await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveCount(1)
+  await page.getByRole('button', { name: /Rename/ }).click()
+  await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveCount(0)
 })
 
 test('creates organize previews from configure and derives embedded mode from metadata source', async ({ page }) => {
@@ -264,7 +264,7 @@ test('shows bootstrap fallback state when config and options fail', async ({ pag
   await expect(page.locator('.event-row').filter({ hasText: 'Config unavailable' })).toHaveCount(1)
   await expect(page.locator('.event-row').filter({ hasText: 'Options unavailable' })).toHaveCount(1)
   await expect(page.locator('select[aria-label="Layout"] option')).toHaveText(['Author / Series / Title', 'Custom'])
-  await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveCount(0)
+  await expect(page.getByRole('radio', { name: 'Audiobookshelf metadata' })).toHaveCount(1)
 })
 
 test('does not treat redacted ABS credentials as usable browser state', async ({ page }) => {
