@@ -26,6 +26,7 @@ Use it when you want to:
 - organize messy folders into predictable layouts such as `Author/Series/Title`;
 - rename files from metadata templates;
 - inspect and map metadata from `metadata.json`, embedded tags, and Audiobookshelf, including organizing from a validated ABS connection in the local web UI;
+- use **Guide Me** in the local web UI to choose an organize or rename path and safely hand off to the dry-run setup for local or ABS metadata;
 - trigger Audiobookshelf scans after filesystem changes;
 - undo organization and rename operations from generated logs.
 

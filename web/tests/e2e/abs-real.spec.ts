@@ -47,7 +47,7 @@ test('rejects an invalid ABS token and keeps the workflow locked', async ({ page
   await expect(page.getByRole('button', { name: 'Review & Run Select, execute, inspect' })).toBeDisabled()
 })
 
-test('organizes a mounted library using real Audiobookshelf metadata', async ({ page }) => {
+test('guides a mounted library through real Audiobookshelf organize metadata', async ({ page }) => {
   test.setTimeout(120_000)
 
   const absURL = requiredEnv('ABS_PLAIN_URL')
@@ -55,7 +55,11 @@ test('organizes a mounted library using real Audiobookshelf metadata', async ({ 
   const audiobookRoot = join(repoRoot, 'test', 'abs', 'runtime', 'plain', 'audiobooks')
 
   await loadApp(page)
-  await page.getByRole('button', { name: /Organize/ }).click()
+  await page.getByRole('button', { name: 'Guide Me' }).click()
+  await page.getByRole('dialog').getByRole('radio', { name: 'Organize books' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Next' }).click()
+  await page.getByRole('button', { name: 'Audiobookshelf API' }).click()
+  await expect(page.getByText(/Next: enter the ABS server URL and token/)).toBeVisible()
   await page.getByRole('textbox', { name: 'Source folder' }).fill(audiobookRoot)
   await page.getByRole('textbox', { name: 'Output folder' }).fill(audiobookRoot)
   await page.getByRole('radio', { name: 'Audiobookshelf metadata' }).click()
