@@ -253,6 +253,13 @@ func (s *Service) CleanABSMissing(
 }
 
 func (s *Service) newABSProvider(cfg ABSConfigDTO) (*abs.MetadataProvider, error) {
+	return s.newABSProviderForInput(cfg, "")
+}
+
+func (s *Service) newABSProviderForInput(
+	cfg ABSConfigDTO,
+	inputPath string,
+) (*abs.MetadataProvider, error) {
 	libraryID := cfg.LibraryID
 	if libraryID == "" {
 		libraryID = "main"
@@ -267,8 +274,7 @@ func (s *Service) newABSProvider(cfg ABSConfigDTO) (*abs.MetadataProvider, error
 		}
 		provider = abs.NewMetadataProviderAllLibraries(cfg.URL, cfg.Token, mappings)
 	case cfg.SQLitePath != "":
-		inputPath := ""
-		if len(cfg.PathMappings) > 0 {
+		if inputPath == "" && len(cfg.PathMappings) > 0 {
 			inputPath = cfg.PathMappings[0].LocalPrefix
 		}
 		var err error

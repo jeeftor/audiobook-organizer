@@ -203,11 +203,23 @@ func (p *MetadataProvider) convertToOrganizerMetadata(item *LibraryItem) organiz
 			meta.Series = append(meta.Series, series.Name)
 		}
 	}
+	if len(meta.Series) == 0 && absMedia.SeriesName != "" {
+		meta.Series = append(meta.Series, absMedia.SeriesName)
+	}
 
 	// Store ABS-specific data in RawData for advanced use
 	meta.RawData["title"] = meta.Title
 	meta.RawData["authors"] = strings.Join(meta.Authors, ", ")
 	meta.RawData["series"] = strings.Join(meta.Series, ", ")
+	meta.RawData["series_number"] = absMedia.SeriesSequence
+	meta.RawData["narrator"] = absMedia.NarratorName
+	meta.RawData["publisher"] = absMedia.Publisher
+	meta.RawData["published_year"] = absMedia.PublishedYear
+	meta.RawData["published_date"] = absMedia.PublishedDate
+	meta.RawData["language"] = absMedia.Language
+	meta.RawData["genres"] = strings.Join(absMedia.Genres, ", ")
+	meta.RawData["tags"] = strings.Join(absMedia.Tags, ", ")
+	meta.RawData["source_path"] = meta.SourcePath
 	meta.RawData["authorNamesFirstLast"] = item.AuthorNamesFirstLast
 	meta.RawData["authorNamesLastFirst"] = item.AuthorNamesLastFirst
 	meta.RawData["abs_item_id"] = item.ID

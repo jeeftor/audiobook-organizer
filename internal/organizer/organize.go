@@ -492,6 +492,7 @@ func (o *Organizer) OrganizePathWithMetadata(sourcePath string, metadata Metadat
 	}
 
 	provider := NewStaticMetadataProvider(metadata)
+	o.summary.MetadataFound = append(o.summary.MetadataFound, sourcePath)
 	if info.IsDir() {
 		return o.OrganizeAudiobook(sourcePath, provider)
 	}

@@ -192,6 +192,53 @@ func TestMetadataProvider_UsesLibraryItemAuthorNamesFallback(t *testing.T) {
 	}
 }
 
+func TestMetadataProvider_NormalizesABSMetadataForFieldMapping(t *testing.T) {
+	provider := NewMetadataProvider(
+		"http://example.invalid",
+		"test-token",
+		"lib_main",
+		[]PathMapping{{ABSPrefix: "/books", LocalPrefix: "/mnt/books"}},
+	)
+
+	meta := provider.convertToOrganizerMetadata(&LibraryItem{
+		ID:        "li_001",
+		LibraryID: "lib_main",
+		Path:      "/books/messy/pride",
+		Media: Media{Metadata: Metadata{
+			Title:          "Pride and Prejudice",
+			AuthorName:     "Jane Austen",
+			SeriesName:     "Classics",
+			SeriesSequence: "4",
+			NarratorName:   "Public Domain Reader",
+			Publisher:      "Example Press",
+			PublishedYear:  "1813",
+			PublishedDate:  "1813-01-28",
+			Language:       "English",
+			Genres:         []string{"Classic"},
+			Tags:           []string{"regency"},
+		}},
+	})
+
+	if got := meta.Series; len(got) != 1 || got[0] != "Classics" {
+		t.Fatalf("series = %v, want [Classics]", got)
+	}
+	for key, want := range map[string]any{
+		"series_number":  "4",
+		"narrator":       "Public Domain Reader",
+		"publisher":      "Example Press",
+		"published_year": "1813",
+		"published_date": "1813-01-28",
+		"language":       "English",
+		"genres":         "Classic",
+		"tags":           "regency",
+		"source_path":    "/mnt/books/messy/pride",
+	} {
+		if got := meta.RawData[key]; got != want {
+			t.Fatalf("RawData[%q] = %v, want %v", key, got, want)
+		}
+	}
+}
+
 func TestMetadataProvider_PathMappings(t *testing.T) {
 	server := mockProviderServer()
 	defer server.Close()
