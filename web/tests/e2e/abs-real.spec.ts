@@ -26,6 +26,27 @@ test.afterAll(async () => {
   await server?.stop()
 })
 
+test('rejects an invalid ABS token and keeps the workflow locked', async ({ page }) => {
+  test.setTimeout(120_000)
+
+  const absURL = requiredEnv('ABS_PLAIN_URL')
+  const audiobookRoot = join(repoRoot, 'test', 'abs', 'runtime', 'plain', 'audiobooks')
+
+  await loadApp(page)
+  await page.getByRole('button', { name: /Audiobookshelf/ }).click()
+  await page.getByRole('textbox', { name: 'Source folder' }).fill(audiobookRoot)
+  await page.getByLabel('ABS server URL').fill(absURL)
+  await page.getByLabel('ABS API token').fill('invalid-token')
+  await page.getByLabel('ABS path prefix').fill('/audiobooks')
+  await page.getByLabel('Local path prefix').fill(audiobookRoot)
+  await page.getByRole('button', { name: 'Test Connection' }).click()
+
+  await expect(page.locator('.inline-alert')).toBeVisible()
+  await expect(page.getByLabel('ABS library')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Validate Paths' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Review & Run Select, execute, inspect' })).toBeDisabled()
+})
+
 test('organizes a mounted library using real Audiobookshelf metadata', async ({ page }) => {
   test.setTimeout(120_000)
 

@@ -183,7 +183,7 @@ test('uses numbered layout and removes empty source folders after organize run',
   }
 })
 
-test('uses a custom metadata field mapping in a real organize preview', async ({ page }) => {
+test('uses a custom metadata field mapping in a real organize preview and execution', async ({ page }) => {
   test.setTimeout(60_000)
 
   const fixture = await createFieldMappingFixture()
@@ -197,6 +197,18 @@ test('uses a custom metadata field mapping in a real organize preview', async ({
 
     await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
     await expect(page.getByText(fixture.mappedDir)).toBeVisible()
+    await expect.poll(() => pathExists(fixture.mappedDir)).toBe(false)
+
+    await page.getByRole('button', { name: 'Review & Run', exact: true }).click()
+    page.once('dialog', async (dialog) => {
+      expect(dialog.message()).toContain('Run Organize will change files for 1 selected move')
+      await dialog.accept()
+    })
+    await page.getByRole('button', { name: 'Run 1 Selected Move' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
+    await expect.poll(() => pathExists(fixture.mappedDir)).toBe(true)
+    await expect.poll(() => pathExists(fixture.sourceFile)).toBe(false)
   } finally {
     await fixture.cleanup()
   }
@@ -510,6 +522,7 @@ async function createFieldMappingFixture(): Promise<{
   outputDir: string
   defaultDir: string
   mappedDir: string
+  sourceFile: string
   cleanup: () => Promise<void>
 }> {
   const root = await mkFixtureRoot()
@@ -536,6 +549,7 @@ async function createFieldMappingFixture(): Promise<{
     outputDir,
     defaultDir: join(outputDir, 'Default Author', 'Default Series', 'Default Title'),
     mappedDir: join(outputDir, 'Mapped Author', 'Mapped Series', 'Mapped Title'),
+    sourceFile: join(bookDir, 'book.mp3'),
     cleanup: () => rm(root, { recursive: true, force: true }),
   }
 }
