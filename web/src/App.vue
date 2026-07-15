@@ -92,7 +92,14 @@
           <span>Choosing yes opens the existing validated ABS setup. Choosing no keeps the safe local metadata fallback.</span>
           <div class="guide-actions">
             <button class="secondary-action" type="button" @click="chooseGuidedSource('json', true)">No or unsure</button>
-            <button class="primary-action" type="button" @click="chooseGuidedSource('abs')">Yes, use Audiobookshelf</button>
+            <button
+              v-if="guideWorkflow === 'organize'"
+              class="primary-action"
+              type="button"
+              @click="chooseGuidedSource('abs')"
+            >
+              Yes, use Audiobookshelf
+            </button>
           </div>
         </div>
 
@@ -145,7 +152,7 @@
           <p>{{ currentStage.copy }}</p>
         </div>
 
-        <p v-if="guideHandoffHint" class="guide-handoff-hint" role="status">{{ guideHandoffHint }}</p>
+        <p v-if="guideHandoffHint && activeStage === 'configure'" class="guide-handoff-hint" role="status">{{ guideHandoffHint }}</p>
 
         <section v-if="activeStage === 'configure'" class="setup-preview-grid">
           <div class="setup-controls">
@@ -1456,6 +1463,7 @@ const isRunActionDisabled = computed(() => {
 })
 
 function selectWorkflow(workflow: WorkflowId) {
+  guideHandoffHint.value = ''
   activeWorkflow.value = workflow
   activeStage.value = 'configure'
   ensureScanModeFitsWorkflow()
@@ -1480,6 +1488,10 @@ function closeGuide() {
 
 function chooseGuidedSource(source: GuidedSource, useLocalFallback = false) {
   if (source === 'unsure') {
+    if (guideWorkflow.value === 'rename') {
+      chooseGuidedSource('json', true)
+      return
+    }
     guideStep.value = 3
     return
   }
