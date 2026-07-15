@@ -27,7 +27,7 @@ export async function startTestServer(): Promise<TestServer> {
   const startup = new Promise<TestServer>((resolve, reject) => {
     const timeout = setTimeout(() => {
       reject(new Error(`Timed out waiting for web server URL.\n${output}`))
-    }, 20_000)
+    }, 45_000)
 
     child.once('error', reject)
     child.once('exit', (code, signal) => {

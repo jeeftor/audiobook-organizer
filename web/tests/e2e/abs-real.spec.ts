@@ -54,6 +54,10 @@ test('organizes a mounted library using real Audiobookshelf metadata', async ({ 
   await expect(page.locator('.move-list')).toContainText('Lewis Carroll')
   await expect(page.getByRole('button', { name: /Run 2 Selected Moves/ })).toBeEnabled()
 
+  page.once('dialog', async (dialog) => {
+    expect(dialog.message()).toContain('Run Organize will change files for 2 selected move(s).')
+    await dialog.accept()
+  })
   await page.getByRole('button', { name: /Run 2 Selected Moves/ }).click()
   await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
   await expect(page.getByText('Open Audiobookshelf to trigger a library scan, inspect the refreshed state, and clean only confirmed missing old paths.')).toBeVisible()
