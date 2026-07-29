@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Docker web UI diagnostics**: Startup now warns when a container uses the unreachable loopback bind and when a web UI is network-reachable.
 - **Custom metadata author mappings**: Arrays from `metadata.json` now apply correctly when selected as an author field in the web UI.
 - **Web session recovery**: The browser UI now explains how to recover when opened without its required session-token URL parameter.
 - **Docker web UI access**: Documented the required `--host=0.0.0.0` bind,

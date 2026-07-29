@@ -111,6 +111,8 @@ Open the tokenized URL printed in the container logs at
 `http://localhost:8080/`. When using Traefik or another reverse proxy, route
 to container port `8080`, not the host-side published port.
 
+If startup warns that the UI is bound to loopback inside a container, Docker port publishing cannot reach it; restart with `--host=0.0.0.0`. A network-reachable UI also warns you to keep the session-token URL private and use a trusted HTTPS/authenticated proxy.
+
 Release archives and Linux packages are available from [GitHub Releases](https://github.com/jeeftor/audiobook-organizer/releases). See the [installation guide](docs/INSTALLATION.md) for package details and platform notes.
 
 ## Safe First Run

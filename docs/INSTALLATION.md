@@ -105,6 +105,8 @@ Open the tokenized URL printed in the container logs at
 reverse proxy, route to container port `8080`, not the host-side published
 port.
 
+If startup warns that the UI is bound to loopback inside a container, Docker port publishing cannot reach it; restart with `--host=0.0.0.0`. A network-reachable UI also warns you to keep the session-token URL private and use a trusted HTTPS/authenticated proxy.
+
 ### Go Install
 
 ```bash

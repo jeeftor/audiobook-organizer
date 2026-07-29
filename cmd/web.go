@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"github.com/jeeftor/audiobook-organizer/internal/app"
 	"github.com/jeeftor/audiobook-organizer/internal/server"
@@ -70,6 +71,9 @@ func runWeb(cmd *cobra.Command, args []string) error {
 	url := server.URL(host, listener, token)
 
 	fmt.Fprintf(cmd.OutOrStdout(), "Audiobook Organizer web UI running at:\n%s\n", url)
+	if warning := webBindWarning(host, runningInContainer()); warning != "" {
+		fmt.Fprintln(cmd.ErrOrStderr(), warning)
+	}
 	if openBrowser {
 		if err := openURL(url); err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "Could not open browser automatically: %v\n", err)
@@ -77,6 +81,36 @@ func runWeb(cmd *cobra.Command, args []string) error {
 	}
 
 	return webServer.Serve(context.Background(), listener)
+}
+
+func webBindWarning(host string, inContainer bool) string {
+	if inContainer && isLoopbackHost(host) {
+		return "Warning: web UI is bound to loopback inside a container; published Docker ports cannot reach it. Use --host=0.0.0.0 or an in-container proxy."
+	}
+	if !isLoopbackHost(host) {
+		return "Warning: web UI is network-reachable. Treat the session-token URL as a password and prefer a trusted HTTPS/authenticated reverse proxy."
+	}
+	return ""
+}
+
+func isLoopbackHost(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	address := net.ParseIP(host)
+	return address != nil && address.IsLoopback()
+}
+
+func runningInContainer() bool {
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+	contents, err := os.ReadFile("/proc/1/cgroup")
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(contents), "docker") ||
+		strings.Contains(string(contents), "containerd")
 }
 
 func firstNonEmpty(values ...string) string {
