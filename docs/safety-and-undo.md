@@ -14,23 +14,45 @@ audiobook-organizer --dir=/books/source --out=/books/organized --dry-run
 audiobook-organizer rename --dir=/books/source --dry-run
 ```
 
-Use dry-run output to inspect destination paths, skipped books, conflicts, and metadata warnings.
+Use dry-run output to inspect destination paths, skipped books, conflicts, and metadata warnings. You can preview a new output folder before it exists. Dry-run does not create output folders, remove empty folders, or restore files when combined with `--undo`.
+
+## Destination Safety
+
+Organization refuses to replace an occupied destination. If a move fails, the command reports the error and logs only completed moves. Resolve the reported conflict before retrying; do not delete a file unless you have verified which copy you want to keep.
+
+Rename resolves collisions with numeric suffixes, including files already on disk. Identical names in different directories do not conflict. Selecting fewer rows in the web review preserves the original collision-resolved filenames while the source files and configuration are unchanged. If you change the files on disk, refresh the preview before running.
+
+For rename templates, `--strict` rejects missing required simple fields before renaming any file. A fallback such as `{year|Unknown}` or an optional composite such as `{year - }` still permits a missing year.
 
 ## Organization Undo
 
 Organization operations write `.abook-org.log`.
 
-Undo from the same source directory:
+Later runs using the same log retain earlier recovery history. Undo reverses all
+recorded operations, newest first. A malformed or unreadable existing log blocks
+a new non-dry-run operation; preserve the log and resolve the error before retrying.
+
+Undo with the same source and output directories used for the original run:
 
 ```bash
-audiobook-organizer --dir=/books/source --undo
+audiobook-organizer --dir=/books/source --out=/books/organized --undo
 ```
+
+If an original path is occupied or a restore fails, undo stops and retains that
+operation and all older, unprocessed operations in the log. Older operations can
+depend on the blocked path, so continuing could move an unrelated file.
+Successfully restored operations are removed from the log. Resolve the conflict
+and rerun the same undo command. Restores across filesystems use a copy-and-delete fallback.
 
 Keep the log until you have verified the output folder and any Audiobookshelf scan results.
 
 ## Rename Undo
 
 Rename operations write `.abook-rename.log`.
+
+Successive runs in the same directory retain earlier rename history. Undo stops
+at the first failure and retains the failed operation and all older dependencies.
+Resolve the reported conflict and retry; already-restored files are not replayed.
 
 Undo from the renamed directory:
 
@@ -39,6 +61,12 @@ audiobook-organizer rename --dir=/books/source --undo
 ```
 
 ## Safer First Runs
+
+If saving a new move's recovery log fails, organization and rename attempt to
+roll that move back. A rollback failure reports the affected paths; preserve the
+error output and inspect both locations before retrying. This is not a guarantee
+against power loss, concurrent filesystem changes, or a storage device failing
+during both the operation and its rollback.
 
 1. Start with a small folder.
 2. Use a separate `--out` directory.

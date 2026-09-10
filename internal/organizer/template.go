@@ -265,6 +265,18 @@ func NewTemplateRenderer(template *Template, authorFormatter *AuthorFormatter) *
 	}
 }
 
+// validateRequiredFields checks mandatory simple placeholders. Composite groups
+// are optional by design, and explicit fallbacks satisfy missing fields.
+func (tr *TemplateRenderer) validateRequiredFields(metadata Metadata) error {
+	for _, token := range tr.template.tokens {
+		if token.kind == tokenSimple && token.fallback == "" &&
+			strings.TrimSpace(tr.resolveFieldFormatted(token.value, token.format, metadata)) == "" {
+			return fmt.Errorf("missing required template field %q", token.value)
+		}
+	}
+	return nil
+}
+
 // Render applies metadata to template and returns filename
 func (tr *TemplateRenderer) Render(metadata Metadata) (string, error) {
 	var result strings.Builder

@@ -3,6 +3,7 @@ package organizer
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,13 +26,28 @@ func SetForceDarkMode(enabled bool) {
 	// This is handled by the styles.go file
 }
 
+// loadExistingLog preserves earlier runs and refuses to replace unreadable history.
+func loadExistingLog(path string, entries any) error {
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("reading recovery log %s: %w", path, err)
+	}
+	if err := json.Unmarshal(data, entries); err != nil {
+		return fmt.Errorf("parsing recovery log %s: %w", path, err)
+	}
+	return nil
+}
+
 func (o *Organizer) saveLog() error {
 	logPath := o.GetLogPath()
 	data, err := json.MarshalIndent(o.logEntries, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(logPath, data, 0o644)
+	return writeLogAtomic(logPath, data)
 }
 
 func (o *Organizer) undoMoves() error {
@@ -46,30 +62,51 @@ func (o *Organizer) undoMoves() error {
 		return fmt.Errorf("error parsing log: %v", err)
 	}
 
-	for _, entry := range entries {
-		PrintYellow("↩️  Restoring files from %s to %s", entry.TargetPath, entry.SourcePath)
+	if o.config.DryRun {
+		for _, entry := range entries {
+			PrintYellow("Would restore files from %s to %s", entry.TargetPath, entry.SourcePath)
+		}
+		return nil
+	}
+	var failures []error
+restore:
+	for i := len(entries) - 1; i >= 0; i-- {
+		entry := &entries[i]
 		if err := os.MkdirAll(entry.SourcePath, 0o755); err != nil {
-			PrintRed("❌ Error creating source directory: %v", err)
-			continue
+			failures = append(failures, err)
+			break
 		}
-
-		for _, file := range entry.Files {
-			oldPath := filepath.Join(entry.TargetPath, file.To)
-			newPath := filepath.Join(entry.SourcePath, file.From)
-			if o.config.Verbose {
-				PrintBlue("📦 Moving %s to %s", oldPath, newPath)
+		for j := len(entry.Files) - 1; j >= 0; j-- {
+			file := entry.Files[j]
+			if err := moveNoReplace(filepath.Join(entry.TargetPath, file.To), filepath.Join(entry.SourcePath, file.From)); err != nil {
+				failures = append(failures, fmt.Errorf("restoring %s: %w", file.From, err))
+				// Older entries may depend on this path. Do not move its occupant.
+				break restore
 			}
-			if err := os.Rename(oldPath, newPath); err != nil {
-				PrintRed("❌ Error moving %s: %v", oldPath, err)
-			}
+			entry.Files = entry.Files[:j]
 		}
 	}
-
-	if err := os.Remove(logPath); err != nil {
-		PrintYellow("⚠️  Warning: couldn't remove log file: %v", err)
+	var remaining []LogEntry
+	for _, entry := range entries {
+		if len(entry.Files) > 0 {
+			remaining = append(remaining, entry)
+		}
 	}
-
-	return nil
+	if len(remaining) == 0 {
+		if err := os.Remove(logPath); err != nil {
+			return err
+		}
+		o.logEntries = nil
+		return nil
+	}
+	data, err = json.MarshalIndent(remaining, "", "  ")
+	if err == nil {
+		err = writeLogAtomic(logPath, data)
+	}
+	if err == nil {
+		o.logEntries = remaining
+	}
+	return errors.Join(append(failures, err)...)
 }
 
 func (o *Organizer) printSummary(startTime time.Time) {

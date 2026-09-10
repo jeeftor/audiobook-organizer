@@ -264,6 +264,10 @@ func TestOrganizePreviewEndpointReturnsDryRunSummary(t *testing.T) {
 func TestOrganizePreviewEndpointAcceptsCustomLayoutTemplate(t *testing.T) {
 	handler := newTestHandler(t)
 	inputDir, outputDir := createOrganizerFixture(t)
+	outputDir, err := filepath.EvalSymlinks(outputDir)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	body := map[string]any{
 		"config": map[string]any{

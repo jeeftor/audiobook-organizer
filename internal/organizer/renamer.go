@@ -2,6 +2,7 @@ package organizer
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -183,11 +184,17 @@ func NewRenamer(config *RenamerConfig) (*Renamer, error) {
 	authorFormatter := NewAuthorFormatter(config.AuthorFormat)
 	renderer := NewTemplateRenderer(template, authorFormatter)
 
-	return &Renamer{
+	r := &Renamer{
 		config:           *config,
 		templateRenderer: renderer,
 		logEntries:       []RenameLogEntry{},
-	}, nil
+	}
+	if !config.DryRun {
+		if err := loadExistingLog(r.GetLogPath(), &r.logEntries); err != nil {
+			return nil, err
+		}
+	}
+	return r, nil
 }
 
 // Execute performs the rename operation
@@ -198,10 +205,18 @@ func (r *Renamer) Execute() error {
 		return err
 	}
 
+	if r.config.StrictMode && len(r.summary.Errors) > 0 {
+		return fmt.Errorf(
+			"strict rename validation failed: %s",
+			strings.Join(r.summary.Errors, "; "),
+		)
+	}
+
 	// 2. Filter out no-ops
 	toRename := filterRenameableCandidates(candidates)
 
 	// 3. Execute renames
+	var executionErrors []string
 	for _, candidate := range toRename {
 		// Skip if prompt is enabled and user declines
 		if r.config.PromptEnabled {
@@ -213,6 +228,7 @@ func (r *Renamer) Execute() error {
 
 		if err := r.RenameFile(candidate.CurrentPath, candidate.ProposedPath); err != nil {
 			r.summary.Errors = append(r.summary.Errors, err.Error())
+			executionErrors = append(executionErrors, err.Error())
 			continue
 		}
 		r.summary.FilesRenamed++
@@ -225,6 +241,9 @@ func (r *Renamer) Execute() error {
 		}
 	}
 
+	if len(executionErrors) > 0 {
+		return fmt.Errorf("rename completed with errors: %s", strings.Join(executionErrors, "; "))
+	}
 	return nil
 }
 
@@ -254,17 +273,6 @@ func (r *Renamer) ScanFiles() ([]RenameCandidate, error) {
 		if !IsSupportedFile(ext) {
 			return nil
 		}
-		if len(allowedPaths) > 0 {
-			normalizedPath, err := normalizeExistingPath(path)
-			if err != nil {
-				return err
-			}
-			if _, ok := allowedPaths[normalizedPath]; !ok {
-				return nil
-			}
-		}
-
-		r.summary.FilesScanned++
 
 		var metadata Metadata
 		if r.config.MetadataResolver != nil {
@@ -314,6 +322,20 @@ func (r *Renamer) ScanFiles() ([]RenameCandidate, error) {
 		return candidates, err
 	}
 
+	r.resolveCandidateConflicts(candidates)
+	if len(allowedPaths) > 0 {
+		selected := make([]RenameCandidate, 0, len(allowedPaths))
+		for _, candidate := range candidates {
+			normalized, err := normalizeExistingPath(candidate.CurrentPath)
+			if err != nil {
+				return nil, err
+			}
+			if _, ok := allowedPaths[normalized]; ok {
+				selected = append(selected, candidate)
+			}
+		}
+		candidates = selected
+	}
 	r.finalizePreviewSummary(candidates)
 	return candidates, nil
 }
@@ -354,39 +376,64 @@ func (r *Renamer) finalizePreviewSummary(candidates []RenameCandidate) {
 	summary := RenameSummary{
 		FilesScanned: len(candidates),
 	}
-	resolver := NewConflictResolver()
-
 	for i := range candidates {
 		if candidates[i].Error != "" {
 			summary.FilesSkipped++
 			summary.Errors = append(summary.Errors, candidates[i].Error)
-			continue
-		}
-		if candidates[i].IsNoOp {
+		} else if candidates[i].IsNoOp {
 			summary.FilesSkipped++
-			continue
 		}
-
-		filename := filepath.Base(candidates[i].ProposedPath)
-		resolvedName, isConflict := resolver.CheckConflict(filename)
-		if !isConflict {
-			continue
+		if candidates[i].IsConflict {
+			summary.ConflictsFound++
 		}
-
-		candidates[i].IsConflict = true
-		candidates[i].ProposedPath = filepath.Join(
-			filepath.Dir(candidates[i].ProposedPath),
-			resolvedName,
-		)
-		summary.ConflictsFound++
 	}
-
 	r.summary = summary
+}
+
+// resolveCandidateConflicts plans the whole scan before selection so selected
+// files retain the names shown in the original preview.
+func (r *Renamer) resolveCandidateConflicts(candidates []RenameCandidate) {
+	reserved := make(map[string]bool)
+	for _, candidate := range candidates {
+		reserved[filepath.Clean(candidate.CurrentPath)] = true
+	}
+	for i := range candidates {
+		candidate := &candidates[i]
+		if candidate.Error != "" || candidate.IsNoOp {
+			continue
+		}
+		original := candidate.ProposedPath
+		ext := filepath.Ext(original)
+		for n := 2; ; n++ {
+			target := filepath.Clean(candidate.ProposedPath)
+			_, err := os.Lstat(target)
+			if !reserved[target] && os.IsNotExist(err) {
+				reserved[target] = true
+				break
+			}
+			if err != nil && !os.IsNotExist(err) {
+				candidate.Error = fmt.Sprintf("inspect rename destination: %v", err)
+				break
+			}
+			candidate.IsConflict = true
+			candidate.ProposedPath = fmt.Sprintf(
+				"%s (%d)%s",
+				strings.TrimSuffix(original, ext),
+				n,
+				ext,
+			)
+		}
+	}
 }
 
 // GenerateNewPath generates the new path for a file based on metadata
 func (r *Renamer) GenerateNewPath(currentPath string, metadata Metadata) (string, error) {
 	// Render template to get new filename (without extension)
+	if r.config.StrictMode {
+		if err := r.templateRenderer.validateRequiredFields(metadata); err != nil {
+			return "", err
+		}
+	}
 	newFilename, err := r.templateRenderer.Render(metadata)
 	if err != nil {
 		return "", err
@@ -443,7 +490,7 @@ func (r *Renamer) RenameFile(oldPath, newPath string) error {
 	}
 
 	// Perform rename
-	if err := os.Rename(oldPath, newPath); err != nil {
+	if err := moveNoReplace(oldPath, newPath); err != nil {
 		return fmt.Errorf("failed to rename %s: %w", oldPath, err)
 	}
 
@@ -453,6 +500,16 @@ func (r *Renamer) RenameFile(oldPath, newPath string) error {
 		OldPath:   oldPath,
 		NewPath:   newPath,
 	})
+	if err := r.SaveLog(); err != nil {
+		if rollbackErr := moveNoReplace(newPath, oldPath); rollbackErr != nil {
+			return errors.Join(
+				err,
+				fmt.Errorf("rollback %s to %s failed: %w", newPath, oldPath, rollbackErr),
+			)
+		}
+		r.logEntries = r.logEntries[:len(r.logEntries)-1]
+		return fmt.Errorf("saving rename log failed; rename rolled back: %w", err)
+	}
 
 	return nil
 }
@@ -463,7 +520,7 @@ func (r *Renamer) SaveLog() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(r.GetLogPath(), data, 0o644)
+	return writeLogAtomic(r.GetLogPath(), data)
 }
 
 // UndoRenames reverses rename operations from log
@@ -480,6 +537,8 @@ func (r *Renamer) UndoRenames() error {
 	}
 
 	// Process in reverse order
+	var failures []error
+	var remaining []RenameLogEntry
 	for i := len(entries) - 1; i >= 0; i-- {
 		entry := entries[i]
 		if r.config.Verbose {
@@ -491,18 +550,33 @@ func (r *Renamer) UndoRenames() error {
 		}
 
 		if !r.config.DryRun {
-			if err := os.Rename(entry.NewPath, entry.OldPath); err != nil {
-				return fmt.Errorf("failed to undo rename: %w", err)
+			if err := moveNoReplace(entry.NewPath, entry.OldPath); err != nil {
+				failures = append(failures, fmt.Errorf("failed to undo rename: %w", err))
+				// Older entries may depend on this intermediate path.
+				remaining = entries[:i+1]
+				break
 			}
 		}
 	}
 
-	// Remove log file after successful undo
-	if !r.config.DryRun {
-		return os.Remove(logPath)
+	if r.config.DryRun {
+		return nil
 	}
-
-	return nil
+	if len(remaining) == 0 {
+		if err := os.Remove(logPath); err != nil {
+			return err
+		}
+		r.logEntries = nil
+		return nil
+	}
+	data, err = json.MarshalIndent(remaining, "", "  ")
+	if err == nil {
+		err = writeLogAtomic(logPath, data)
+	}
+	if err == nil {
+		r.logEntries = remaining
+	}
+	return errors.Join(append(failures, err)...)
 }
 
 // GetSummary returns the rename summary

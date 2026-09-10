@@ -28,7 +28,7 @@ type LibraryItemsResponse struct {
 	Results []LibraryItem `json:"results"`
 	Total   int           `json:"total"`
 	Limit   int           `json:"limit"`
-	Offset  int           `json:"offset"`
+	Page    int           `json:"page"`
 }
 
 // LibraryItem represents an audiobook/podcast in ABS

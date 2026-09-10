@@ -117,22 +117,22 @@ func TestPreviewRenameReturnsRealSummaryState(t *testing.T) {
 	if resp.Summary.FilesSkipped != 2 {
 		t.Fatalf("FilesSkipped = %d, want 2", resp.Summary.FilesSkipped)
 	}
-	if resp.Summary.ConflictsFound != 1 {
-		t.Fatalf("ConflictsFound = %d, want 1", resp.Summary.ConflictsFound)
+	if resp.Summary.ConflictsFound != 0 {
+		t.Fatalf("ConflictsFound = %d, want 0", resp.Summary.ConflictsFound)
 	}
 	if len(resp.Summary.Errors) != 1 {
 		t.Fatalf("Errors length = %d, want 1", len(resp.Summary.Errors))
 	}
 
 	conflict := findRenameCandidate(t, resp.Candidates, "02-conflict-b")
-	if !conflict.IsConflict {
-		t.Fatal("second duplicate candidate should be marked as conflict")
+	if conflict.IsConflict {
+		t.Fatal("same filename in separate directories must not conflict")
 	}
-	if got := filepath.Base(conflict.ProposedPath); got != "Conflict Author - Conflict Book (2).mp3" {
+	if got := filepath.Base(conflict.ProposedPath); got != "Conflict Author - Conflict Book.mp3" {
 		t.Fatalf(
 			"conflict proposed filename = %q, want %q",
 			got,
-			"Conflict Author - Conflict Book (2).mp3",
+			"Conflict Author - Conflict Book.mp3",
 		)
 	}
 
@@ -182,8 +182,8 @@ func TestRunRenameAppliesCandidatesAndWritesLog(t *testing.T) {
 	if resp.Summary.FilesSkipped != 2 {
 		t.Fatalf("FilesSkipped = %d, want 2", resp.Summary.FilesSkipped)
 	}
-	if resp.Summary.ConflictsFound != 1 {
-		t.Fatalf("ConflictsFound = %d, want 1", resp.Summary.ConflictsFound)
+	if resp.Summary.ConflictsFound != 0 {
+		t.Fatalf("ConflictsFound = %d, want 0", resp.Summary.ConflictsFound)
 	}
 	if len(resp.Summary.Errors) != 1 {
 		t.Fatalf("Errors length = %d, want 1", len(resp.Summary.Errors))
@@ -200,7 +200,7 @@ func TestRunRenameAppliesCandidatesAndWritesLog(t *testing.T) {
 	)
 	assertPathExists(
 		t,
-		filepath.Join(inputDir, "02-conflict-b", "Conflict Author - Conflict Book (2).mp3"),
+		filepath.Join(inputDir, "02-conflict-b", "Conflict Author - Conflict Book.mp3"),
 	)
 	assertPathExists(t, filepath.Join(inputDir, "03-noop", "Noop Author - Noop Book.mp3"))
 	assertPathExists(t, filepath.Join(inputDir, "04-broken", "broken.mp3"))

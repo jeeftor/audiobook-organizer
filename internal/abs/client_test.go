@@ -43,7 +43,7 @@ func mockABSServer() *httptest.Server {
 
 		case "/api/libraries/lib_main/items":
 			limit := 100
-			offset := 0
+			page := 0
 			// Parse query params (simplified)
 			json.NewEncoder(w).Encode(LibraryItemsResponse{
 				Results: []LibraryItem{
@@ -65,9 +65,9 @@ func mockABSServer() *httptest.Server {
 						},
 					},
 				},
-				Total:  1,
-				Limit:  limit,
-				Offset: offset,
+				Total: 1,
+				Limit: limit,
+				Page:  page,
 			})
 
 		case "/api/items/li_001":

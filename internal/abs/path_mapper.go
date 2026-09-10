@@ -6,6 +6,7 @@ package abs
 import (
 	"database/sql"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -31,23 +32,17 @@ func NewPathMapper(mappings []PathMapping) *PathMapper {
 // NewPathMapperFromSQLite discovers mappings from ABS SQLite database
 func NewPathMapperFromSQLite(dbPath string, userInputPath string) (*PathMapper, error) {
 	// Open in read-only mode
-	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?mode=ro", dbPath))
+	db, err := sql.Open(
+		"sqlite",
+		(&url.URL{Scheme: "file", Path: dbPath, RawQuery: "mode=ro"}).String(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("opening ABS database: %w", err)
 	}
 	defer db.Close()
 
-	// Query library folders - tables: libraries, libraryFolders, folders
-	rows, err := db.Query(`
-		SELECT
-			l.id as library_id,
-			l.name as library_name,
-			f.path as folder_path,
-			f.fullPath as folder_full_path
-		FROM libraries l
-		JOIN libraryFolders lf ON l.id = lf.libraryId
-		JOIN folders f ON lf.folderId = f.id
-	`)
+	// ABS stores the container-visible absolute path directly in libraryFolders.
+	rows, err := db.Query(`SELECT id, path FROM libraryFolders`)
 	if err != nil {
 		return nil, fmt.Errorf("querying library folders: %w", err)
 	}
@@ -55,22 +50,28 @@ func NewPathMapperFromSQLite(dbPath string, userInputPath string) (*PathMapper, 
 
 	var mappings []PathMapping
 	for rows.Next() {
-		var libID, libName, folderPath, folderFullPath string
-		if err := rows.Scan(&libID, &libName, &folderPath, &folderFullPath); err != nil {
-			continue
+		var folderID, folderPath string
+		if err := rows.Scan(&folderID, &folderPath); err != nil {
+			return nil, fmt.Errorf("reading library folder: %w", err)
 		}
 
 		// Check if user input path matches this folder
-		if strings.HasPrefix(userInputPath, folderFullPath) {
+		if pathPrefix(userInputPath, folderPath) {
 			mappings = append(mappings, PathMapping{
 				ABSPrefix:   folderPath,
-				LocalPrefix: folderFullPath,
+				LocalPrefix: folderPath,
 			})
 		}
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("reading library folders: %w", err)
+	}
 	if len(mappings) == 0 {
-		return nil, fmt.Errorf("no ABS library folder matches %s", userInputPath)
+		return nil, fmt.Errorf(
+			"no ABS library folder matches %s; use --abs-path-map when the local mount differs from the ABS path",
+			userInputPath,
+		)
 	}
 
 	return &PathMapper{Mappings: mappings}, nil
@@ -78,34 +79,58 @@ func NewPathMapperFromSQLite(dbPath string, userInputPath string) (*PathMapper, 
 
 // ToLocal converts an ABS path to a local path
 func (pm *PathMapper) ToLocal(absPath string) string {
-	for _, m := range pm.Mappings {
-		// Handle empty ABSPrefix - means ABS uses full local paths
+	best := -1
+	length := -1
+	for i, m := range pm.Mappings {
 		if m.ABSPrefix == "" {
-			// If path already starts with local prefix, it's already local
-			if strings.HasPrefix(absPath, m.LocalPrefix) {
-				return absPath
+			if best < 0 {
+				best = i
+				length = 0
 			}
-			// Otherwise, prepend the local prefix
-			return filepath.Join(m.LocalPrefix, absPath)
-		}
-
-		// Normal case: replace ABSPrefix with LocalPrefix
-		if strings.HasPrefix(absPath, m.ABSPrefix) {
-			return strings.Replace(absPath, m.ABSPrefix, m.LocalPrefix, 1)
+		} else if pathPrefix(absPath, m.ABSPrefix) && len(filepath.Clean(m.ABSPrefix)) > length {
+			best = i
+			length = len(filepath.Clean(m.ABSPrefix))
 		}
 	}
-	// Return as-is if no mapping found
-	return absPath
+	if best < 0 {
+		return absPath
+	}
+	m := pm.Mappings[best]
+	if m.ABSPrefix == "" {
+		if pathPrefix(absPath, m.LocalPrefix) {
+			return absPath
+		}
+		return filepath.Join(m.LocalPrefix, absPath)
+	}
+	suffix, _ := filepath.Rel(filepath.Clean(m.ABSPrefix), filepath.Clean(absPath))
+	return filepath.Join(m.LocalPrefix, suffix)
 }
 
 // ToABS converts a local path to an ABS path
 func (pm *PathMapper) ToABS(localPath string) string {
-	for _, m := range pm.Mappings {
-		if strings.HasPrefix(localPath, m.LocalPrefix) {
-			return strings.Replace(localPath, m.LocalPrefix, m.ABSPrefix, 1)
+	best := -1
+	for i, m := range pm.Mappings {
+		if pathPrefix(localPath, m.LocalPrefix) &&
+			(best < 0 || len(filepath.Clean(m.LocalPrefix)) > len(filepath.Clean(pm.Mappings[best].LocalPrefix))) {
+			best = i
 		}
 	}
-	return localPath
+	if best < 0 {
+		return localPath
+	}
+	m := pm.Mappings[best]
+	suffix, _ := filepath.Rel(filepath.Clean(m.LocalPrefix), filepath.Clean(localPath))
+	if m.ABSPrefix == "" {
+		return "/" + filepath.ToSlash(suffix)
+	}
+	return filepath.ToSlash(filepath.Join(m.ABSPrefix, suffix))
+}
+
+// pathPrefix requires a whole path component, not a textual prefix.
+func pathPrefix(value, prefix string) bool {
+	relative, err := filepath.Rel(filepath.Clean(prefix), filepath.Clean(value))
+	return err == nil && relative != ".." &&
+		!strings.HasPrefix(relative, ".."+string(filepath.Separator))
 }
 
 // ParsePathMapping parses a path mapping from CLI format: "/abs:/local"
@@ -125,16 +150,17 @@ func ParsePathMapping(s string) (PathMapping, error) {
 
 // ListLibraries returns all library paths from SQLite (for debugging)
 func ListLibraries(dbPath string) ([]Folder, error) {
-	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?mode=ro", dbPath))
+	db, err := sql.Open(
+		"sqlite",
+		(&url.URL{Scheme: "file", Path: dbPath, RawQuery: "mode=ro"}).String(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("opening ABS database: %w", err)
 	}
 	defer db.Close()
 
 	rows, err := db.Query(`
-		SELECT f.id, f.path, f.fullPath
-		FROM folders f
-		JOIN libraryFolders lf ON f.id = lf.folderId
+		SELECT id, path, path, libraryId FROM libraryFolders
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("querying folders: %w", err)
@@ -144,11 +170,11 @@ func ListLibraries(dbPath string) ([]Folder, error) {
 	var folders []Folder
 	for rows.Next() {
 		var f Folder
-		if err := rows.Scan(&f.ID, &f.Path, &f.FullPath); err != nil {
+		if err := rows.Scan(&f.ID, &f.Path, &f.FullPath, &f.LibraryID); err != nil {
 			continue
 		}
 		folders = append(folders, f)
 	}
 
-	return folders, nil
+	return folders, rows.Err()
 }

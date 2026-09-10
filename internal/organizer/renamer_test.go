@@ -489,6 +489,7 @@ func TestRenamer_ConflictDetection(t *testing.T) {
 			ProposedPath: filepath.Join(tmpDir, "Same Author - Same Title.m4b"),
 		},
 	}
+	renamer.resolveCandidateConflicts(candidates)
 	renamer.finalizePreviewSummary(candidates)
 
 	if !candidates[1].IsConflict {
@@ -536,6 +537,7 @@ func TestRenamer_PreviewSummaryCountsSkippedErrorsAndConflicts(t *testing.T) {
 			Error:       "Failed to extract metadata: test error",
 		},
 	}
+	renamer.resolveCandidateConflicts(candidates)
 	renamer.finalizePreviewSummary(candidates)
 
 	summary := renamer.GetSummary()

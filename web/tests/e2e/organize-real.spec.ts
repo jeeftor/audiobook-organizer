@@ -265,8 +265,9 @@ test('reports real backend path validation errors for organize preview', async (
     await page.getByRole('textbox', { name: 'Source folder' }).fill(fixture.sourceDir)
     await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.missingOutputDir)
 
-    await expect(page.locator('.inline-alert').filter({ hasText: 'error resolving output directory path' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Review & Run Select, execute, inspect' })).toBeDisabled()
+    await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
+    await expect.poll(() => pathExists(fixture.missingOutputDir)).toBe(false)
+    await expect(page.getByRole('button', { name: 'Review & Run Select, execute, inspect' })).toBeEnabled()
 
     await page.getByRole('textbox', { name: 'Output folder' }).fill(fixture.outputDir)
 
@@ -277,6 +278,36 @@ test('reports real backend path validation errors for organize preview', async (
     expect(organizeRequests.filter((path) => path === '/api/organize/preview')).toHaveLength(2)
   } finally {
     await fixture.cleanup()
+  }
+})
+
+test('flat mode moves only selected files and previews a new output folder without creating it', async ({ page }) => {
+  test.setTimeout(60_000)
+  const root = await mkFixtureRoot()
+  try {
+    const input = join(root, 'input')
+    const output = join(root, 'not-created')
+    await mkdir(input)
+    const audio = join(repoRoot, 'testdata', 'test-scenarios', 'single-file', 'single_book.mp3')
+    await copyFile(audio, join(input, 'a.mp3'))
+    await copyFile(audio, join(input, 'b.mp3'))
+    await loadApp(page)
+    await page.getByRole('radio', { name: 'Embedded metadata by file' }).click()
+    await page.getByRole('textbox', { name: 'Source folder' }).fill(input)
+    await page.getByRole('textbox', { name: 'Output folder' }).fill(output)
+    await expect(page.getByRole('heading', { name: 'Organize preview ready' })).toBeVisible()
+    await expectSummaryValue(page, 'Planned moves', '2')
+    expect(await pathExists(output)).toBe(false)
+    await page.getByRole('button', { name: 'Review & Run', exact: true }).click()
+    await page.locator('.selectable-list input[type="checkbox"]').nth(1).uncheck()
+    page.once('dialog', dialog => dialog.accept())
+    await page.getByRole('button', { name: 'Run 1 Selected Move' }).click()
+    await expect(page.getByRole('heading', { name: 'Organize Run Complete' })).toBeVisible()
+    expect(await pathExists(join(input, 'a.mp3'))).toBe(false)
+    expect(await pathExists(join(input, 'b.mp3'))).toBe(true)
+    expect(await pathExists(join(output, '.abook-org.log'))).toBe(true)
+  } finally {
+    await rm(root, { recursive: true, force: true })
   }
 })
 
@@ -514,7 +545,7 @@ async function createPathErrorFixture(): Promise<PathErrorFixture> {
 }
 
 async function mkFixtureRoot(): Promise<string> {
-  return mkdtemp(join(tmpdir(), 'abo-web-organize-'))
+  return realpath(await mkdtemp(join(tmpdir(), 'abo-web-organize-')))
 }
 
 async function createFieldMappingFixture(): Promise<{

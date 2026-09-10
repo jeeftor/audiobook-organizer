@@ -55,6 +55,8 @@ audiobook-organizer \
   --verbose
 ```
 
+Dry-run can preview a new output folder without creating it. Organization refuses to overwrite existing files; rename uses collision-safe suffixes. Keep the undo log until you verify the results. See [Safety And Undo](docs/safety-and-undo.md) for recovery and retry instructions.
+
 When `metadata.json` exists beside MP3 or M4B files, Audiobook Organizer can use hybrid metadata: book-level fields come from `metadata.json`, while track-level fields can come from embedded audio tags. If your library does not have `metadata.json` files, use embedded metadata mode instead:
 
 ```bash
