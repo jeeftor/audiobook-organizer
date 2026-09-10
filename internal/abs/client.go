@@ -144,9 +144,9 @@ func (c *Client) GetLibraries() ([]Library, error) {
 // GetLibraryItems returns items from a library with pagination
 func (c *Client) GetLibraryItems(
 	libraryID string,
-	limit, offset int,
+	limit, page int,
 ) (*LibraryItemsResponse, error) {
-	path := fmt.Sprintf("/api/libraries/%s/items?limit=%d&offset=%d", libraryID, limit, offset)
+	path := fmt.Sprintf("/api/libraries/%s/items?limit=%d&page=%d", libraryID, limit, page)
 	resp, err := c.request("GET", path, nil)
 	if err != nil {
 		return nil, err
@@ -165,20 +165,27 @@ func (c *Client) GetLibraryItems(
 func (c *Client) GetAllLibraryItems(libraryID string) ([]LibraryItem, error) {
 	const limit = 100
 	var allItems []LibraryItem
-	offset := 0
+	page := 0
 
 	for {
-		resp, err := c.GetLibraryItems(libraryID, limit, offset)
+		resp, err := c.GetLibraryItems(libraryID, limit, page)
 		if err != nil {
 			return nil, err
 		}
 
 		allItems = append(allItems, resp.Results...)
 
-		if offset+len(resp.Results) >= resp.Total {
+		if len(allItems) >= resp.Total {
 			break
 		}
-		offset += limit
+		if len(resp.Results) == 0 {
+			return nil, fmt.Errorf(
+				"incomplete library response: received %d of %d items",
+				len(allItems),
+				resp.Total,
+			)
+		}
+		page++
 	}
 
 	return allItems, nil

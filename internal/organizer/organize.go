@@ -2,8 +2,8 @@
 package organizer
 
 import (
+	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -50,6 +50,10 @@ func (o *Organizer) handleFlatMode(path string, info os.FileInfo, err error) err
 		return nil
 	}
 
+	if !info.IsDir() && !o.IsAllowedSourcePath(path) {
+		return nil
+	}
+
 	// Skip directories in flat mode, but don't skip traversal
 	if info.IsDir() {
 		// We still want to traverse subdirectories to find files
@@ -84,8 +88,11 @@ func (o *Organizer) handleHierarchicalMode(path string, info os.FileInfo) error 
 
 	organized, err := o.tryOrganizeWithMetadata(path)
 	if err != nil {
-		PrintRed("❌ Error processing %s: %v", path, err)
-		return nil
+		if o.config.SkipErrors {
+			PrintRed("❌ Error processing %s: %v", path, err)
+			return nil
+		}
+		return err
 	}
 
 	if organized {
@@ -419,16 +426,14 @@ func (o *Organizer) shouldSkipMove(metadata Metadata, sourcePath, targetPath str
 // executeMove performs the actual file moving operation for an audiobook directory,
 // including logging and cleanup of empty directories.
 func (o *Organizer) executeMove(sourcePath, targetPath string, metadata *Metadata) error {
-	fileNames, err := o.moveFiles(sourcePath, targetPath, metadata)
-	if err != nil {
+	if err := o.validateDestination(targetPath); err != nil {
 		return err
 	}
-
-	if !o.config.DryRun {
-		o.updateLogAndCleanup(sourcePath, targetPath, fileNames)
+	fileNames, err := o.moveFiles(sourcePath, targetPath, metadata)
+	if !o.config.DryRun && len(fileNames) > 0 {
+		err = errors.Join(err, o.updateLogAndCleanup(sourcePath, targetPath, fileNames))
 	}
-
-	return nil
+	return err
 }
 
 // OrganizeSingleFile organizes an individual file based on its embedded metadata.
@@ -532,42 +537,10 @@ func (o *Organizer) calculateSingleFileTargetDirE(
 	filePath string,
 	metadata Metadata,
 ) (string, error) {
-	baseDir := o.getBaseDirForSingleFile(filePath)
-
-	if strings.TrimSpace(o.config.LayoutTemplate) != "" {
-		return o.layoutCalculator.CalculateTargetPathInBaseE(metadata, baseDir)
-	}
-
-	// Use PathBuilder for cleaner path construction
-	pathBuilder := NewPathBuilder().WithSanitizer(o.SanitizePath)
-
-	switch o.config.Layout {
-	case "author-only":
-		return pathBuilder.AddAuthor(strings.Join(metadata.Authors, ",")).Build(baseDir), nil
-	case "author-title":
-		return pathBuilder.
-			AddAuthor(strings.Join(metadata.Authors, ",")).
-			AddTitle(metadata.Title).
-			Build(baseDir), nil
-	case "author-series-title", "":
-		pathBuilder.AddAuthor(strings.Join(metadata.Authors, ","))
-		if validSeries := metadata.GetValidSeries(); validSeries != "" {
-			pathBuilder.AddSeries(validSeries)
-			// Only add title if it's different from the series
-			if validSeries != metadata.Title {
-				pathBuilder.AddTitle(metadata.Title)
-			}
-		} else {
-			// No series, just add the title
-			pathBuilder.AddTitle(metadata.Title)
-		}
-		return pathBuilder.Build(baseDir), nil
-	default:
-		return pathBuilder.
-			AddAuthor(strings.Join(metadata.Authors, ",")).
-			AddTitle(metadata.Title).
-			Build(baseDir), nil
-	}
+	return o.layoutCalculator.CalculateTargetPathInBaseE(
+		metadata,
+		o.getBaseDirForSingleFile(filePath),
+	)
 }
 
 // getBaseDirForSingleFile determines the base directory to use for single file operations,
@@ -583,6 +556,12 @@ func (o *Organizer) getBaseDirForSingleFile(filePath string) string {
 // directory creation, dry-run handling, and logging.
 func (o *Organizer) executeSingleFileMove(filePath, targetPath string, metadata Metadata) error {
 	targetDir := filepath.Dir(targetPath)
+	if err := o.validateDestination(targetPath); err != nil {
+		return err
+	}
+	if err := requireUnoccupied(targetPath); err != nil {
+		return err
+	}
 
 	if err := o.fileOps.CreateDirIfNotExists(targetDir); err != nil {
 		return fmt.Errorf("error creating target directory: %w", err)
@@ -609,13 +588,11 @@ func (o *Organizer) executeSingleFileMove(filePath, targetPath string, metadata 
 	o.addSingleFileMoveToSummary(filePath, targetPath)
 	originalName := filepath.Base(filePath)
 	targetName := filepath.Base(targetPath)
-	o.updateLogAndCleanup(
+	return o.updateLogAndCleanup(
 		filepath.Dir(filePath),
 		filepath.Dir(targetPath),
 		[]FilePair{{From: originalName, To: targetName}},
 	)
-
-	return nil
 }
 
 // addSingleFileMoveToSummary adds a single file move operation to the summary.
@@ -811,7 +788,7 @@ func (o *Organizer) getMetadataProvider(filePath string) (MetadataProvider, erro
 }
 
 // updateLogAndCleanup records the move operation in logs and cleans up empty directories.
-func (o *Organizer) updateLogAndCleanup(sourcePath, targetPath string, fileNames []FilePair) {
+func (o *Organizer) updateLogAndCleanup(sourcePath, targetPath string, fileNames []FilePair) error {
 	o.logEntries = append(o.logEntries, LogEntry{
 		Timestamp:  time.Now(),
 		SourcePath: sourcePath,
@@ -819,9 +796,7 @@ func (o *Organizer) updateLogAndCleanup(sourcePath, targetPath string, fileNames
 		Files:      fileNames,
 	})
 
-	if err := o.saveLog(); err != nil {
-		PrintYellow("⚠️  Warning: couldn't save log: %v", err)
-	}
+	return o.saveLog()
 }
 
 // readMetadataFromJSON reads and processes metadata from a JSON file,
@@ -949,67 +924,21 @@ func (o *Organizer) debugLog(format string, args ...interface{}) {
 // moveFile moves a file from source to target, handling cross-device moves
 // by falling back to copy-and-delete when necessary.
 func (o *Organizer) moveFile(source, target string) error {
-	// Check if source and target are the same
-	if filepath.Clean(source) == filepath.Clean(target) {
+	if o.config.DryRun {
 		return nil
 	}
-
-	o.debugLog("moveFile: source=%s, target=%s", source, target)
-
-	// Create target directory if it doesn't exist
-	targetDir := filepath.Dir(target)
-	if err := o.fileOps.CreateDirIfNotExists(targetDir); err != nil {
-		return fmt.Errorf("error creating target directory: %w", err)
+	if err := o.fileOps.CreateDirIfNotExists(filepath.Dir(target)); err != nil {
+		return err
 	}
-
-	// Try to use os.Rename first (most efficient)
-	err := os.Rename(source, target)
-	if err != nil {
-		// If rename fails (e.g., cross-device link), fall back to copy and delete
-		o.debugLog("Rename failed, falling back to copy and delete: %v", err)
-		return o.copyAndDeleteFile(source, target, targetDir)
-	}
-
-	o.debugLog("Successfully renamed file from %s to %s", source, target)
-	return nil
+	return moveNoReplace(source, target)
 }
 
 // copyAndDeleteFile performs a copy-and-delete operation when os.Rename fails.
 func (o *Organizer) copyAndDeleteFile(source, target, targetDir string) error {
-	sourceFile, err := os.Open(source)
-	if err != nil {
-		return fmt.Errorf("error opening source file: %w", err)
+	if o.config.DryRun {
+		return nil
 	}
-	defer sourceFile.Close()
-
-	// Create target file
-	targetFile, err := os.Create(target)
-	if err != nil {
-		return fmt.Errorf("error creating target file: %w", err)
-	}
-	defer targetFile.Close()
-
-	// Copy the contents
-	data, err := io.ReadAll(sourceFile)
-	if err != nil {
-		return fmt.Errorf("error reading source file: %w", err)
-	}
-	o.debugLog("Read %d bytes from source file %s", len(data), source)
-
-	n, err := targetFile.Write(data)
-	if err != nil {
-		return fmt.Errorf("error writing to target file: %w", err)
-	}
-	o.debugLog("Successfully wrote %d bytes to target file %s", n, target)
-
-	// Remove source file
-	if err := os.Remove(source); err != nil {
-		return fmt.Errorf("error removing source file: %w", err)
-	}
-	o.debugLog("Successfully removed source file %s", source)
-
-	// Sync the target directory to ensure all changes are written to disk
-	return o.syncTargetDirectory(targetDir)
+	return copyNoReplace(source, target)
 }
 
 // syncTargetDirectory ensures that directory changes are written to disk.
@@ -1043,22 +972,38 @@ func (o *Organizer) moveFiles(
 		return nil, fmt.Errorf("error reading source directory: %w", err)
 	}
 
-	// Create target directory if it doesn't exist
-	if err := o.fileOps.CreateDirIfNotExists(targetPath); err != nil {
-		return nil, fmt.Errorf("error creating target directory: %w", err)
-	}
-
-	o.summary.Moves = append(o.summary.Moves, MoveSummary{
-		From: sourcePath,
-		To:   targetPath,
-	})
-
-	// Get metadata if not provided
+	// Validate the whole book before moving metadata or any audio.
 	if dirMetadata == nil {
 		dirMetadata = o.getDirectoryMetadata(sourcePath)
 	}
-
-	return o.processDirectoryFiles(entries, sourcePath, targetPath, dirMetadata)
+	planned := make(map[string]bool)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		target := filepath.Join(
+			targetPath,
+			o.calculateFileTargetName(sourcePath, entry.Name(), dirMetadata),
+		)
+		if err := o.validateDestination(target); err != nil {
+			return nil, err
+		}
+		if err := requireUnoccupied(target); err != nil {
+			return nil, err
+		}
+		if planned[target] {
+			return nil, fmt.Errorf("duplicate destination: %s", target)
+		}
+		planned[target] = true
+	}
+	if err := o.fileOps.CreateDirIfNotExists(targetPath); err != nil {
+		return nil, err
+	}
+	files, err := o.processDirectoryFiles(entries, sourcePath, targetPath, dirMetadata)
+	if len(files) > 0 {
+		o.summary.Moves = append(o.summary.Moves, MoveSummary{From: sourcePath, To: targetPath})
+	}
+	return files, err
 }
 
 // getDirectoryMetadata attempts to load metadata from a metadata.json file in the directory.
@@ -1090,7 +1035,6 @@ func (o *Organizer) processDirectoryFiles(
 		sourceName := filepath.Join(sourcePath, entry.Name())
 		targetName := o.calculateFileTargetName(sourcePath, entry.Name(), dirMetadata)
 		targetFullPath := filepath.Join(targetPath, targetName)
-		fileNames = append(fileNames, FilePair{From: entry.Name(), To: targetName})
 
 		if o.config.Verbose || o.config.DryRun {
 			message := o.formatFileMove(sourceName, targetFullPath, o.config.DryRun)
@@ -1099,9 +1043,10 @@ func (o *Organizer) processDirectoryFiles(
 
 		if !o.config.DryRun {
 			if err := o.moveFile(sourceName, targetFullPath); err != nil {
-				PrintRed("❌ Error moving %s: %v", sourceName, err)
+				return fileNames, fmt.Errorf("moving %s: %w", sourceName, err)
 			}
 		}
+		fileNames = append(fileNames, FilePair{From: entry.Name(), To: targetName})
 	}
 
 	return fileNames, nil

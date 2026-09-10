@@ -4,7 +4,10 @@
 package abs
 
 import (
+	"bytes"
+	"database/sql"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -117,20 +120,47 @@ func TestPathMapper_ToABS(t *testing.T) {
 }
 
 func TestNewPathMapperFromSQLite(t *testing.T) {
-	// Create a test SQLite database
-	tmpDir := t.TempDir()
-	_ = tmpDir // Will be used when we add SQLite test
-
-	// Create minimal schema and data
-	// Note: This requires the mattn/go-sqlite3 package
-	// Skip if not available
-	if os.Getenv("SKIP_SQLITE_TESTS") != "" {
-		t.Skip("Skipping SQLite tests")
+	dbPath := filepath.Join(t.TempDir(), "absdatabase.sqlite")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	// This test would require creating a real SQLite DB
-	// For unit tests, we mock the behavior
-	t.Skip("SQLite integration test requires real database - tested via integration tests")
+	_, err = db.Exec(`CREATE TABLE libraryFolders (id TEXT PRIMARY KEY, path TEXT, libraryId TEXT);
+ INSERT INTO libraryFolders VALUES ('folder','/audiobooks','library')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mapper, err := NewPathMapperFromSQLite(dbPath, "/audiobooks/Author/Book")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := mapper.ToABS("/audiobooks/Author/Book"); got != "/audiobooks/Author/Book" {
+		t.Fatalf("mapping = %s", got)
+	}
+	folders, err := ListLibraries(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(folders) != 1 || folders[0].ID != "folder" || folders[0].FullPath != "/audiobooks" {
+		t.Fatalf("folders = %+v", folders)
+	}
+	if _, err := NewPathMapperFromSQLite(dbPath, "/audiobooks-other/Book"); err == nil {
+		t.Fatal("accepted unrelated library prefix")
+	}
+	after, err := os.ReadFile(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Fatal("read-only discovery changed database")
+	}
 }
 
 func TestPathMapper_Empty(t *testing.T) {

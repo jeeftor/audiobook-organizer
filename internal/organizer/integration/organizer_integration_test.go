@@ -110,11 +110,10 @@ func TestOrganizer_Integration(t *testing.T) {
 
 			// Create a test organizer
 			config := &organizer.OrganizerConfig{
-				BaseDir:      env.InputDir,
-				OutputDir:    env.OutputDir,
-				Verbose:      true,
-				DryRun:       true,
-				UseFileTimes: true,
+				BaseDir:   env.InputDir,
+				OutputDir: env.OutputDir,
+				Verbose:   true,
+				DryRun:    true,
 			}
 
 			org, err := organizer.NewOrganizer(config)
@@ -123,7 +122,7 @@ func TestOrganizer_Integration(t *testing.T) {
 			}
 			if err == nil {
 				// Run the organizer
-				err = org.Organize()
+				err = org.Execute()
 			}
 
 			// Verify results
@@ -131,7 +130,10 @@ func TestOrganizer_Integration(t *testing.T) {
 				assert.Error(t, err, "Expected error but got none")
 			} else {
 				assert.NoError(t, err, "Unexpected error")
-				// Add more assertions based on expected output
+				assert.FileExists(t, filepath.Join(env.InputDir, tt.expectedOutput))
+				entries, err := os.ReadDir(env.OutputDir)
+				assert.NoError(t, err)
+				assert.Empty(t, entries, "dry-run must not create output files")
 			}
 		})
 	}

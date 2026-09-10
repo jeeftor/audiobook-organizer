@@ -44,7 +44,7 @@ func (o *Organizer) SanitizePath(s string) string {
 	if runtime.GOOS == "windows" {
 		invalidChars = append(windowsInvalidChars, commonProblematicChars...)
 	} else if runtime.GOOS == "darwin" {
-		invalidChars = []string{":"}
+		invalidChars = []string{":", "/", "\\"}
 	} else {
 		// Linux/Unix: only replace truly problematic characters
 		// We're keeping apostrophes intact for consistent behavior with tests

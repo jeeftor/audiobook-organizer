@@ -38,6 +38,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Review safety regressions (#212)**: Prevent destination overwrites and metadata path escapes; make dry-run undo and new-output previews read-only; retain only successful moves and retryable undo failures in logs; stop empty-directory cleanup when no progress is made.
+- **Rename planning**: Reserve existing full destination paths, preserve collision-resolved names for selected preview rows, and enforce required fields in strict mode.
+- **Recovery history**: Preserve organize and rename logs across successive runs, refuse to replace unreadable history, and retain only pending operations after a partial rename undo.
+- **Flat organization**: Honor selected source files and every supported single-file layout.
+- **Audiobookshelf discovery**: Use page-based pagination, the registered SQLite driver and current library-folder schema, and component-aware longest-prefix path mappings.
+- **Regression verification**: Isolate TUI worker state from rendering, restore tagged integration checks, and add core, CLI, browser, race, and ABS matrix regression coverage.
+
+
 - Docker image publishing now builds with Go 1.25 so release tags match the toolchain required by `go.mod`.
 - Beta release tags now derive from the latest stable SemVer tag instead of stacking beta suffixes from prior prereleases.
 - Frontend embed path is now stable for goreleaser by building into `internal/server/static`.

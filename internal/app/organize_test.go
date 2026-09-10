@@ -214,8 +214,12 @@ func TestPreviewOrganizeUsesCustomLayoutTemplate(t *testing.T) {
 	if got := len(resp.Summary.Moves); got != 1 {
 		t.Fatalf("Moves length = %d, want 1", got)
 	}
+	resolvedOutput, err := filepath.EvalSymlinks(outputDir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	wantTarget := filepath.Join(
-		outputDir,
+		resolvedOutput,
 		"App Author",
 		"App Series",
 		"1 - App Test Book (App Narrator)",

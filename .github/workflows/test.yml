@@ -37,6 +37,12 @@ jobs:
         go mod tidy
         $(go env GOPATH)/bin/gotestsum --format=testname -- -coverprofile=coverage.out ./...
 
+    - name: Run tagged integration regressions
+      run: go test -tags=integration ./internal/organizer/integration
+
+    - name: Run filesystem and TUI race regressions
+      run: go test -race ./internal/organizer ./internal/app ./internal/server ./internal/tui/models
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v6
       with:
@@ -323,6 +329,8 @@ jobs:
             run_regex: TestRESTHarness_ABSRenameMetadataPreview
           - name: abs-metadata-mode
             run_regex: TestABSMetadataMode
+          - name: abs-review-regressions
+            run_regex: TestABSReviewPaginationSQLiteAndMappings
     env:
       ABS_IMAGE: ghcr.io/advplyr/audiobookshelf:latest
       ABS_FIXTURE_CACHE_DIR: test/abs/.cache/staging-data

@@ -56,6 +56,10 @@ Host path:          /mnt/media/audiobooks/The Case of Charles Dexter Ward
 Mapping flag:       --abs-path-map="/audiobooks:/mnt/media/audiobooks"
 ```
 
+Mappings match complete path components: `/books` does not match `/books-other`. If mappings overlap, the most specific prefix wins in either direction.
+
+SQLite discovery reads the current ABS `libraryFolders` table without writing to the database. The input path must match an ABS-visible library path. If the host and container mount paths differ, use explicit `--abs-path-map` entries; the database does not contain the host's mount configuration.
+
 Use `--check-files` before organizing so missing or incorrect mappings are visible:
 
 ```bash

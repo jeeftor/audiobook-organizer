@@ -34,6 +34,8 @@ type ProcessItem struct {
 type ProcessCompleteMsg struct {
 	Success int
 	Failed  int
+	Items   []ProcessItem
+	Elapsed time.Duration
 }
 
 // ProcessModel represents the processing screen
@@ -90,27 +92,35 @@ func (m *ProcessModel) startProcessing() tea.Cmd {
 	m.processing = true
 	m.startTime = time.Now()
 
+	// Commands run outside the Bubble Tea update loop. Give the worker private
+	// state and publish its result as a message instead of mutating the live model.
+	worker := *m
+	worker.items = append([]ProcessItem(nil), m.items...)
+	worker.config = make(map[string]string, len(m.config))
+	for key, value := range m.config {
+		worker.config[key] = value
+	}
 	return func() tea.Msg {
 		// Get directories from config
-		baseDir := m.config["Input Directory"]
-		outputDir := m.config["Output Directory"]
+		baseDir := worker.config["Input Directory"]
+		outputDir := worker.config["Output Directory"]
 
 		// Fallback: if not in config, try to get from the first book
-		if baseDir == "" && len(m.books) > 0 {
-			baseDir = filepath.Dir(m.books[0].Path)
+		if baseDir == "" && len(worker.books) > 0 {
+			baseDir = filepath.Dir(worker.books[0].Path)
 		}
 		if outputDir == "" {
 			outputDir = baseDir // Use same directory if not specified
 		}
 
 		// Get layout from settings
-		layout := m.config["Layout"]
+		layout := worker.config["Layout"]
 		if layout == "" {
 			layout = "author-series-title"
 		}
 		layoutTemplate := ""
 		if layout == "custom" {
-			layoutTemplate = strings.TrimSpace(m.config["Layout Template"])
+			layoutTemplate = strings.TrimSpace(worker.config["Layout Template"])
 			layout = "author-series-title"
 		}
 
@@ -120,11 +130,11 @@ func (m *ProcessModel) startProcessing() tea.Cmd {
 			OutputDir:           outputDir,
 			Layout:              layout,
 			LayoutTemplate:      layoutTemplate,
-			UseEmbeddedMetadata: m.config["Use Embedded Metadata"] == "Yes",
-			Flat:                m.config["Flat Mode"] == "Yes",
-			DryRun:              m.config["Dry Run"] == "Yes",
+			UseEmbeddedMetadata: worker.config["Use Embedded Metadata"] == "Yes",
+			Flat:                worker.config["Flat Mode"] == "Yes",
+			DryRun:              worker.config["Dry Run"] == "Yes",
 			Verbose:             false, // Always false in TUI mode - we have our own display
-			FieldMapping:        m.fieldMapping,
+			FieldMapping:        worker.fieldMapping,
 			RemoveEmpty:         false, // Don't remove empty directories in TUI mode
 			Prompt:              false, // Don't prompt in TUI mode
 		}
@@ -133,23 +143,28 @@ func (m *ProcessModel) startProcessing() tea.Cmd {
 		org, err := organizer.NewOrganizer(config)
 		if err != nil {
 			// Mark all items as failed with the configuration error
-			for i := range m.items {
-				m.items[i].Status = StatusError
-				m.items[i].Error = fmt.Errorf("configuration error: %v", err)
+			for i := range worker.items {
+				worker.items[i].Status = StatusError
+				worker.items[i].Error = fmt.Errorf("configuration error: %v", err)
 			}
-			m.failed = len(m.items)
-			m.complete = true
-			m.processing = false
-			m.elapsedTime = time.Since(m.startTime)
-			return ProcessCompleteMsg{Success: 0, Failed: m.failed}
+			worker.failed = len(worker.items)
+			worker.complete = true
+			worker.processing = false
+			worker.elapsedTime = time.Since(worker.startTime)
+			return ProcessCompleteMsg{
+				Success: 0,
+				Failed:  worker.failed,
+				Items:   worker.items,
+				Elapsed: time.Since(worker.startTime),
+			}
 		}
 
-		for i := range m.items {
+		for i := range worker.items {
 			// Update status to processing
-			m.items[i].Status = StatusProcessing
+			worker.items[i].Status = StatusProcessing
 
 			// Get the source path for this file
-			sourcePath := m.items[i].SourcePath
+			sourcePath := worker.items[i].SourcePath
 
 			// Process the file using the organizer
 			// Pass nil as the provider to let the organizer create and configure it
@@ -157,29 +172,31 @@ func (m *ProcessModel) startProcessing() tea.Cmd {
 
 			if err != nil {
 				// Processing failed
-				m.items[i].Status = StatusError
-				m.items[i].Error = fmt.Errorf("failed to process: %v", err)
-				m.failed++
+				worker.items[i].Status = StatusError
+				worker.items[i].Error = fmt.Errorf("failed to process: %v", err)
+				worker.failed++
 			} else {
 				// Processing succeeded
-				m.items[i].Status = StatusSuccess
+				worker.items[i].Status = StatusSuccess
 
 				// Build a descriptive message about what was done
 				if config.DryRun {
-					m.items[i].Message = "Would move (dry-run mode)"
+					worker.items[i].Message = "Would move (dry-run mode)"
 				} else {
-					m.items[i].Message = fmt.Sprintf("Moved to %s", filepath.Dir(m.items[i].TargetPath))
+					worker.items[i].Message = fmt.Sprintf("Moved to %s", filepath.Dir(worker.items[i].TargetPath))
 				}
-				m.success++
+				worker.success++
 			}
 		}
 
-		m.complete = true
-		m.processing = false
+		worker.complete = true
+		worker.processing = false
 
 		return ProcessCompleteMsg{
-			Success: m.success,
-			Failed:  m.failed,
+			Success: worker.success,
+			Failed:  worker.failed,
+			Items:   worker.items,
+			Elapsed: time.Since(worker.startTime),
 		}
 	}
 }
@@ -194,6 +211,8 @@ func (m *ProcessModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ProcessCompleteMsg:
 		m.success = msg.Success
 		m.failed = msg.Failed
+		m.items = msg.Items
+		m.elapsedTime = msg.Elapsed
 		m.complete = true
 		m.processing = false
 		return m, nil

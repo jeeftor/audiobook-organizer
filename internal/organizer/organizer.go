@@ -369,7 +369,12 @@ func NewOrganizer(config *OrganizerConfig) (*Organizer, error) {
 		fileOps: NewFileOps(config.DryRun),
 	}
 
-	org.layoutCalculator = NewLayoutCalculator(config, org.SanitizePath)
+	org.layoutCalculator = NewLayoutCalculator(&org.config, org.SanitizePath)
+	if !config.DryRun {
+		if err := loadExistingLog(org.GetLogPath(), &org.logEntries); err != nil {
+			return nil, err
+		}
+	}
 
 	// Set the verbose mode flag for the metadata providers
 	SetVerboseMode(config.Verbose)
@@ -425,7 +430,7 @@ func (o *Organizer) ResolvePaths() error {
 		if err != nil {
 			return fmt.Errorf("error resolving output directory path: %v", err)
 		}
-		resolvedOutputDir, err := filepath.EvalSymlinks(absOut)
+		resolvedOutputDir, err := resolveFuturePath(absOut)
 		if err != nil {
 			return fmt.Errorf("error resolving output directory path: %v", err)
 		}
@@ -570,6 +575,11 @@ func (o *Organizer) removeEmptySourceDirs() error {
 		PrintBlue("🔍 Scanning for empty directories...")
 	}
 
+	// Dry-run reports a single pass because no directories will disappear.
+	if o.config.DryRun {
+		return nil
+	}
+
 	// Keep removing empty directories until no more are found
 	for {
 		emptyDirs, err := o.findEmptyDirectories()
@@ -594,7 +604,7 @@ func (o *Organizer) removeEmptySourceDirs() error {
 		for _, dir := range emptyDirs {
 			if err := o.removeEmptyDir(dir); err != nil {
 				PrintRed("❌ Error removing directory %s: %v", dir, err)
-			} else {
+			} else if _, statErr := os.Stat(dir); os.IsNotExist(statErr) {
 				removedAny = true
 			}
 		}

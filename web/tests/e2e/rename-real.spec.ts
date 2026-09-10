@@ -35,12 +35,12 @@ test('previews and executes real rename candidates through the web UI', async ({
     await expect(page.getByRole('heading', { name: 'Rename preview ready' })).toBeVisible()
     await expectSummaryValue(page, 'Files scanned', '4')
     await expectSummaryValue(page, 'Candidates', '4')
-    await expectSummaryValue(page, 'Conflicts', '1')
+    await expectSummaryValue(page, 'Conflicts', '0')
     await expectSummaryValue(page, 'Skipped', '2')
     await expectSummaryValue(page, 'Errors', '1')
     await expect(page.locator('.move-list').filter({ hasText: fixture.firstProposedPath })).toBeVisible()
     await expect(page.locator('.move-list').filter({ hasText: fixture.conflictProposedPath })).toBeVisible()
-    await expect(page.locator('.move-list em').filter({ hasText: /^Conflict$/ })).toBeVisible()
+    await expect(page.locator('.move-list em').filter({ hasText: /^Conflict$/ })).toHaveCount(0)
     await expect(page.locator('.move-list em').filter({ hasText: 'Skipped: unchanged' })).toBeVisible()
     await expect(page.locator('.warning-list li').filter({ hasText: /Failed to extract metadata/ })).toBeVisible()
     expect(renameRequests).toContain('/api/rename/preview')
@@ -124,6 +124,36 @@ test('uses a custom metadata field mapping in a real rename preview and executio
   }
 })
 
+test('keeps the reviewed collision suffix when only the second file is selected', async ({ page }) => {
+  test.setTimeout(60_000)
+  const root = await mkdtemp(join(tmpdir(), 'abo-rename-selection-'))
+  try {
+    const audio = join(repoRoot(), 'testdata', 'test-scenarios', 'single-file', 'single_book.mp3')
+    await createRenameBook(root, 'book', 'a.mp3', audio, { title: 'Book', authors: ['Author'] })
+    await copyFile(audio, join(root, 'book', 'b.mp3'))
+    const selected = join(root, 'book', 'b.mp3')
+    const expected = join(root, 'book', 'Book (2).mp3')
+    await loadApp(page)
+    await page.getByRole('button', { name: /Rename/ }).click()
+    await page.getByRole('textbox', { name: 'Source folder' }).fill(root)
+    await page.getByRole('textbox', { name: 'Filename template' }).fill('{title}')
+    await expect(page.getByRole('heading', { name: 'Rename preview ready' })).toBeVisible()
+    await expect(page.locator('.move-list').filter({ hasText: expected })).toBeVisible()
+    await page.getByRole('button', { name: 'Review & Run', exact: true }).click()
+    await page.getByRole('checkbox', { name: `Select rename candidate ${join(root, 'book', 'a.mp3')}` }).uncheck()
+    page.once('dialog', dialog => dialog.accept())
+    await page.getByRole('button', { name: 'Run 1 Selected File' }).click()
+    await expect(page.getByRole('heading', { name: 'Rename Run Complete' })).toBeVisible()
+    await expectPathExists(expected)
+    await expectPathExists(join(root, 'book', 'a.mp3'))
+    await expectPathMissing(selected)
+    await expectPathMissing(join(root, 'book', 'Book.mp3'))
+    expect(await readFile(expected)).toEqual(await readFile(audio))
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 type RenameFixture = {
   sourceDir: string
   firstOriginalPath: string
@@ -167,7 +197,7 @@ async function createRenameFixture(): Promise<RenameFixture> {
     firstOriginalPath: join(conflictADir, 'original-a.mp3'),
     conflictOriginalPath: join(conflictBDir, 'original-b.mp3'),
     firstProposedPath: join(conflictADir, 'Conflict Author - Conflict Book.mp3'),
-    conflictProposedPath: join(conflictBDir, 'Conflict Author - Conflict Book (2).mp3'),
+    conflictProposedPath: join(conflictBDir, 'Conflict Author - Conflict Book.mp3'),
     noopPath: join(noopDir, 'Noop Author - Noop Book.mp3'),
     brokenPath: join(brokenDir, 'broken.mp3'),
     logPath: join(root, '.abook-rename.log'),

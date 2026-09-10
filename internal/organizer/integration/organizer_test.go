@@ -15,10 +15,10 @@ func TestTrackNumberInFilenames(t *testing.T) {
 		filename string
 		expected int
 	}{
-		{"single_digit", "track1.mp3", 1},
-		{"two_digits", "track12.mp3", 12},
-		{"with_underscore", "track_1.mp3", 1},
-		{"with_dash", "track-1.mp3", 1},
+		{"single_digit_prefix", "01 - chapter.mp3", 1},
+		{"two_digit_prefix", "12 - chapter.mp3", 12},
+		{"not_a_prefix_underscore", "track_1.mp3", 0},
+		{"not_a_prefix_dash", "track-1.mp3", 0},
 		{"no_number", "track.mp3", 0},
 	}
 

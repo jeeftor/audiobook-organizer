@@ -157,6 +157,23 @@ lifecycle while non-Docker tests cover template rendering and path safety.
 | A6 | ABS organize, already indexed | plain | Ebooks | `go test -tags=abs_e2e ./test/abs/e2e -run TestABSMetadataMode_OrganizeBooksLifecycle -count=1 -v` | Implemented. Seeds explicit ABS author metadata through the ABS media-update API, then organizes already-indexed EPUB folders using ABS metadata and verifies the same filesystem, scan, cleanup, and final-state lifecycle as A5. |
 | A7 | ABS organize, custom layout template | plain | Audiobooks | Covered by `go test ./cmd ./internal/app ./internal/server ./internal/organizer` and `npx playwright test tests/e2e/organize-real.spec.ts -g "custom layout template" --project chromium-desktop` | Implemented without a new Docker ABS lifecycle row. `abs organize` exposes `--layout-template` and maps it into the shared organizer config; focused command, REST, app, organizer, and real browser filesystem tests verify the custom target path behavior. A5-A6 continue to validate ABS scan/missing-row reconciliation. |
 
+## Review Regressions (#212)
+
+| Row | Behavior | Automated coverage | Acceptance |
+| --- | --- | --- | --- |
+| R1 | Page-based pagination loads more than 100 distinct items without duplicates | `TestReviewPaginationContract`, `TestReviewPaginationStopsOnIncompleteResponse`, `TestABSReviewPaginationSQLiteAndMappings` | Real ABS scan with 104 EPUB items, CLI discovery, and distinct API IDs |
+| R2 | SQLite discovery opens read-only with the registered driver and current `libraryFolders` schema | `TestNewPathMapperFromSQLite`, `TestABSReviewPaginationSQLiteAndMappings` | Real SQLite unit fixture plus CLI discovery from live ABS database |
+| R3 | Mapping uses path boundaries and the most specific prefix in both directions | `TestReviewPathMappingBoundary`, `TestABSReviewPaginationSQLiteAndMappings` | Every mapped ABS item exists on disk and round-trips; unrelated prefixes remain unchanged |
+| R4 | Flat organize respects selected source paths and numbered layouts | `TestSafetyFlatSelectionAndLayouts`, browser flat-selection regression, existing flat import lifecycle rows | Real filesystem browser selection and existing Docker flat lifecycle matrix |
+
+The live regression command is:
+
+```bash
+go test -tags=abs_e2e ./test/abs/e2e -run TestABSReviewPaginationSQLiteAndMappings -count=1 -v
+```
+
+SQLite auto-discovery only works when the input path matches the path stored by ABS. If Docker and the host see different mount paths, supply explicit `--abs-path-map` mappings; a database cannot infer the host's mount layout.
+
 ## Per-Test Verification
 
 Each mode test should verify three layers:
@@ -205,6 +222,7 @@ cycle, so the fixed ABS ports do not conflict:
 | `rest-abs-operations` | `TestRESTHarness_ABSOperationEndpoints` |
 | `rest-abs-metadata-organize` | `TestRESTHarness_ABSMetadataSourceOrganizeLifecycle` |
 | `abs-metadata-mode` | `TestABSMetadataMode` |
+| `abs-review-regressions` | `TestABSReviewPaginationSQLiteAndMappings` |
 
 The browser-backed ABS row `W1` runs in its own GitHub Actions job with
 `make gui-test-abs` because it requires both Playwright-managed Chromium and the
