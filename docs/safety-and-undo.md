@@ -38,7 +38,11 @@ Undo with the same source and output directories used for the original run:
 audiobook-organizer --dir=/books/source --out=/books/organized --undo
 ```
 
-If an original path is occupied or a restore fails, undo reports the failure and retains the pending operations in the log. Successfully restored operations are removed from that log. Resolve the conflict and rerun the same undo command. Restores across filesystems use a copy-and-delete fallback.
+If an original path is occupied or a restore fails, undo stops and retains that
+operation and all older, unprocessed operations in the log. Older operations can
+depend on the blocked path, so continuing could move an unrelated file.
+Successfully restored operations are removed from the log. Resolve the conflict
+and rerun the same undo command. Restores across filesystems use a copy-and-delete fallback.
 
 Keep the log until you have verified the output folder and any Audiobookshelf scan results.
 
@@ -46,9 +50,9 @@ Keep the log until you have verified the output folder and any Audiobookshelf sc
 
 Rename operations write `.abook-rename.log`.
 
-Successive runs in the same directory retain earlier rename history. If undo
-partly succeeds, only failed operations remain in the log. Resolve the reported
-conflict and retry; already-restored files are not replayed.
+Successive runs in the same directory retain earlier rename history. Undo stops
+at the first failure and retains the failed operation and all older dependencies.
+Resolve the reported conflict and retry; already-restored files are not replayed.
 
 Undo from the renamed directory:
 
@@ -57,6 +61,12 @@ audiobook-organizer rename --dir=/books/source --undo
 ```
 
 ## Safer First Runs
+
+If saving a new move's recovery log fails, organization and rename attempt to
+roll that move back. A rollback failure reports the affected paths; preserve the
+error output and inspect both locations before retrying. This is not a guarantee
+against power loss, concurrent filesystem changes, or a storage device failing
+during both the operation and its rollback.
 
 1. Start with a small folder.
 2. Use a separate `--out` directory.

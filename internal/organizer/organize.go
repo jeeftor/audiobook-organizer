@@ -429,9 +429,14 @@ func (o *Organizer) executeMove(sourcePath, targetPath string, metadata *Metadat
 	if err := o.validateDestination(targetPath); err != nil {
 		return err
 	}
+	previousMoves, previousEntries := len(o.summary.Moves), len(o.logEntries)
 	fileNames, err := o.moveFiles(sourcePath, targetPath, metadata)
 	if !o.config.DryRun && len(fileNames) > 0 {
-		err = errors.Join(err, o.updateLogAndCleanup(sourcePath, targetPath, fileNames))
+		logErr := o.updateLogAndCleanup(sourcePath, targetPath, fileNames)
+		if logErr != nil && len(o.logEntries) == previousEntries {
+			o.summary.Moves = o.summary.Moves[:previousMoves]
+		}
+		err = errors.Join(err, logErr)
 	}
 	return err
 }
@@ -585,14 +590,17 @@ func (o *Organizer) executeSingleFileMove(filePath, targetPath string, metadata 
 		return err
 	}
 
-	o.addSingleFileMoveToSummary(filePath, targetPath)
 	originalName := filepath.Base(filePath)
 	targetName := filepath.Base(targetPath)
-	return o.updateLogAndCleanup(
+	if err := o.updateLogAndCleanup(
 		filepath.Dir(filePath),
 		filepath.Dir(targetPath),
 		[]FilePair{{From: originalName, To: targetName}},
-	)
+	); err != nil {
+		return err
+	}
+	o.addSingleFileMoveToSummary(filePath, targetPath)
+	return nil
 }
 
 // addSingleFileMoveToSummary adds a single file move operation to the summary.
@@ -796,7 +804,24 @@ func (o *Organizer) updateLogAndCleanup(sourcePath, targetPath string, fileNames
 		Files:      fileNames,
 	})
 
-	return o.saveLog()
+	if err := o.saveLog(); err != nil {
+		// Do not strand completed moves without durable recovery history.
+		entry := &o.logEntries[len(o.logEntries)-1]
+		for i := len(entry.Files) - 1; i >= 0; i-- {
+			file := entry.Files[i]
+			from, to := filepath.Join(targetPath, file.To), filepath.Join(sourcePath, file.From)
+			if rollbackErr := moveNoReplace(from, to); rollbackErr != nil {
+				return errors.Join(
+					err,
+					fmt.Errorf("rollback %s to %s failed: %w", from, to, rollbackErr),
+				)
+			}
+			entry.Files = entry.Files[:i]
+		}
+		o.logEntries = o.logEntries[:len(o.logEntries)-1]
+		return fmt.Errorf("saving organization log failed; moves rolled back: %w", err)
+	}
+	return nil
 }
 
 // readMetadataFromJSON reads and processes metadata from a JSON file,

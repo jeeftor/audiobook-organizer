@@ -500,6 +500,16 @@ func (r *Renamer) RenameFile(oldPath, newPath string) error {
 		OldPath:   oldPath,
 		NewPath:   newPath,
 	})
+	if err := r.SaveLog(); err != nil {
+		if rollbackErr := moveNoReplace(newPath, oldPath); rollbackErr != nil {
+			return errors.Join(
+				err,
+				fmt.Errorf("rollback %s to %s failed: %w", newPath, oldPath, rollbackErr),
+			)
+		}
+		r.logEntries = r.logEntries[:len(r.logEntries)-1]
+		return fmt.Errorf("saving rename log failed; rename rolled back: %w", err)
+	}
 
 	return nil
 }
@@ -542,7 +552,9 @@ func (r *Renamer) UndoRenames() error {
 		if !r.config.DryRun {
 			if err := moveNoReplace(entry.NewPath, entry.OldPath); err != nil {
 				failures = append(failures, fmt.Errorf("failed to undo rename: %w", err))
-				remaining = append([]RenameLogEntry{entry}, remaining...)
+				// Older entries may depend on this intermediate path.
+				remaining = entries[:i+1]
+				break
 			}
 		}
 	}

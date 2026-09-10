@@ -69,21 +69,22 @@ func (o *Organizer) undoMoves() error {
 		return nil
 	}
 	var failures []error
+restore:
 	for i := len(entries) - 1; i >= 0; i-- {
 		entry := &entries[i]
 		if err := os.MkdirAll(entry.SourcePath, 0o755); err != nil {
 			failures = append(failures, err)
-			continue
+			break
 		}
-		var pending []FilePair
 		for j := len(entry.Files) - 1; j >= 0; j-- {
 			file := entry.Files[j]
 			if err := moveNoReplace(filepath.Join(entry.TargetPath, file.To), filepath.Join(entry.SourcePath, file.From)); err != nil {
 				failures = append(failures, fmt.Errorf("restoring %s: %w", file.From, err))
-				pending = append([]FilePair{file}, pending...)
+				// Older entries may depend on this path. Do not move its occupant.
+				break restore
 			}
+			entry.Files = entry.Files[:j]
 		}
-		entry.Files = pending
 	}
 	var remaining []LogEntry
 	for _, entry := range entries {

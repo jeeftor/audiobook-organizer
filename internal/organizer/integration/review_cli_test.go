@@ -177,6 +177,58 @@ func TestReviewCLIRegressions(t *testing.T) {
 			t.Fatal("rename undo retry did not restore original")
 		}
 	})
+	t.Run("chained_rename_undo_preserves_intermediate_occupant", func(t *testing.T) {
+		input, _, _ := book(t)
+		dir := filepath.Join(input, "book")
+		original := filepath.Join(dir, "audio.mp3")
+		put(t, original, audio)
+		args := []string{"rename", "--dir", dir}
+		run(t, "", false, append(args, "--template", "First - {title}")...)
+		run(t, "", false, append(args, "--template", "Second - {title}")...)
+		intermediate := filepath.Join(dir, "First - Book.mp3")
+		put(t, intermediate, []byte("unrelated occupant"))
+		run(t, "", true, append(args, "--undo")...)
+		if string(read(t, intermediate)) != "unrelated occupant" || exists(original) ||
+			!bytes.Equal(read(t, filepath.Join(dir, "Second - Book.mp3")), audio) {
+			t.Fatal("blocked chained undo moved unrelated contents")
+		}
+		if err := os.Remove(intermediate); err != nil {
+			t.Fatal(err)
+		}
+		run(t, "", false, append(args, "--undo")...)
+		if !bytes.Equal(read(t, original), audio) {
+			t.Fatal("retry lost original")
+		}
+	})
+	t.Run("log_write_failure_rolls_back_real_moves", func(t *testing.T) {
+		if os.Geteuid() == 0 {
+			t.Skip("requires an unprivileged user to enforce directory permissions")
+		}
+		for _, rename := range []bool{false, true} {
+			input, output, args := book(t)
+			original := filepath.Join(input, "book", "audio.mp3")
+			put(t, original, audio)
+			logRoot := output
+			logName := ".abook-org.log"
+			if rename {
+				args = []string{"rename", "--dir", input, "--template", "{title}"}
+				logRoot, logName = input, ".abook-rename.log"
+			} else if err := os.MkdirAll(filepath.Join(output, "Author", "Book"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			logPath := filepath.Join(logRoot, logName)
+			put(t, logPath, []byte("[]\n"))
+			if err := os.Chmod(logRoot, 0o555); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = os.Chmod(logRoot, 0o755) })
+			result := run(t, "", true, args...)
+			if !strings.Contains(result, "rolled back") || !bytes.Equal(read(t, original), audio) ||
+				string(read(t, logPath)) != "[]\n" {
+				t.Fatal("log failure did not restore source and preserve prior history")
+			}
+		}
+	})
 	t.Run("invalid_recovery_log_blocks_new_moves", func(t *testing.T) {
 		for _, rename := range []bool{false, true} {
 			input, output, args := book(t)

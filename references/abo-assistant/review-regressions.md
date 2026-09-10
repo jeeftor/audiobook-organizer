@@ -1,6 +1,6 @@
 # Review Regression Coverage (#212)
 
-Rows 1–18 correspond to the original project review; rows 19–20 cover recovery gaps found during the second acceptance pass.
+Rows 1–18 correspond to the original project review; rows 19–22 cover recovery gaps found during the second acceptance pass and PR review.
 
 | Finding | Corrected behavior | Regression coverage |
 | --- | --- | --- |
@@ -24,6 +24,8 @@ Rows 1–18 correspond to the original project review; rows 19–20 cover recove
 | 18 | Strict rename validates required fields before changing files, while fallbacks and optional groups remain valid | `TestRenameSafetyStrictMissingFieldAbortsBeforeMutation`, `TestRenameSafetyStrictValidFileWaitsForWholePlanValidation`, CLI `strict_missing_year` |
 | 19 | Separate organize and rename runs preserve earlier history; corrupt logs block new moves | CLI `organize_history_survives_separate_runs`, `rename_history_and_partial_undo_retry`, `invalid_recovery_log_blocks_new_moves` |
 | 20 | Partial rename undo retains only pending entries and can be retried | CLI `rename_history_and_partial_undo_retry` |
+| 21 | Blocked chained undo stops before older dependencies can move an unrelated occupant | `TestRecoveryChainedRenameUndoPreservesIntermediateOccupant`, `TestRecoveryChainedOrganizeUndoPreservesIntermediateOccupant`, CLI `chained_rename_undo_preserves_intermediate_occupant` |
+| 22 | Log-publication failures roll back new directory, single-file, and rename moves; failed rollback reports remaining paths | `TestRecoveryLogFailureRollsBackOrganize`, `TestRecoveryLogFailureRollsBackRename`, `TestRecoveryRollbackFailureReportsRemainingMove`, CLI `log_write_failure_rolls_back_real_moves` |
 
 Run the default suite, tagged integration suite, and race checks:
 
