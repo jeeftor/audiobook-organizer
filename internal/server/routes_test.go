@@ -35,6 +35,7 @@ func TestProtectedEndpointsRequireSessionToken(t *testing.T) {
 		{name: "initial config", path: "/api/config/initial"},
 		{name: "options", path: "/api/config/options"},
 		{name: "path validation", path: "/api/paths/validate"},
+		{name: "path browse", path: "/api/paths/browse?path=/input"},
 	}
 
 	for _, tt := range tests {

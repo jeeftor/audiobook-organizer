@@ -1,4 +1,4 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { execFileSync, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { once } from 'node:events'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -12,13 +12,16 @@ export type TestServer = {
 
 const repoRoot = new URL('../../..', import.meta.url).pathname
 const serverURLPattern = /http:\/\/127\.0\.0\.1:(\d+)\/\?token=([a-f0-9]+)/
+const goExecutable = execFileSync('/usr/bin/which', ['go'], { encoding: 'utf8' }).trim()
 
-export async function startTestServer(): Promise<TestServer> {
-  const child = spawn('go', ['run', '.', 'web', '--host', '127.0.0.1', '--port', '0', '--no-open'], {
+export async function startTestServer(options: { browseRoots?: string[] } = {}): Promise<TestServer> {
+  const browseRootArgs = (options.browseRoots ?? []).flatMap((root) => ['--browse-root', root])
+  const child = spawn(goExecutable, ['run', '.', 'web', '--host', '127.0.0.1', '--port', '0', '--no-open', ...browseRootArgs], {
     cwd: repoRoot,
     env: {
-      ...process.env,
+      HOME: process.env.HOME,
       GOCACHE: join(tmpdir(), 'audiobook-organizer-go-build'),
+      GOMODCACHE: join(tmpdir(), 'audiobook-organizer-go-mod'),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   })

@@ -113,6 +113,24 @@
       </div>
     </section>
 
+    <section v-if="browseDialogField" class="guide-backdrop" role="presentation" @click.self="closeServerPathPicker">
+      <div class="guide-dialog" role="dialog" aria-modal="true" aria-labelledby="server-folder-title">
+        <div class="guide-dialog-header">
+          <div><span class="eyebrow">Server folders</span><h2 id="server-folder-title">Choose {{ pathLabel(browseDialogField) }}</h2></div>
+          <button class="icon-button" type="button" aria-label="Close server folder picker" @click="closeServerPathPicker">×</button>
+        </div>
+        <p v-if="browseError" class="inline-alert">{{ browseError }}</p>
+        <div class="action-row" aria-label="Server browse roots">
+          <button v-for="root in browseRoots" :key="root" class="secondary-action compact-action" type="button" @click="loadServerDirectory(root)">{{ root }}</button>
+        </div>
+        <div v-if="!browseError" class="guide-choice-grid" role="list">
+          <button v-if="browseDirectory?.parent" class="guide-choice" type="button" @click="loadServerDirectory(browseDirectory.parent)">..</button>
+          <button v-for="directory in browseDirectory?.directories" :key="directory.path" class="guide-choice" type="button" @click="loadServerDirectory(directory.path)"><FolderOpen :size="22" /><strong>{{ directory.name }}</strong></button>
+        </div>
+        <div class="guide-actions"><button class="secondary-action" type="button" :disabled="!browseDirectory" @click="selectServerDirectory">Choose this folder</button></div>
+      </div>
+    </section>
+
     <section class="workflow-switcher" aria-label="Workflow">
       <button
         v-for="workflow in workflows"
@@ -897,6 +915,7 @@ import {
   type ABSLibraryStateResponse,
   type ABSPathMappingResponse,
   type ABSScanTriggerResponse,
+  type DirectoryBrowseResponse,
   type FieldMapping,
   type HealthResponse,
   type Option,
@@ -1046,6 +1065,10 @@ const sourceFolder = ref('')
 const outputFolder = ref('')
 const sourceFolderPicker = ref<HTMLInputElement | null>(null)
 const outputFolderPicker = ref<HTMLInputElement | null>(null)
+const browseRoots = ref<string[]>([])
+const browseDialogField = ref<PathFieldId | null>(null)
+const browseDirectory = ref<DirectoryBrowseResponse | null>(null)
+const browseError = ref('')
 const sourcePathMessage = ref('')
 const outputPathMessage = ref('')
 const activePathDropTarget = ref<PathFieldId | null>(null)
@@ -1793,6 +1816,10 @@ function addActionError(label: string, detail: string, requestStarted: boolean) 
 }
 
 function openPathPicker(field: PathFieldId) {
+	if (browseRoots.value.length > 0) {
+		void openServerPathPicker(field)
+		return
+	}
   clearPathMessage(field)
   const picker = field === 'source' ? sourceFolderPicker.value : outputFolderPicker.value
   if (!picker) {
@@ -1801,6 +1828,33 @@ function openPathPicker(field: PathFieldId) {
   }
   picker.value = ''
   picker.click()
+}
+
+async function openServerPathPicker(field: PathFieldId) {
+	browseDialogField.value = field
+	browseError.value = ''
+	await loadServerDirectory(browseRoots.value[0])
+}
+
+async function loadServerDirectory(path: string) {
+	try {
+		browseError.value = ''
+		browseDirectory.value = await apiGet<DirectoryBrowseResponse>(`/api/paths/browse?path=${encodeURIComponent(path)}`)
+	} catch (error) {
+		browseError.value = error instanceof Error ? error.message : 'Unable to browse server folders.'
+	}
+}
+
+function selectServerDirectory() {
+	if (!browseDialogField.value || !browseDirectory.value) return
+	setPathValue(browseDialogField.value, browseDirectory.value.path)
+	setPathMessage(browseDialogField.value, `${pathLabel(browseDialogField.value)} selected from server folders.`)
+	closeServerPathPicker()
+}
+
+function closeServerPathPicker() {
+	browseDialogField.value = null
+	browseDirectory.value = null
 }
 
 function handlePathPickerChange(field: PathFieldId, event: Event) {
@@ -2622,6 +2676,7 @@ onMounted(async () => {
     renameFieldMapping.value = cloneFieldMapping(config.rename?.field_mapping ?? defaultFieldMapping)
     sourceFolder.value = config.initial?.input_dir || config.organizer?.base_dir || ''
     outputFolder.value = config.initial?.output_dir || config.organizer?.output_dir || ''
+		browseRoots.value = config.browse_roots ?? []
     layoutTemplate.value = config.organizer?.layout_template || ''
     layout.value = layoutTemplate.value ? customLayoutValue : config.organizer?.layout || layout.value
     removeEmpty.value = config.organizer?.remove_empty ?? false

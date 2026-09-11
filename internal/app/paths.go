@@ -33,6 +33,87 @@ type PathValidationResult struct {
 	Error string `json:"error,omitempty"`
 }
 
+// DirectoryBrowseResponse contains a permitted server-side directory and its children.
+type DirectoryBrowseResponse struct {
+	Path        string           `json:"path"`
+	Parent      string           `json:"parent,omitempty"`
+	Directories []DirectoryEntry `json:"directories"`
+}
+
+// DirectoryEntry identifies a selectable server-side directory.
+type DirectoryEntry struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
+
+// BrowseDirectories lists directories beneath configured browse roots.
+func (s *Service) BrowseDirectories(
+	ctx context.Context,
+	path string,
+) (*DirectoryBrowseResponse, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if len(s.config.BrowseRoots) == 0 {
+		return nil, fmt.Errorf("server folder browsing is not configured")
+	}
+	resolvedPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return nil, fmt.Errorf("resolve directory path: %w", err)
+	}
+	info, err := os.Stat(resolvedPath)
+	if err != nil {
+		return nil, fmt.Errorf("access directory path: %w", err)
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("path is not a directory: %s", path)
+	}
+	if !isWithinBrowseRoots(resolvedPath, s.config.BrowseRoots) {
+		return nil, fmt.Errorf("directory is outside configured browse roots")
+	}
+
+	entries, err := os.ReadDir(resolvedPath)
+	if err != nil {
+		return nil, fmt.Errorf("read directory: %w", err)
+	}
+	response := &DirectoryBrowseResponse{Path: resolvedPath}
+	parent := filepath.Dir(resolvedPath)
+	if isWithinBrowseRoots(parent, s.config.BrowseRoots) {
+		response.Parent = parent
+	}
+	for _, entry := range entries {
+		childPath := filepath.Join(resolvedPath, entry.Name())
+		childInfo, statErr := os.Stat(childPath)
+		if statErr != nil || !childInfo.IsDir() {
+			continue
+		}
+		resolvedChild, resolveErr := filepath.EvalSymlinks(childPath)
+		if resolveErr != nil || !isWithinBrowseRoots(resolvedChild, s.config.BrowseRoots) {
+			continue
+		}
+		response.Directories = append(
+			response.Directories,
+			DirectoryEntry{Name: entry.Name(), Path: resolvedChild},
+		)
+	}
+	return response, nil
+}
+
+func isWithinBrowseRoots(path string, roots []string) bool {
+	for _, root := range roots {
+		resolvedRoot, err := filepath.EvalSymlinks(root)
+		if err != nil {
+			continue
+		}
+		relative, err := filepath.Rel(resolvedRoot, path)
+		if err == nil && relative != ".." &&
+			!strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+			return true
+		}
+	}
+	return false
+}
+
 // ValidatePaths checks local workflow paths without creating directories.
 func (s *Service) ValidatePaths(
 	ctx context.Context,

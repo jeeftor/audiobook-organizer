@@ -9,13 +9,14 @@ import (
 
 // WebConfig contains the initial local web UI configuration.
 type WebConfig struct {
-	Host      string             `json:"host"`
-	Port      int                `json:"port"`
-	Open      bool               `json:"open"`
-	Initial   InitialConfigDTO   `json:"initial"`
-	Organizer OrganizerConfigDTO `json:"organizer"`
-	Rename    RenameConfigDTO    `json:"rename"`
-	ABS       ABSConfigDTO       `json:"abs"`
+	Host        string             `json:"host"`
+	Port        int                `json:"port"`
+	Open        bool               `json:"open"`
+	BrowseRoots []string           `json:"browse_roots,omitempty"`
+	Initial     InitialConfigDTO   `json:"initial"`
+	Organizer   OrganizerConfigDTO `json:"organizer"`
+	Rename      RenameConfigDTO    `json:"rename"`
+	ABS         ABSConfigDTO       `json:"abs"`
 }
 
 // InitialConfigDTO contains initial path values passed from the CLI.

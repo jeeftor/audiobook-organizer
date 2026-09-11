@@ -201,6 +201,7 @@ export type WebConfig = {
   host: string
   port: number
   open: boolean
+  browse_roots?: string[]
   initial: {
     input_dir: string
     output_dir: string
@@ -208,6 +209,12 @@ export type WebConfig = {
   organizer: OrganizerConfig
   rename: RenameConfig
   abs: ABSConfig
+}
+
+export type DirectoryBrowseResponse = {
+  path: string
+  parent?: string
+  directories: Array<{ name: string; path: string }>
 }
 
 export type OptionsResponse = {

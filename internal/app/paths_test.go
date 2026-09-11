@@ -93,6 +93,46 @@ func TestValidatePathsHonorsCanceledContext(t *testing.T) {
 	}
 }
 
+func TestBrowseDirectoriesStaysWithinConfiguredRoots(t *testing.T) {
+	root := t.TempDir()
+	books := filepath.Join(root, "books")
+	child := filepath.Join(books, "series")
+	outside := t.TempDir()
+	if err := os.MkdirAll(child, 0o755); err != nil {
+		t.Fatalf("create browse fixture: %v", err)
+	}
+	resolvedBooks, err := filepath.EvalSymlinks(books)
+	if err != nil {
+		t.Fatalf("resolve browse root: %v", err)
+	}
+	resolvedChild, err := filepath.EvalSymlinks(child)
+	if err != nil {
+		t.Fatalf("resolve browse child: %v", err)
+	}
+
+	config := DefaultWebConfig("127.0.0.1", 0, false, "", "")
+	config.BrowseRoots = []string{books}
+	service := NewService(config)
+
+	resp, err := service.BrowseDirectories(context.Background(), books)
+	if err != nil {
+		t.Fatalf("BrowseDirectories() error = %v", err)
+	}
+	if resp.Path != resolvedBooks || len(resp.Directories) != 1 ||
+		resp.Directories[0].Path != resolvedChild {
+		t.Fatalf(
+			"BrowseDirectories() = %#v, want %q with child %q",
+			resp,
+			resolvedBooks,
+			resolvedChild,
+		)
+	}
+
+	if _, err := service.BrowseDirectories(context.Background(), outside); err == nil {
+		t.Fatal("BrowseDirectories() outside configured root error = nil")
+	}
+}
+
 func assertPathValidation(
 	t *testing.T,
 	resp *PathValidationResponse,

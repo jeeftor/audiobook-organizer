@@ -97,13 +97,14 @@ docker run --rm -p 8080:8080 \
   -v /path/to/audiobooks:/books \
   -v /path/to/output:/output \
   jeffsui/audiobook-organizer:latest \
-  web --host=0.0.0.0 --port=8080 --no-open
+  web --host=0.0.0.0 --port=8080 --no-open --browse-root=/books --browse-root=/output
 ```
 
 Open the tokenized URL printed in the container logs at
 `http://localhost:8080/`. Keep that URL private. When using Traefik or another
 reverse proxy, route to container port `8080`, not the host-side published
 port.
+The folder buttons browse only the declared container paths; without `--browse-root`, type mounted paths manually.
 
 If startup warns that the UI is bound to loopback inside a container, Docker port publishing cannot reach it; restart with `--host=0.0.0.0`. A network-reachable UI also warns you to keep the session-token URL private and use a trusted HTTPS/authenticated proxy.
 

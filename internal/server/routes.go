@@ -21,6 +21,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/api/config/initial", s.withAuth(s.handleInitialConfig))
 	mux.HandleFunc("/api/config/options", s.withAuth(s.handleOptions))
 	mux.HandleFunc("/api/paths/validate", s.withAuth(s.handleValidatePaths))
+	mux.HandleFunc("/api/paths/browse", s.withAuth(s.handleBrowseDirectories))
 	mux.HandleFunc("/api/organize/preview", s.withAuth(s.handleOrganizePreview))
 	mux.HandleFunc("/api/organize/run", s.withAuth(s.handleOrganizeRun))
 	mux.HandleFunc("/api/rename/preview", s.withAuth(s.handleRenamePreview))
@@ -34,6 +35,19 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("/", s.handleStatic)
 
 	return mux
+}
+
+func (s *Server) handleBrowseDirectories(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, errors.New("method not allowed"))
+		return
+	}
+	resp, err := s.app.BrowseDirectories(r.Context(), r.URL.Query().Get("path"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (s *Server) withAuth(next http.HandlerFunc) http.HandlerFunc {

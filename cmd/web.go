@@ -38,6 +38,8 @@ func addWebFlags(cmd *cobra.Command) {
 	cmd.Flags().Int("port", 0, "Port for the local web UI (0 chooses an available port)")
 	cmd.Flags().Bool("open", true, "Open the web UI in the default browser")
 	cmd.Flags().Bool("no-open", false, "Do not open the web UI in the default browser")
+	cmd.Flags().
+		StringSlice("browse-root", nil, "Server directory root available to the web UI (repeatable)")
 }
 
 func runWeb(cmd *cobra.Command, args []string) error {
@@ -45,6 +47,7 @@ func runWeb(cmd *cobra.Command, args []string) error {
 	port, _ := cmd.Flags().GetInt("port")
 	openBrowser, _ := cmd.Flags().GetBool("open")
 	noOpen, _ := cmd.Flags().GetBool("no-open")
+	browseRoots, _ := cmd.Flags().GetStringSlice("browse-root")
 	if noOpen {
 		openBrowser = false
 	}
@@ -58,6 +61,7 @@ func runWeb(cmd *cobra.Command, args []string) error {
 	}
 
 	webConfig := app.DefaultWebConfig(host, port, openBrowser, inputDir, outputDir)
+	webConfig.BrowseRoots = browseRoots
 	service := app.NewService(webConfig)
 	webServer, err := server.New(server.Config{Token: token}, service)
 	if err != nil {

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
@@ -259,6 +259,25 @@ test('supports folder picker and drop affordances while preserving manual path e
 
   await sourceInput.fill('/typed/source')
   await expect(page.locator('.path-message').filter({ hasText: 'Source folder set from dropped folder.' })).toHaveCount(0)
+})
+
+test('lets you select every configured server browse root', async ({ page }) => {
+  const firstRoot = await mkdtemp(join(tmpdir(), 'abo-browse-first-'))
+  const secondRoot = await mkdtemp(join(tmpdir(), 'abo-browse-second-'))
+  const resolvedSecondRoot = await realpath(secondRoot)
+  const pickerServer = await startTestServer({ browseRoots: [firstRoot, secondRoot] })
+  try {
+    await page.goto(pickerServer.url)
+    await page.getByRole('button', { name: 'Choose output folder' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Choose Output folder' })
+    await dialog.getByRole('button', { name: secondRoot }).click()
+    await dialog.getByRole('button', { name: 'Choose this folder' }).click()
+    await expect(page.getByRole('textbox', { name: 'Output folder' })).toHaveValue(resolvedSecondRoot)
+  } finally {
+    await pickerServer.stop()
+    await rm(firstRoot, { recursive: true, force: true })
+    await rm(secondRoot, { recursive: true, force: true })
+  }
 })
 
 test('keeps staged workflows usable without document overflow on narrow viewports', async ({ page }) => {

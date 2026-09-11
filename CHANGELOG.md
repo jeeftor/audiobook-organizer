@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Server folder browser**: Docker and remote web UI deployments can expose explicitly configured `--browse-root` directories for source and output selection without exposing the rest of the container filesystem.
 - **ABS metadata-source rename workflow**: The local web UI can now rename mapped Audiobookshelf library files directly from validated ABS metadata, preserving per-file track numbers while keeping the normal preview, selection, conflict, undo-log, and dry-run safeguards.
 - **Guided web setup**: The local browser UI now offers **Guide Me** for selecting organize or rename, choosing metadata source, routing Audiobookshelf users through validated ABS setup, and handing off to the existing dry-run workflow.
 - **Successful web UI test evidence**: GitHub browser jobs now retain Playwright reports, final screenshots, and a per-test evidence summary for green runs as well as failures.
