@@ -40,6 +40,18 @@ test('#187: explains how to recover when the browser opens without the web sessi
   ).toBeVisible()
 })
 
+test('#187: keeps the web session token usable after five minutes', async ({ page }) => {
+  await page.clock.install()
+  await page.goto(server.url)
+  await expect(page.getByText(/config ready/)).toBeVisible()
+
+  await page.clock.fastForward('05:01')
+  await page.reload()
+
+  await expect(page.getByText(/config ready/)).toBeVisible()
+  await expect(page.getByText(/missing its token/)).toHaveCount(0)
+})
+
 test('renders staged workflows and connects to the local server', async ({ page }) => {
   await loadApp(page)
 
