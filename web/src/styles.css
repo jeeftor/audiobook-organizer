@@ -1002,6 +1002,13 @@ select:focus {
   margin: 16px 20px 0;
 }
 
+.no-auth-warning {
+  margin: 16px 20px 0;
+  border-color: rgba(251, 191, 36, 0.42);
+  background: rgba(251, 191, 36, 0.1);
+  color: #fcd34d;
+}
+
 .success-note {
   width: 100%;
   padding: 10px 11px;

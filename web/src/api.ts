@@ -1,5 +1,6 @@
 export type HealthResponse = {
   status: string
+  auth_required?: boolean
 }
 
 export type Option = {
