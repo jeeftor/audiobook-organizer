@@ -58,6 +58,28 @@ cd web && npm run install:browsers
 
 You can also point the workflow at an existing Chrome or Chrome Headless Shell binary with `ABO_DOCS_BROWSER_EXECUTABLE_PATH=/path/to/chrome make docs-web-screenshots`. Containerized visual generation is tracked separately in #148.
 
+## Docker and Reverse Proxy
+
+### Binding to all interfaces (Docker)
+
+By default the server binds to `127.0.0.1`, which is unreachable from Docker port publishing. Bind to `0.0.0.0` so the published port works:
+
+```bash
+audiobook-organizer web --host=0.0.0.0 --port=8080 --no-open
+```
+
+Point your reverse proxy or `docker run -p` at the container port (`8080`), not the host-side published port.
+
+### Disabling the session token for reverse proxies
+
+When ABO sits behind a reverse proxy that already handles authentication (Authelia, Traefik middleware, Caddy basicauth, etc.), the startup session token is redundant. Use `--no-token` to skip the session check entirely:
+
+```bash
+audiobook-organizer web --host=0.0.0.0 --port=8080 --no-open --no-token
+```
+
+With `--no-token` the startup URL has no `?token=` query parameter and all API endpoints are open. A warning is printed when `--no-token` is combined with a non-loopback bind address. Only use this flag when access is restricted by a trusted auth layer.
+
 ## Audiobookshelf
 
 The web API exposes Audiobookshelf workflow endpoints for:
