@@ -45,7 +45,7 @@ concurrency:
 jobs:
   docs-visuals:
     name: Generate docs visuals
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:

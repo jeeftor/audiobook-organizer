@@ -68,7 +68,7 @@ jobs:
 
   web-ui-e2e:
     name: Web UI Playwright
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
@@ -120,7 +120,7 @@ jobs:
 
   web-session-token-regression:
     name: Web session token regression (#187)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       issues: write
@@ -204,7 +204,7 @@ jobs:
 
   web-ui-abs-e2e:
     name: Web UI ABS Playwright
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
       ABS_IMAGE: ghcr.io/advplyr/audiobookshelf:latest
