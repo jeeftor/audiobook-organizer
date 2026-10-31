@@ -71,6 +71,9 @@ func (s *Server) Serve(ctx context.Context, listener net.Listener) error {
 func URL(host string, listener net.Listener, token string) string {
 	_, port, err := net.SplitHostPort(listener.Addr().String())
 	if err != nil {
+		if token == "" {
+			return fmt.Sprintf("http://%s/", listener.Addr().String())
+		}
 		return fmt.Sprintf("http://%s/?token=%s", listener.Addr().String(), token)
 	}
 	displayHost := host
@@ -79,6 +82,9 @@ func URL(host string, listener net.Listener, token string) string {
 	}
 	if strings.Contains(displayHost, ":") && !strings.HasPrefix(displayHost, "[") {
 		displayHost = "[" + displayHost + "]"
+	}
+	if token == "" {
+		return fmt.Sprintf("http://%s:%s/", displayHost, port)
 	}
 	return fmt.Sprintf("http://%s:%s/?token=%s", displayHost, port, token)
 }
