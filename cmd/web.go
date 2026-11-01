@@ -38,6 +38,8 @@ func addWebFlags(cmd *cobra.Command) {
 	cmd.Flags().Int("port", 0, "Port for the local web UI (0 chooses an available port)")
 	cmd.Flags().Bool("open", true, "Open the web UI in the default browser")
 	cmd.Flags().Bool("no-open", false, "Do not open the web UI in the default browser")
+	cmd.Flags().
+		Bool("no-token", false, "Disable session token authentication (use when a trusted reverse proxy handles access control)")
 }
 
 func runWeb(cmd *cobra.Command, args []string) error {
@@ -52,9 +54,15 @@ func runWeb(cmd *cobra.Command, args []string) error {
 	inputDir := firstNonEmpty(viper.GetString("input"), viper.GetString("dir"))
 	outputDir := firstNonEmpty(viper.GetString("output"), viper.GetString("out"))
 
-	token, err := newSessionToken()
-	if err != nil {
-		return err
+	noToken, _ := cmd.Flags().GetBool("no-token")
+
+	var token string
+	if !noToken {
+		var err error
+		token, err = newSessionToken()
+		if err != nil {
+			return err
+		}
 	}
 
 	webConfig := app.DefaultWebConfig(host, port, openBrowser, inputDir, outputDir)
@@ -73,6 +81,12 @@ func runWeb(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(cmd.OutOrStdout(), "Audiobook Organizer web UI running at:\n%s\n", url)
 	if warning := webBindWarning(host, runningInContainer()); warning != "" {
 		fmt.Fprintln(cmd.ErrOrStderr(), warning)
+	}
+	if noToken && !isLoopbackHost(host) {
+		fmt.Fprintln(
+			cmd.ErrOrStderr(),
+			"Warning: session token disabled. Ensure access is restricted by your reverse proxy.",
+		)
 	}
 	if openBrowser {
 		if err := openURL(url); err != nil {

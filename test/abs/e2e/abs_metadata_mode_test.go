@@ -208,7 +208,7 @@ func absMetadataBookCase() absMetadataOrganizeCase {
 				"plain",
 				"books",
 				"Mary Wollstonecraft Shelley",
-				"Frankenstein; or, the modern prometheus",
+				"Frankenstein; or, The modern Prometheus",
 				"shelley-book.epub",
 			},
 			{
@@ -233,7 +233,7 @@ func absMetadataBookCase() absMetadataOrganizeCase {
 		newAPIPaths: []string{
 			"/books/Jane Austen/Pride and Prejudice",
 			"/books/Lewis Carroll/Alice's Adventures in Wonderland",
-			"/books/Mary Wollstonecraft Shelley/Frankenstein; or, the modern prometheus",
+			"/books/Mary Wollstonecraft Shelley/Frankenstein; or, The modern Prometheus",
 		},
 		expectedCount: 3,
 		seedAuthors: map[string]string{

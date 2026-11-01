@@ -23,6 +23,48 @@ func TestHealthDoesNotRequireAuthentication(t *testing.T) {
 
 	assertStatus(t, rec, http.StatusOK)
 	assertJSONField(t, rec, "status", "ok")
+	assertJSONField(t, rec, "auth_required", true)
+}
+
+func TestHealthReportsAuthNotRequiredInNoTokenMode(t *testing.T) {
+	cfg := app.DefaultWebConfig("127.0.0.1", 0, false, "/input", "/output")
+	service := app.NewService(cfg)
+	srv, err := New(Config{Token: ""}, service)
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	handler := srv.routes()
+
+	rec := performRequest(handler, http.MethodGet, "/api/health", nil, "")
+
+	assertStatus(t, rec, http.StatusOK)
+	assertJSONField(t, rec, "status", "ok")
+	assertJSONField(t, rec, "auth_required", false)
+}
+
+func TestNoTokenModeAllowsUnauthenticatedAccess(t *testing.T) {
+	cfg := app.DefaultWebConfig("127.0.0.1", 0, false, "/input", "/output")
+	service := app.NewService(cfg)
+	srv, err := New(Config{Token: ""}, service)
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	handler := srv.routes()
+
+	tests := []struct {
+		name string
+		path string
+	}{
+		{name: "initial config", path: "/api/config/initial"},
+		{name: "options", path: "/api/config/options"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := performRequest(handler, http.MethodGet, tt.path, nil, "")
+			assertStatus(t, rec, http.StatusOK)
+		})
+	}
 }
 
 func TestProtectedEndpointsRequireSessionToken(t *testing.T) {

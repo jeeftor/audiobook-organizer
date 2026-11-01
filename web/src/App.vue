@@ -14,8 +14,11 @@
       <span class="server-status">{{ serverLabel }}</span>
     </header>
 
-    <p v-if="!hasWebSessionToken" class="inline-alert session-token-alert" role="alert">
+    <p v-if="!hasWebSessionToken && serverRequiresToken" class="inline-alert session-token-alert" role="alert">
       This web session link is missing its token. Reopen the complete startup URL.
+    </p>
+    <p v-if="!serverRequiresToken" class="inline-alert no-auth-warning" role="alert">
+      Authentication is disabled. Ensure your reverse proxy restricts access to this UI.
     </p>
 
     <section v-if="guideOpen" class="guide-backdrop" role="presentation" @click.self="closeGuide">
@@ -1033,6 +1036,7 @@ const defaultFieldMapping: FieldMapping = {
 const fieldMappingFieldNames = ['title', 'authors', 'author', 'artist', 'album_artist', 'series', 'album', 'track', 'track_number', 'disc', 'discnumber']
 
 const health = ref('offline')
+const serverRequiresToken = ref(true)
 const configState = ref<LoadState>('loading')
 const optionsState = ref<LoadState>('loading')
 const activeWorkflow = ref<WorkflowId>('organize')
@@ -2598,19 +2602,20 @@ function now() {
 }
 
 onMounted(async () => {
-  if (!hasWebSessionToken) {
-    bootstrapComplete.value = true
-    return
-  }
-
   addRequestStart('Health check', 'GET /api/health')
   try {
     const response = await apiGet<HealthResponse>('/api/health')
     health.value = response.status
+    serverRequiresToken.value = response.auth_required !== false
     addRequestSuccess('Health check', `Server reported ${response.status}.`)
   } catch {
     health.value = 'offline'
     addRequestError('Health check', 'Server health request failed.')
+  }
+
+  if (!hasWebSessionToken && serverRequiresToken.value) {
+    bootstrapComplete.value = true
+    return
   }
 
   addRequestStart('Initial config', 'GET /api/config/initial')

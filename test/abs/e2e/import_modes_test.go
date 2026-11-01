@@ -276,7 +276,7 @@ func flatModeMechanicsCases() []flatModeMechanicsCase {
 				{"Lewis Carroll", "Alice's Adventures in Wonderland", "ebook-001.epub"},
 				{
 					"Mary Wollstonecraft Shelley",
-					"Frankenstein; or, the modern prometheus",
+					"Frankenstein; or, The modern Prometheus",
 					"shelley-book.epub",
 				},
 			},

@@ -57,7 +57,10 @@ func requestToken(r *http.Request) string {
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":        "ok",
+		"auth_required": s.config.Token != "",
+	})
 }
 
 func (s *Server) handleInitialConfig(w http.ResponseWriter, r *http.Request) {
