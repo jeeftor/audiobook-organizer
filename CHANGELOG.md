@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.14.0] — 2026-11-01
+
 ### Added
 
 - **`--no-token` web flag**: Users behind a trusted reverse proxy (Authelia, Traefik, Caddy, etc.) can now start the web UI with `--no-token` to skip session token auth entirely. The startup URL has no `?token=` parameter and a warning is printed when combined with a non-loopback bind.
