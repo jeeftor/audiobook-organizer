@@ -121,7 +121,7 @@ jobs:
   web-session-token-regression:
     name: Web session token regression (#187)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     permissions:
       issues: write
 
@@ -163,9 +163,13 @@ jobs:
       id: regression
       run: cd web && npm run build && npx playwright test e2e/gui-smoke.spec.ts --project=chromium-desktop --grep '#187:'
 
+    - name: Verify Docker web session survives five minutes
+      id: docker_regression
+      run: test/web-session-token-docker.sh
+
     - name: Comment on #187 when its regression fails
       if: >-
-        always() && steps.regression.outcome == 'failure' &&
+        always() && (steps.regression.outcome == 'failure' || steps.docker_regression.outcome == 'failure') &&
         github.event_name == 'pull_request' &&
         github.event.pull_request.head.repo.full_name == github.repository
       uses: actions/github-script@v8
@@ -178,7 +182,7 @@ jobs:
             marker,
             '## Web session-token regression failed',
             '',
-            'Opening the web UI without its `?token=...` session parameter still does not show recovery guidance.',
+            'The browser or Docker session-token regression check failed.',
             '',
             `[View failed CI run](${repositoryURL}/actions/runs/${context.runId}) · [PR #${pullRequestNumber}](${repositoryURL}/pull/${pullRequestNumber}) · [commit ${context.sha.slice(0, 7)}](${repositoryURL}/commit/${context.sha})`,
             '',
